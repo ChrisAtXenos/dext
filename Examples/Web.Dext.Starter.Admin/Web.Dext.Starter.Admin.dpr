@@ -52,8 +52,7 @@ begin
 
     Writeln('[*] Dext Admin Starter running at http://localhost:8080');
     // Only pause if not running in automated mode
-    ConsolePause;
-
+    App.Run(8080);
   except
     on E: Exception do
     begin

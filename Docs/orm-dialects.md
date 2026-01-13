@@ -13,7 +13,7 @@ The following dialects are built-in and ready to use:
 | **Firebird 3.0+** | `TFirebirdDialect` | ✅ Validated | Identity, Paging (OFFSET/FETCH), Boolean (TRUE/FALSE) |
 | **SQL Server** | `TSQLServerDialect` | ✅ Validated | Identity, Paging (OFFSET/FETCH), UUID |
 | **Oracle 12c+** | `TOracleDialect` | ⚠️ Unit Tested | Identity, Paging, UUID (VARCHAR2) |
-| **MySQL / MariaDB** | `TMySQLDialect` | ⚠️ Unit Tested | AutoIncrement, Paging (LIMIT), UUID (CHAR) |
+| **MySQL / MariaDB** | `TMySQLDialect` | ✅ Validated | AutoIncrement, Paging (LIMIT), JSON |
 
 ---
 

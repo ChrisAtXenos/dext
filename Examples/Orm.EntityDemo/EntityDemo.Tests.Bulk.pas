@@ -5,8 +5,10 @@ interface
 uses
   System.SysUtils,
   System.Generics.Collections,
+  Dext.Entity.Dialects,
   EntityDemo.Tests.Base,
-  EntityDemo.Entities;
+  EntityDemo.Entities,
+  EntityDemo.DbConfig;
 
 type
   TBulkTest = class(TBaseTest)
@@ -25,7 +27,11 @@ var
   StartTime: TDateTime;
   Duration: TDateTime;
   Count: Integer;
+  Dialect: ISQLDialect;
+  SQL: string;
 begin
+  Dialect := TDbConfig.CreateDialect;
+  
   Log('📦 Running Bulk Operation Tests...');
   Log('================================');
 
@@ -50,7 +56,9 @@ begin
     
     LogSuccess(Format('Inserted 100 users in %s', [FormatDateTime('ss.zzz', Duration)]));
 
-    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM "users" WHERE "Age" = 20 AND "full_name" LIKE ''Bulk User%''');
+    SQL := Format('SELECT COUNT(*) FROM %s WHERE %s = 20 AND %s LIKE ''Bulk User%%''',
+      [Dialect.QuoteIdentifier('users'), Dialect.QuoteIdentifier('Age'), Dialect.QuoteIdentifier('full_name')]);
+    Count := FConn.ExecSQLScalar(SQL);
     AssertTrue(Count = 100, 'Bulk Add Verified.', Format('Bulk Add Failed: Found %d users.', [Count]));
 
     // 2. Bulk Update
@@ -69,7 +77,9 @@ begin
 
     LogSuccess(Format('Updated 100 users in %s', [FormatDateTime('ss.zzz', Duration)]));
 
-    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM "users" WHERE "Age" = 30 AND "full_name" LIKE ''Bulk User%''');
+    SQL := Format('SELECT COUNT(*) FROM %s WHERE %s = 30 AND %s LIKE ''Bulk User%%''',
+      [Dialect.QuoteIdentifier('users'), Dialect.QuoteIdentifier('Age'), Dialect.QuoteIdentifier('full_name')]);
+    Count := FConn.ExecSQLScalar(SQL);
     AssertTrue(Count = 100, 'Bulk Update Verified.', Format('Bulk Update Failed: Found %d users.', [Count]));
 
     // 3. Bulk Remove
@@ -81,7 +91,9 @@ begin
 
     LogSuccess(Format('Removed 100 users in %s', [FormatDateTime('ss.zzz', Duration)]));
 
-    Count := FConn.ExecSQLScalar('SELECT COUNT(*) FROM "users" WHERE "full_name" LIKE ''Bulk User%''');
+    SQL := Format('SELECT COUNT(*) FROM %s WHERE %s LIKE ''Bulk User%%''',
+      [Dialect.QuoteIdentifier('users'), Dialect.QuoteIdentifier('full_name')]);
+    Count := FConn.ExecSQLScalar(SQL);
     AssertTrue(Count = 0, 'Bulk Remove Verified.', Format('Bulk Remove Failed: Found %d users.', [Count]));
 
   finally

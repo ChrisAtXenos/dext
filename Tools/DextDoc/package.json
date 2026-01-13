@@ -1,0 +1,21 @@
+{
+    "name": "dext-doc",
+    "version": "1.0.0",
+    "description": "Premium documentation generator for Dext Framework using DelphiAST XML",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "generate": "node index.js ../../Docs/API/xml ../../Docs/API/html"
+    },
+    "keywords": [
+        "delphi",
+        "documentation",
+        "ast",
+        "dext"
+    ],
+    "author": "Antigravity",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "fast-xml-parser": "^4.3.2"
+    }
+}

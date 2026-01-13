@@ -95,13 +95,14 @@ type
   private
     FConnection: IFDPhysConnection;
     FCommand: IFDPhysCommand;
+    FOnLog: TProc<string>;
 
     FDialect: TDatabaseDialect;
     
     procedure SetParamValue(Param: TFDParam; const AValue: TValue);
     function GetDialect: TDatabaseDialect;
   public
-    constructor Create(AConnection: IFDPhysConnection);
+    constructor Create(AConnection: IFDPhysConnection; ADialect: TDatabaseDialect);
     destructor Destroy; override;
     
     procedure SetSQL(const ASQL: string);
@@ -126,6 +127,9 @@ type
   private
     FConnection: IFDPhysConnection;
     FDatSManager: TFDDatSManager;
+    FOnLog: TProc<string>;
+    FDialect: TDatabaseDialect;
+    procedure DetectDialect;
   public
     constructor Create(AConnection: IFDPhysConnection);
     destructor Destroy; override;
@@ -142,6 +146,13 @@ type
     function GetConnectionString: string;
     procedure SetConnectionString(const AValue: string);
     property ConnectionString: string read GetConnectionString write SetConnectionString;
+    
+    procedure SetOnLog(AValue: TProc<string>);
+    function GetOnLog: TProc<string>;
+    property OnLog: TProc<string> read GetOnLog write SetOnLog;
+    
+    function GetDialect: TDatabaseDialect;
+    property Dialect: TDatabaseDialect read GetDialect;
     
     property PhysConnection: IFDPhysConnection read FConnection;
   end;
@@ -278,7 +289,7 @@ end;
 
 { TFireDACPhysCommand }
 
-constructor TFireDACPhysCommand.Create(AConnection: IFDPhysConnection);
+constructor TFireDACPhysCommand.Create(AConnection: IFDPhysConnection; ADialect: TDatabaseDialect);
 begin
   inherited Create;
   FConnection := AConnection;
@@ -304,7 +315,7 @@ begin
   // FCmd.Params[0].AsInteger := ...
   // So yes, Params should be available.
   
-  FDialect := ddUnknown; 
+  FDialect := ADialect;
 end;
 
 destructor TFireDACPhysCommand.Destroy;
@@ -352,41 +363,21 @@ begin
 end;
 
 function TFireDACPhysCommand.GetDialect: TDatabaseDialect;
-var
-  Meta: IFDPhysConnectionMetadata;
 begin
-  if FDialect <> ddUnknown then Exit(FDialect);
-
-  if FConnection <> nil then
-  begin
-     // Use Metadata to get RDBMS Kind
-     FConnection.CreateMetadata(Meta);
-     case Meta.Kind of
-       TFDRDBMSKinds.PostgreSQL: Result := ddPostgreSQL;
-       TFDRDBMSKinds.MySQL: Result := ddMySQL;
-       TFDRDBMSKinds.MSSQL: Result := ddSQLServer;
-       TFDRDBMSKinds.Firebird: Result := ddFirebird;
-       TFDRDBMSKinds.Interbase: Result := ddInterbase;
-       TFDRDBMSKinds.SQLite: Result := ddSQLite;
-       TFDRDBMSKinds.Oracle: Result := ddOracle;
-       else Result := ddUnknown;
-     end;
-  end
-  else
-    Result := ddUnknown;
-
-  FDialect := Result;
+  Result := FDialect;
 end;
 
 
 
 procedure TFireDACPhysCommand.Execute;
 begin
+  if Assigned(FOnLog) then FOnLog(FCommand.CommandText);
   FCommand.Execute;
 end;
 
 function TFireDACPhysCommand.ExecuteNonQuery: Integer;
 begin
+  if Assigned(FOnLog) then FOnLog(FCommand.CommandText);
   FCommand.Execute;
   Result := FCommand.RowsAffected;
 end;
@@ -396,6 +387,7 @@ var
   DatSManager: TFDDatSManager;
   Table: TFDDatSTable;
 begin
+  if Assigned(FOnLog) then FOnLog(FCommand.CommandText);
   // We need a DatS Manager for the results
   // We can use a local one or share.
   // For Phys command, we often need to Fetch.
@@ -416,6 +408,7 @@ end;
 
 function TFireDACPhysCommand.ExecuteScalar: TValue;
 begin
+  if Assigned(FOnLog) then FOnLog(FCommand.CommandText);
   // Execute and fetch 1 row
   var DatS := TFDDatSManager.Create;
   try
@@ -491,6 +484,16 @@ begin
   Result := FConnection.State = csConnected;
 end;
 
+procedure TFireDACPhysConnection.SetOnLog(AValue: TProc<string>);
+begin
+  FOnLog := AValue;
+end;
+
+function TFireDACPhysConnection.GetOnLog: TProc<string>;
+begin
+  Result := FOnLog;
+end;
+
 function TFireDACPhysConnection.BeginTransaction: IDbTransaction;
 var
   Tx: IFDPhysTransaction;
@@ -501,11 +504,13 @@ end;
 
 function TFireDACPhysConnection.CreateCommand(const ASQL: string): IDbCommand;
 var
-  Cmd: TFireDACPhysCommand;
+  LCmd: TFireDACPhysCommand;
 begin
-  Cmd := TFireDACPhysCommand.Create(FConnection);
-  Cmd.SetSQL(ASQL);
-  Result := Cmd;
+  LCmd := TFireDACPhysCommand.Create(FConnection, GetDialect);
+  LCmd.FOnLog := FOnLog;
+  if ASQL <> '' then
+    LCmd.SetSQL(ASQL);
+  Result := LCmd;
 end;
 
 function TFireDACPhysConnection.GetLastInsertId: Variant;
@@ -701,8 +706,30 @@ end;
 
 procedure TFireDACPhysConnection.SetConnectionString(const AValue: string);
 begin
-  // For Phys connection, usually params are set before creation.
   // We don't support late-binding connection strings here yet.
+end;
+
+procedure TFireDACPhysConnection.DetectDialect;
+var
+  DriverID: string;
+begin
+  if FDialect <> ddUnknown then Exit;
+
+  // IFDPhysConnection doesn't expose DriverName directly as property, checking...
+  // Usually we can get it from Driver
+  if FConnection.Driver <> nil then
+    DriverID := FConnection.Driver.DriverID.ToLower
+  else
+    DriverID := ''; // Should not happen if connected
+
+  FDialect := TDialectFactory.DetectDialect(DriverID);
+end;
+
+function TFireDACPhysConnection.GetDialect: TDatabaseDialect;
+begin
+  if FDialect = ddUnknown then
+    DetectDialect;
+  Result := FDialect;
 end;
 
 end.

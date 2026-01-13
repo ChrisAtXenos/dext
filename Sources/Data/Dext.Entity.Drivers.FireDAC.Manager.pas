@@ -36,6 +36,14 @@ type
     procedure SetUniqueName;
   end;
 
+  TFireDACOptimization = (
+    optDisableMacros,        // Sets MacroCreate/MacroExpand = False (Performance, SQL Injection safety)
+    optDisableEscapes,       // Sets EscapeExpand = False (Performance, raw SQL fidelity)
+    optDirectExecute         // Sets DirectExecute = True (Skip prepare step for simple queries)
+  );
+  
+  TFireDACOptimizations = set of TFireDACOptimization;
+
 type
   /// <summary>
   ///   Manages FireDAC Connection Definitions and Pooling globally
@@ -85,10 +93,13 @@ type
     /// <summary>
     ///   Apply common resource options for specific databases (e.g. PostgreSQL)
     /// </summary>
-    procedure ApplyResourceOptions(AConnection: TFDConnection);
+    procedure ApplyResourceOptions(AConnection: TFDConnection; AOptimizations: TFireDACOptimizations);
   end;
 
 implementation
+
+uses
+  Dext.Entity.Dialects;
 
 { TComponentHelper }
 
@@ -210,17 +221,24 @@ begin
   end;
 end;
 
-procedure TDextFireDACManager.ApplyResourceOptions(AConnection: TFDConnection);
+procedure TDextFireDACManager.ApplyResourceOptions(AConnection: TFDConnection; AOptimizations: TFireDACOptimizations);
 begin
-  var DriverID := AConnection.DriverName.ToLower;
+  var Dialect := TDialectFactory.DetectDialect(AConnection.DriverName);
   
-  // PostgreSQL performance optimizations from Foundation
-  if DriverID.Contains('pg') or DriverID.Contains('postgres') then
+  // Apply optimizations if dialect is PostgreSQL (or others if added later)
+  if Dialect = ddPostgreSQL then
   begin
-    AConnection.ResourceOptions.MacroCreate := False;
-    AConnection.ResourceOptions.MacroExpand := False;
-    AConnection.ResourceOptions.EscapeExpand := False;
-    AConnection.ResourceOptions.DirectExecute := True;
+    if optDisableMacros in AOptimizations then
+    begin
+      AConnection.ResourceOptions.MacroCreate := False;
+      AConnection.ResourceOptions.MacroExpand := False;
+    end;
+    
+    if optDisableEscapes in AOptimizations then
+      AConnection.ResourceOptions.EscapeExpand := False;
+      
+    if optDirectExecute in AOptimizations then
+      AConnection.ResourceOptions.DirectExecute := True;
   end;
 end;
 

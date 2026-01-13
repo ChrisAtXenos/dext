@@ -119,7 +119,7 @@
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="Core\Base\Dext.Core.Activator.pas"/>
         <DCCReference Include="Core\Base\Dext.Core.Memory.pas"/>
-        <DCCReference Include="Core\Base\Dext.Core.CancellationToken.pas"/>
+        <DCCReference Include="Core\Dext.Threading.CancellationToken.pas"/>
         <DCCReference Include="Core\Base\Dext.Core.ValueConverters.pas"/>
         <DCCReference Include="Core\Base\Dext.Utils.pas"/>
         <DCCReference Include="Core\Base\Dext.Types.Nullable.pas"/>

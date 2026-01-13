@@ -90,5 +90,5 @@ TestTypeConverters.exe
 
 ## See Also
 
-- [ORM Type System Guide](../../Docs/ORM-Type-System-Guide.md)
+- [ORM Type System Guide](../../Docs/orm-type-system-guide.md)
 - [Type System Enhancement Design](../../Docs/Roadmap/orm-type-system-enhancement.md)

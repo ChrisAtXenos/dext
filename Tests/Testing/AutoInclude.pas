@@ -4,7 +4,7 @@ interface
 
 uses
   Dext.Core.Activator,
-  Dext.Core.CancellationToken,
+  Dext.Threading.CancellationToken,
   Dext.Core.DateUtils,
   Dext.Core.Extensions,
   Dext.Core.Memory,

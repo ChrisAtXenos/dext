@@ -9,6 +9,9 @@
         <Projects Include="DextFacadeGenerator\DextFacadeGenerator.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="DextASTParser\DextASTParser.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +38,23 @@
     <Target Name="DextFacadeGenerator:Make">
         <MSBuild Projects="DextFacadeGenerator\DextFacadeGenerator.dproj" Targets="Make"/>
     </Target>
+    <Target Name="DextASTParser">
+        <MSBuild Projects="DextASTParser\DextASTParser.dproj"/>
+    </Target>
+    <Target Name="DextASTParser:Clean">
+        <MSBuild Projects="DextASTParser\DextASTParser.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DextASTParser:Make">
+        <MSBuild Projects="DextASTParser\DextASTParser.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="DextTool;DextFacadeGenerator"/>
+        <CallTarget Targets="DextTool;DextFacadeGenerator;DextASTParser"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="DextTool:Clean;DextFacadeGenerator:Clean"/>
+        <CallTarget Targets="DextTool:Clean;DextFacadeGenerator:Clean;DextASTParser:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="DextTool:Make;DextFacadeGenerator:Make"/>
+        <CallTarget Targets="DextTool:Make;DextFacadeGenerator:Make;DextASTParser:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

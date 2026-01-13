@@ -4,8 +4,10 @@ interface
 
 uses
   System.SysUtils,
+  Dext.Entity.Dialects,
   EntityDemo.Tests.Base,
-  EntityDemo.Entities;
+  EntityDemo.Entities,
+  EntityDemo.DbConfig;
 
 type
   TRelationshipTest = class(TBaseTest)
@@ -18,7 +20,11 @@ implementation
 { TRelationshipTest }
 
 procedure TRelationshipTest.Run;
+var
+  Dialect: ISQLDialect;
 begin
+  Dialect := TDbConfig.CreateDialect;
+  
   Log('🔗 Running Relationship Tests...');
   Log('==============================');
 
@@ -57,8 +63,10 @@ begin
     FContext.SaveChanges;
     LogSuccess('Address removed.');
     
-    // Verify User is gone from DB
-    var Count: Integer := FConn.ExecSQLScalar('SELECT COUNT(*) FROM "users" WHERE "Id" = ' + UserId.ToString);
+    // Verify User is gone from DB (use proper quoting for each database)
+    var SQL := Format('SELECT COUNT(*) FROM %s WHERE %s = %d', 
+      [Dialect.QuoteIdentifier('users'), Dialect.QuoteIdentifier('Id'), UserId]);
+    var Count: Integer := FConn.ExecSQLScalar(SQL);
     AssertTrue(Count = 0, 'Cascade Delete Verified: User is gone from DB.', 'Cascade Delete Failed: User still exists in DB.');
   end;
   

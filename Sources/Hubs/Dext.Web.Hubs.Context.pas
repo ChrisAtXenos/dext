@@ -40,7 +40,7 @@ uses
   Dext.Web.Hubs.Interfaces,
   Dext.Web.Hubs.Connections,
   Dext.Web.Hubs.Clients,
-  Dext.Core.CancellationToken,
+  Dext.Threading.CancellationToken,
   Dext.Auth.Identity;
 
 type

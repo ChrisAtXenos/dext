@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dext.Web - Dext Framework 1.0</title>
+    
+    <!-- Blocking script to avoid theme flicker --> 
+    <script>
+        (function() {
+            const storedTheme = localStorage.getItem('dext-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', storedTheme);
+        })();
+    </script>
+    
+    <!-- Theme & Layout (Separate files for internal Dext Tooling) -->
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="layout.css">
+    
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>Dext Framework 1.0</h3>
+            <small>Documentation</small>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Search API..." id="searchInput">
+        </div>
+        <div class="nav-list" id="navList">
+            <!-- Sidebar Content Injected Here -->
+            <a href="Dext.html" class="nav-item">Dext</a>
+<a href="Dext.Assertions.html" class="nav-item">Dext.Assertions</a>
+<a href="Dext.Auth.Attributes.html" class="nav-item">Dext.Auth.Attributes</a>
+<a href="Dext.Auth.BasicAuth.html" class="nav-item">Dext.Auth.BasicAuth</a>
+<a href="Dext.Auth.Identity.html" class="nav-item">Dext.Auth.Identity</a>
+<a href="Dext.Auth.JWT.html" class="nav-item">Dext.Auth.JWT</a>
+<a href="Dext.Auth.Middleware.html" class="nav-item">Dext.Auth.Middleware</a>
+<a href="Dext.Caching.html" class="nav-item">Dext.Caching</a>
+<a href="Dext.Caching.Redis.html" class="nav-item">Dext.Caching.Redis</a>
+<a href="Dext.Collections.html" class="nav-item">Dext.Collections</a>
+<a href="Dext.Collections.Extensions.html" class="nav-item">Dext.Collections.Extensions</a>
+<a href="Dext.Configuration.Binder.html" class="nav-item">Dext.Configuration.Binder</a>
+<a href="Dext.Configuration.Core.html" class="nav-item">Dext.Configuration.Core</a>
+<a href="Dext.Configuration.EnvironmentVariables.html" class="nav-item">Dext.Configuration.EnvironmentVariables</a>
+<a href="Dext.Configuration.Interfaces.html" class="nav-item">Dext.Configuration.Interfaces</a>
+<a href="Dext.Configuration.Json.html" class="nav-item">Dext.Configuration.Json</a>
+<a href="Dext.Configuration.Yaml.html" class="nav-item">Dext.Configuration.Yaml</a>
+<a href="Dext.Core.Activator.html" class="nav-item">Dext.Core.Activator</a>
+<a href="Dext.Core.DateUtils.html" class="nav-item">Dext.Core.DateUtils</a>
+<a href="Dext.Core.Extensions.html" class="nav-item">Dext.Core.Extensions</a>
+<a href="Dext.Core.Memory.html" class="nav-item">Dext.Core.Memory</a>
+<a href="Dext.Core.Reflection.html" class="nav-item">Dext.Core.Reflection</a>
+<a href="Dext.Core.SmartTypes.html" class="nav-item">Dext.Core.SmartTypes</a>
+<a href="Dext.Core.Span.html" class="nav-item">Dext.Core.Span</a>
+<a href="Dext.Core.ValueConverters.html" class="nav-item">Dext.Core.ValueConverters</a>
+<a href="Dext.DI.Attributes.html" class="nav-item">Dext.DI.Attributes</a>
+<a href="Dext.DI.Comparers.html" class="nav-item">Dext.DI.Comparers</a>
+<a href="Dext.DI.Core.html" class="nav-item">Dext.DI.Core</a>
+<a href="Dext.DI.Extensions.html" class="nav-item">Dext.DI.Extensions</a>
+<a href="Dext.DI.Extensions.utf8.html" class="nav-item">Dext.DI.Extensions.utf8</a>
+<a href="Dext.DI.Interfaces.html" class="nav-item">Dext.DI.Interfaces</a>
+<a href="Dext.DI.Middleware.html" class="nav-item">Dext.DI.Middleware</a>
+<a href="Dext.Entity.html" class="nav-item">Dext.Entity</a>
+<a href="Dext.Entity.Attributes.html" class="nav-item">Dext.Entity.Attributes</a>
+<a href="Dext.Entity.Cache.html" class="nav-item">Dext.Entity.Cache</a>
+<a href="Dext.Entity.Context.html" class="nav-item">Dext.Entity.Context</a>
+<a href="Dext.Entity.Core.html" class="nav-item">Dext.Entity.Core</a>
+<a href="Dext.Entity.DbSet.html" class="nav-item">Dext.Entity.DbSet</a>
+<a href="Dext.Entity.Dialects.html" class="nav-item">Dext.Entity.Dialects</a>
+<a href="Dext.Entity.Drivers.FireDAC.html" class="nav-item">Dext.Entity.Drivers.FireDAC</a>
+<a href="Dext.Entity.Drivers.FireDAC.Manager.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Manager</a>
+<a href="Dext.Entity.Drivers.FireDAC.Phys.html" class="nav-item">Dext.Entity.Drivers.FireDAC.Phys</a>
+<a href="Dext.Entity.Drivers.Interfaces.html" class="nav-item">Dext.Entity.Drivers.Interfaces</a>
+<a href="Dext.Entity.Grouping.html" class="nav-item">Dext.Entity.Grouping</a>
+<a href="Dext.Entity.Joining.html" class="nav-item">Dext.Entity.Joining</a>
+<a href="Dext.Entity.LazyLoading.html" class="nav-item">Dext.Entity.LazyLoading</a>
+<a href="Dext.Entity.Mapping.html" class="nav-item">Dext.Entity.Mapping</a>
+<a href="Dext.Entity.Migrations.html" class="nav-item">Dext.Entity.Migrations</a>
+<a href="Dext.Entity.Migrations.Builder.html" class="nav-item">Dext.Entity.Migrations.Builder</a>
+<a href="Dext.Entity.Migrations.Differ.html" class="nav-item">Dext.Entity.Migrations.Differ</a>
+<a href="Dext.Entity.Migrations.Extractor.html" class="nav-item">Dext.Entity.Migrations.Extractor</a>
+<a href="Dext.Entity.Migrations.Generator.html" class="nav-item">Dext.Entity.Migrations.Generator</a>
+<a href="Dext.Entity.Migrations.Json.html" class="nav-item">Dext.Entity.Migrations.Json</a>
+<a href="Dext.Entity.Migrations.Model.html" class="nav-item">Dext.Entity.Migrations.Model</a>
+<a href="Dext.Entity.Migrations.Operations.html" class="nav-item">Dext.Entity.Migrations.Operations</a>
+<a href="Dext.Entity.Migrations.Runner.html" class="nav-item">Dext.Entity.Migrations.Runner</a>
+<a href="Dext.Entity.Migrations.Serializers.Json.html" class="nav-item">Dext.Entity.Migrations.Serializers.Json</a>
+<a href="Dext.Entity.Naming.html" class="nav-item">Dext.Entity.Naming</a>
+<a href="Dext.Entity.Prototype.html" class="nav-item">Dext.Entity.Prototype</a>
+<a href="Dext.Entity.Query.html" class="nav-item">Dext.Entity.Query</a>
+<a href="Dext.Entity.Scaffolding.html" class="nav-item">Dext.Entity.Scaffolding</a>
+<a href="Dext.Entity.Setup.html" class="nav-item">Dext.Entity.Setup</a>
+<a href="Dext.Entity.Tenancy.html" class="nav-item">Dext.Entity.Tenancy</a>
+<a href="Dext.Entity.TypeConverters.html" class="nav-item">Dext.Entity.TypeConverters</a>
+<a href="Dext.Entity.TypeSystem.html" class="nav-item">Dext.Entity.TypeSystem</a>
+<a href="Dext.Filters.html" class="nav-item">Dext.Filters</a>
+<a href="Dext.Filters.BuiltIn.html" class="nav-item">Dext.Filters.BuiltIn</a>
+<a href="Dext.HealthChecks.html" class="nav-item">Dext.HealthChecks</a>
+<a href="Dext.Hosting.html" class="nav-item">Dext.Hosting</a>
+<a href="Dext.Hosting.AppState.html" class="nav-item">Dext.Hosting.AppState</a>
+<a href="Dext.Hosting.ApplicationLifetime.html" class="nav-item">Dext.Hosting.ApplicationLifetime</a>
+<a href="Dext.Hosting.BackgroundService.html" class="nav-item">Dext.Hosting.BackgroundService</a>
+<a href="Dext.Hosting.CLI.html" class="nav-item">Dext.Hosting.CLI</a>
+<a href="Dext.Hosting.CLI.Args.html" class="nav-item">Dext.Hosting.CLI.Args</a>
+<a href="Dext.Hosting.CLI.Commands.Configuration.html" class="nav-item">Dext.Hosting.CLI.Commands.Configuration</a>
+<a href="Dext.Hosting.CLI.Commands.Doc.html" class="nav-item">Dext.Hosting.CLI.Commands.Doc</a>
+<a href="Dext.Hosting.CLI.Commands.Facade.html" class="nav-item">Dext.Hosting.CLI.Commands.Facade</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateDown.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateDown</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateGenerate.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateGenerate</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateList.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateList</a>
+<a href="Dext.Hosting.CLI.Commands.MigrateUp.html" class="nav-item">Dext.Hosting.CLI.Commands.MigrateUp</a>
+<a href="Dext.Hosting.CLI.Commands.Scaffold.html" class="nav-item">Dext.Hosting.CLI.Commands.Scaffold</a>
+<a href="Dext.Hosting.CLI.Commands.Test.html" class="nav-item">Dext.Hosting.CLI.Commands.Test</a>
+<a href="Dext.Hosting.CLI.Commands.UI.html" class="nav-item">Dext.Hosting.CLI.Commands.UI</a>
+<a href="Dext.Hosting.CLI.Config.html" class="nav-item">Dext.Hosting.CLI.Config</a>
+<a href="Dext.Hosting.CLI.Hubs.Dashboard.html" class="nav-item">Dext.Hosting.CLI.Hubs.Dashboard</a>
+<a href="Dext.Hosting.CLI.Logger.html" class="nav-item">Dext.Hosting.CLI.Logger</a>
+<a href="Dext.Hosting.CLI.Registry.html" class="nav-item">Dext.Hosting.CLI.Registry</a>
+<a href="Dext.Hosting.CLI.Tools.CodeCoverage.html" class="nav-item">Dext.Hosting.CLI.Tools.CodeCoverage</a>
+<a href="Dext.Hosting.CLI.Tools.DocGen.html" class="nav-item">Dext.Hosting.CLI.Tools.DocGen</a>
+<a href="Dext.Hosting.CLI.Tools.FacadeGenerator.html" class="nav-item">Dext.Hosting.CLI.Tools.FacadeGenerator</a>
+<a href="Dext.Hosting.CLI.Tools.Sonar.html" class="nav-item">Dext.Hosting.CLI.Tools.Sonar</a>
+<a href="Dext.Hubs.html" class="nav-item">Dext.Hubs</a>
+<a href="Dext.Interception.html" class="nav-item">Dext.Interception</a>
+<a href="Dext.Interception.ClassProxy.html" class="nav-item">Dext.Interception.ClassProxy</a>
+<a href="Dext.Interception.Proxy.html" class="nav-item">Dext.Interception.Proxy</a>
+<a href="Dext.Json.html" class="nav-item">Dext.Json</a>
+<a href="Dext.Json.Driver.DextJsonDataObjects.html" class="nav-item">Dext.Json.Driver.DextJsonDataObjects</a>
+<a href="Dext.Json.Driver.SystemJson.html" class="nav-item">Dext.Json.Driver.SystemJson</a>
+<a href="Dext.Json.Types.html" class="nav-item">Dext.Json.Types</a>
+<a href="Dext.Json.Utf8.html" class="nav-item">Dext.Json.Utf8</a>
+<a href="Dext.Json.Utf8.Serializer.html" class="nav-item">Dext.Json.Utf8.Serializer</a>
+<a href="Dext.Logging.html" class="nav-item">Dext.Logging</a>
+<a href="Dext.Logging.Console.html" class="nav-item">Dext.Logging.Console</a>
+<a href="Dext.Logging.Extensions.html" class="nav-item">Dext.Logging.Extensions</a>
+<a href="Dext.MM.html" class="nav-item">Dext.MM</a>
+<a href="Dext.Mapper.html" class="nav-item">Dext.Mapper</a>
+<a href="Dext.Mocks.html" class="nav-item">Dext.Mocks</a>
+<a href="Dext.Mocks.Auto.html" class="nav-item">Dext.Mocks.Auto</a>
+<a href="Dext.Mocks.Interceptor.html" class="nav-item">Dext.Mocks.Interceptor</a>
+<a href="Dext.Mocks.Matching.html" class="nav-item">Dext.Mocks.Matching</a>
+<a href="Dext.MultiTenancy.html" class="nav-item">Dext.MultiTenancy</a>
+<a href="Dext.OpenAPI.Attributes.html" class="nav-item">Dext.OpenAPI.Attributes</a>
+<a href="Dext.OpenAPI.Extensions.html" class="nav-item">Dext.OpenAPI.Extensions</a>
+<a href="Dext.OpenAPI.Fluent.html" class="nav-item">Dext.OpenAPI.Fluent</a>
+<a href="Dext.OpenAPI.Generator.html" class="nav-item">Dext.OpenAPI.Generator</a>
+<a href="Dext.OpenAPI.Types.html" class="nav-item">Dext.OpenAPI.Types</a>
+<a href="Dext.Options.html" class="nav-item">Dext.Options</a>
+<a href="Dext.Options.Extensions.html" class="nav-item">Dext.Options.Extensions</a>
+<a href="Dext.RateLimiting.html" class="nav-item">Dext.RateLimiting</a>
+<a href="Dext.RateLimiting.Core.html" class="nav-item">Dext.RateLimiting.Core</a>
+<a href="Dext.RateLimiting.Limiters.html" class="nav-item">Dext.RateLimiting.Limiters</a>
+<a href="Dext.RateLimiting.Policy.html" class="nav-item">Dext.RateLimiting.Policy</a>
+<a href="Dext.Specifications.Base.html" class="nav-item">Dext.Specifications.Base</a>
+<a href="Dext.Specifications.Evaluator.html" class="nav-item">Dext.Specifications.Evaluator</a>
+<a href="Dext.Specifications.Fluent.html" class="nav-item">Dext.Specifications.Fluent</a>
+<a href="Dext.Specifications.Interfaces.html" class="nav-item">Dext.Specifications.Interfaces</a>
+<a href="Dext.Specifications.OrderBy.html" class="nav-item">Dext.Specifications.OrderBy</a>
+<a href="Dext.Specifications.SQL.Generator.html" class="nav-item">Dext.Specifications.SQL.Generator</a>
+<a href="Dext.Specifications.Types.html" class="nav-item">Dext.Specifications.Types</a>
+<a href="Dext.Swagger.Middleware.html" class="nav-item">Dext.Swagger.Middleware</a>
+<a href="Dext.Testing.html" class="nav-item">Dext.Testing</a>
+<a href="Dext.Testing.Attributes.html" class="nav-item">Dext.Testing.Attributes</a>
+<a href="Dext.Testing.Console.html" class="nav-item">Dext.Testing.Console</a>
+<a href="Dext.Testing.DI.html" class="nav-item">Dext.Testing.DI</a>
+<a href="Dext.Testing.Dashboard.html" class="nav-item">Dext.Testing.Dashboard</a>
+<a href="Dext.Testing.Fluent.html" class="nav-item">Dext.Testing.Fluent</a>
+<a href="Dext.Testing.History.html" class="nav-item">Dext.Testing.History</a>
+<a href="Dext.Testing.Report.html" class="nav-item">Dext.Testing.Report</a>
+<a href="Dext.Testing.Runner.html" class="nav-item">Dext.Testing.Runner</a>
+<a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
+<a href="Dext.Threading.CancellationToken.html" class="nav-item">Dext.Threading.CancellationToken</a>
+<a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
+<a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
+<a href="Dext.Types.UUID.html" class="nav-item">Dext.Types.UUID</a>
+<a href="Dext.Utils.html" class="nav-item">Dext.Utils</a>
+<a href="Dext.Validation.html" class="nav-item">Dext.Validation</a>
+<a href="Dext.Web.html" class="nav-item">Dext.Web</a>
+<a href="Dext.Web.ApplicationBuilder.Extensions.html" class="nav-item">Dext.Web.ApplicationBuilder.Extensions</a>
+<a href="Dext.Web.ControllerScanner.html" class="nav-item">Dext.Web.ControllerScanner</a>
+<a href="Dext.Web.Controllers.html" class="nav-item">Dext.Web.Controllers</a>
+<a href="Dext.Web.Core.html" class="nav-item">Dext.Web.Core</a>
+<a href="Dext.Web.Cors.html" class="nav-item">Dext.Web.Cors</a>
+<a href="Dext.Web.DataApi.html" class="nav-item">Dext.Web.DataApi</a>
+<a href="Dext.Web.Extensions.html" class="nav-item">Dext.Web.Extensions</a>
+<a href="Dext.Web.Formatters.Interfaces.html" class="nav-item">Dext.Web.Formatters.Interfaces</a>
+<a href="Dext.Web.Formatters.Json.html" class="nav-item">Dext.Web.Formatters.Json</a>
+<a href="Dext.Web.Formatters.Selector.html" class="nav-item">Dext.Web.Formatters.Selector</a>
+<a href="Dext.Web.HandlerInvoker.html" class="nav-item">Dext.Web.HandlerInvoker</a>
+<a href="Dext.Web.Hubs.html" class="nav-item">Dext.Web.Hubs</a>
+<a href="Dext.Web.Hubs.Clients.html" class="nav-item">Dext.Web.Hubs.Clients</a>
+<a href="Dext.Web.Hubs.Connections.html" class="nav-item">Dext.Web.Hubs.Connections</a>
+<a href="Dext.Web.Hubs.Context.html" class="nav-item">Dext.Web.Hubs.Context</a>
+<a href="Dext.Web.Hubs.Extensions.html" class="nav-item">Dext.Web.Hubs.Extensions</a>
+<a href="Dext.Web.Hubs.Hub.html" class="nav-item">Dext.Web.Hubs.Hub</a>
+<a href="Dext.Web.Hubs.Interfaces.html" class="nav-item">Dext.Web.Hubs.Interfaces</a>
+<a href="Dext.Web.Hubs.Middleware.html" class="nav-item">Dext.Web.Hubs.Middleware</a>
+<a href="Dext.Web.Hubs.Protocol.Json.html" class="nav-item">Dext.Web.Hubs.Protocol.Json</a>
+<a href="Dext.Web.Hubs.Transport.SSE.html" class="nav-item">Dext.Web.Hubs.Transport.SSE</a>
+<a href="Dext.Web.Hubs.Types.html" class="nav-item">Dext.Web.Hubs.Types</a>
+<a href="Dext.Web.Indy.html" class="nav-item">Dext.Web.Indy</a>
+<a href="Dext.Web.Indy.SSL.Interfaces.html" class="nav-item">Dext.Web.Indy.SSL.Interfaces</a>
+<a href="Dext.Web.Indy.SSL.OpenSSL.html" class="nav-item">Dext.Web.Indy.SSL.OpenSSL</a>
+<a href="Dext.Web.Indy.SSL.Taurus.html" class="nav-item">Dext.Web.Indy.SSL.Taurus</a>
+<a href="Dext.Web.Indy.Server.html" class="nav-item">Dext.Web.Indy.Server</a>
+<a href="Dext.Web.Indy.Types.html" class="nav-item">Dext.Web.Indy.Types</a>
+<a href="Dext.Web.Injection.html" class="nav-item">Dext.Web.Injection</a>
+<a href="Dext.Web.Interfaces.html" class="nav-item">Dext.Web.Interfaces</a>
+<a href="Dext.Web.Middleware.html" class="nav-item">Dext.Web.Middleware</a>
+<a href="Dext.Web.Middleware.Compression.html" class="nav-item">Dext.Web.Middleware.Compression</a>
+<a href="Dext.Web.Middleware.Extensions.html" class="nav-item">Dext.Web.Middleware.Extensions</a>
+<a href="Dext.Web.Middleware.Logging.html" class="nav-item">Dext.Web.Middleware.Logging</a>
+<a href="Dext.Web.Middleware.StartupLock.html" class="nav-item">Dext.Web.Middleware.StartupLock</a>
+<a href="Dext.Web.ModelBinding.html" class="nav-item">Dext.Web.ModelBinding</a>
+<a href="Dext.Web.ModelBinding.Extensions.html" class="nav-item">Dext.Web.ModelBinding.Extensions</a>
+<a href="Dext.Web.MultiTenancy.html" class="nav-item">Dext.Web.MultiTenancy</a>
+<a href="Dext.Web.Pipeline.html" class="nav-item">Dext.Web.Pipeline</a>
+<a href="Dext.Web.ResponseHelper.html" class="nav-item">Dext.Web.ResponseHelper</a>
+<a href="Dext.Web.Results.html" class="nav-item">Dext.Web.Results</a>
+<a href="Dext.Web.Routing.html" class="nav-item">Dext.Web.Routing</a>
+<a href="Dext.Web.Routing.Attributes.html" class="nav-item">Dext.Web.Routing.Attributes</a>
+<a href="Dext.Web.RoutingMiddleware.html" class="nav-item">Dext.Web.RoutingMiddleware</a>
+<a href="Dext.Web.StaticFiles.html" class="nav-item">Dext.Web.StaticFiles</a>
+<a href="Dext.Web.StatusCodes.html" class="nav-item">Dext.Web.StatusCodes</a>
+<a href="Dext.Web.Versioning.html" class="nav-item">Dext.Web.Versioning</a>
+<a href="Dext.Web.WebApplication.html" class="nav-item">Dext.Web.WebApplication</a>
+<a href="Dext.WebHost.html" class="nav-item">Dext.WebHost</a>
+<a href="Dext.Yaml.html" class="nav-item">Dext.Yaml</a>
+<a href="DextJsonDataObjects.html" class="nav-item">DextJsonDataObjects</a>
+
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-actions">
+            <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">&#x1F313;</button>
+        </div>
+        
+        <div id="contentArea">
+            <!-- Main Documentation Content Injected Here -->
+            <h1>Unit Dext.Web</h1><h2>Classes</h2>
+<details class="mermaid-details" open>
+<summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
+<div class="mermaid-container">
+<div class="mermaid">
+classDiagram
+class TDextHttpServicesHelper {    +AddControllers()
+    +AddHealthChecks()
+    +AddBackgroundServices()
+    +Configure~T~()
+}
+class TDextHttpAppBuilderHelper {    +CreateCorsOptions()
+    +CreateJwtOptions()
+    +CreateStaticFileOptions()
+    +UseCors()
+    +UseJwtAuthentication()
+    +UseBasicAuthentication()
+    +UseSwagger()
+    +UseStaticFiles()
+    +UseMiddleware()
+    +MapGet()
+    +MapPost()
+    +MapPut()
+    +MapDelete()
+    +Build()
+    +UseStartupLock()
+    +UseExceptionHandler()
+    +UseHttpLogging()
+    +UseRateLimiting()
+    +MapPost~T~()
+    +MapPost~T1,T2~()
+    +MapPost~T1,T2,T3~()
+    +MapPost~TResult~()
+    +MapPost~T,TResult~()
+    +MapPost~T1,T2,TResult~()
+    +MapPost~T1,T2,T3,TResult~()
+    +MapGet~T~()
+    +MapGet~T1,T2~()
+    +MapGet~T1,T2,T3~()
+    +MapGet~TResult~()
+    +MapGet~T,TResult~()
+    +MapGet~T1,T2,TResult~()
+    +MapGet~T1,T2,T3,TResult~()
+    +MapPut~T~()
+    +MapPut~T1,T2~()
+    +MapPut~T1,T2,T3~()
+    +MapPut~T,TResult~()
+    +MapPut~T1,T2,TResult~()
+    +MapPut~T1,T2,T3,TResult~()
+    +MapDelete~T~()
+    +MapDelete~T1,T2~()
+    +MapDelete~T1,T2,T3~()
+    +MapDelete~T,TResult~()
+    +MapDelete~T1,T2,TResult~()
+    +MapDelete~T1,T2,T3,TResult~()
+}
+</div>
+</div>
+</details>
+<h2>API Details</h2>
+<div class="class-header">
+<h3>record TDextHttpServicesHelper</h3><a name="TDextHttpServicesHelper"></a><div class="description">Helper for TDextServices to add web framework features.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function AddControllers: TDextServices</div><div class="description">Scans the application for controllers (classes with [DextController]) and registers them in the DI container.</div></div>
+<div class="api-item">
+<div class="api-signature">function AddHealthChecks: THealthCheckBuilder</div><div class="description">Starts the Health Check builder chain.</div></div>
+<div class="api-item">
+<div class="api-signature">function AddBackgroundServices: TBackgroundServiceBuilder</div><div class="description">Starts the Background Service builder chain.</div></div>
+<div class="api-item">
+<div class="api-signature">function Configure&lt;T&gt;(Configuration: IConfiguration): TDextServices</div><div class="description">Configures a settings class (IOptions&lt;T&gt;) from the root configuration. (Re-exposed from Core for convenience)</div></div>
+<div class="api-item">
+<div class="api-signature">function Configure&lt;T&gt;(Section: IConfigurationSection): TDextServices</div><div class="description">Configures a settings class (IOptions&lt;T&gt;) from a specific configuration section. (Re-exposed from Core for convenience)</div></div>
+</div>
+<hr>
+<div class="class-header">
+<h3>record TDextHttpAppBuilderHelper</h3><a name="TDextHttpAppBuilderHelper"></a><div class="description">Helper for TDextAppBuilder to provide factory methods and extensions for middleware configuration.</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">function CreateCorsOptions: TCorsOptions</div><div class="description">Creates a new instance of TCorsOptions with default settings.</div></div>
+<div class="api-item">
+<div class="api-signature">function CreateJwtOptions(const const: string): TJwtOptions</div><div class="description">Creates a new instance of TJwtOptions with the specified secret key.</div></div>
+<div class="api-item">
+<div class="api-signature">function CreateStaticFileOptions: TStaticFileOptions</div><div class="description">Creates a new instance of TStaticFileOptions with default settings.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseCors(const const: TCorsOptions): TDextAppBuilder</div><div class="description">Adds CORS middleware to the pipeline using the provided options.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseCors(AConfigurator: TProc): TDextAppBuilder</div><div class="description">Adds CORS middleware to the pipeline using a configuration delegate.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseJwtAuthentication(const const: TJwtOptions): TDextAppBuilder</div><div class="description">Adds JWT Authentication middleware to the pipeline using the provided options.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseJwtAuthentication(const const: string; AConfigurator: TProc): TDextAppBuilder</div><div class="description">Adds JWT Authentication middleware to the pipeline using the provided options (Legacy overload).</div></div>
+<div class="api-item">
+<div class="api-signature">function UseBasicAuthentication(const const: string; AValidateFunc: TBasicAuthValidateFunc): TDextAppBuilder</div><div class="description">Adds Basic Authentication middleware with a simple validation function.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseBasicAuthentication(const const: string; AValidateFunc: TBasicAuthValidateWithRolesFunc): TDextAppBuilder</div><div class="description">Adds Basic Authentication middleware with role support.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseBasicAuthentication(const const: TBasicAuthOptions; AValidateFunc: TBasicAuthValidateFunc): TDextAppBuilder</div><div class="description">Adds Basic Authentication middleware with custom options.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseSwagger(const const: TOpenAPIOptions): TDextAppBuilder</div><div class="description">Adds Swagger middleware to the application pipeline using the provided options.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseSwagger: TDextAppBuilder</div><div class="description">Adds Swagger middleware to the application pipeline with default options.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseStaticFiles(const const: TStaticFileOptions): TDextAppBuilder</div><div class="description">Adds Static Files middleware to the pipeline using the provided options.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseStaticFiles(const const: string): TDextAppBuilder</div><div class="description">Adds Static Files middleware to the pipeline serving from the specified root path.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseMiddleware(AMiddleware: TClass): TDextAppBuilder</div><div class="description">Adds a middleware class to the pipeline. The middleware must have a constructor accepting RequestDelegate (and optionally other services).</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet(const const: string; Handler: TStaticHandler): TDextAppBuilder</div><div class="description">Maps a GET request to a static handler.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost(const const: string; Handler: TStaticHandler): TDextAppBuilder</div><div class="description">Maps a POST request to a static handler.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut(const const: string; Handler: TStaticHandler): TDextAppBuilder</div><div class="description">Maps a PUT request to a static handler.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete(const const: string; Handler: TStaticHandler): TDextAppBuilder</div><div class="description">Maps a DELETE request to a static handler.</div></div>
+<div class="api-item">
+<div class="api-signature">function Build: TRequestDelegate</div><div class="description">Builds the request pipeline and returns the main RequestDelegate.</div></div>
+<div class="api-item">
+<div class="api-signature">function UseStaticFiles: TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function UseStartupLock: TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function UseExceptionHandler: TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function UseExceptionHandler(const const: TExceptionHandlerOptions): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function UseHttpLogging: TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function UseHttpLogging(const const: THttpLoggingOptions): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function UseRateLimiting(const const: TRateLimitPolicy): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;T&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div><div class="description">Maps a POST request to a handler with 1 injected parameter.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;T1,T2&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div><div class="description">Maps a POST request to a handler with 2 injected parameters.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;T1,T2,T3&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div><div class="description">Maps a POST request to a handler with 3 injected parameters.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div><div class="description">Maps a POST request to a handler that returns a result.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;T,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;T1,T2,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPost&lt;T1,T2,T3,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;T&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler with 1 injected parameter.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;T1,T2&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler with 2 injected parameters.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;T1,T2,T3&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler with 3 injected parameters.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler that returns a result.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;T,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler with 1 parameter that returns a result.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;T1,T2,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler with 2 parameters that returns a result.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapGet&lt;T1,T2,T3,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div><div class="description">Maps a GET request to a handler with 3 parameters that returns a result.</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut&lt;T&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut&lt;T1,T2&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut&lt;T1,T2,T3&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut&lt;T,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut&lt;T1,T2,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapPut&lt;T1,T2,T3,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete&lt;T&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete&lt;T1,T2&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete&lt;T1,T2,T3&gt;(const const: string; Handler: THandlerProc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete&lt;T,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete&lt;T1,T2,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+<div class="api-item">
+<div class="api-signature">function MapDelete&lt;T1,T2,T3,TResult&gt;(const const: string; Handler: THandlerResultFunc): TDextAppBuilder</div></div>
+</div>
+<hr>
+<h2>Global Routines</h2>
+<div class="visibility-group"><h5>Routines</h5><div class="api-item">
+<div class="api-signature">procedure RespondJson(const const: IHttpContext; AStatusCode: Integer; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RespondJson(const const: IHttpContext; AStatusCode: Integer; const const: string; const const: array)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RespondError(const const: IHttpContext; AStatusCode: Integer; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RespondOk(const const: IHttpContext; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RespondCreated(const const: IHttpContext; const const: string)</div></div>
+<div class="api-item">
+<div class="api-signature">procedure RespondNoContent(const const: IHttpContext)</div></div>
+</div>
+<h2>Types</h2>
+<div class="visibility-group"><div class="api-item">
+<div class="api-signature">type AuthorizeAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type AllowAnonymousAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TBasicAuthOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TBasicAuthValidateFunc = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TBasicAuthValidateWithRolesFunc = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TBasicAuthMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderBasicAuthExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IIdentity = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IClaimsPrincipal = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TClaimsIdentity = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TClaimsPrincipal = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TClaimTypes = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IClaimsBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TClaimsBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TClaim = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJwtValidationResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IJwtTokenHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJwtOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJwtOptionsBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJwtOptionsHelper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJwtTokenHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJwtAuthenticationMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderJwtExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ICacheStore = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCacheEntry = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TMemoryCacheStore = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TResponseCacheOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TResponseCaptureWrapper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TResponseCacheMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TResponseCacheBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderCacheExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TResponseCacheOptionsHelper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRedisCacheStore = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TServiceScopeMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderScopeExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TActionDescriptor = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IActionExecutingContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IActionExecutedContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IActionFilter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ActionFilterAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TActionExecutingContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TActionExecutedContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type LogActionAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type RequireHeaderAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ResponseCacheAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ValidateModelAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type AddHeaderAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THealthStatus = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THealthCheckResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHealthCheck = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHealthCheckService = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THealthCheckService = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THealthCheckMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THealthCheckBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerIgnoreAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerOperationAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerResponseAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerSchemaAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerIgnorePropertyAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerPropertyAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerRequiredAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerExampleAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerFormatAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerTagAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TSwaggerParamLocation = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerParamAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerAuthorizeAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TEndpointMetadataExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TEndpointBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type SwaggerEndpoint = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIGenerator = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIDataType = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPISchema = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIParameterLocation = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIParameter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIRequestBody = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIResponse = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIOperation = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIPathItem = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIServer = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIContact = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPILicense = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIInfo = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TSecuritySchemeType = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApiKeyLocation = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPISecurityScheme = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIDocument = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRateLimitMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderRateLimitExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TPartitionKeyResolver = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRateLimiterType = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TPartitionStrategy = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRateLimitResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IRateLimiter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRateLimitConfig = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TFixedWindowLimiter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TSlidingWindowLimiter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TTokenBucketLimiter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TConcurrencyLimiter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRateLimitPolicy = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TSwaggerMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TSwaggerExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDextAppBuilderHelper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHttpHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TControllerClass = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TController = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TControllerMethod = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TControllerInfo = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCachedMethod = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IControllerScanner = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TControllerScanner = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TMiddlewareRegistration = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TAnonymousMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCorsOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStringArrayHelper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCorsMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCorsBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderCorsExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCorsOptionsHelper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApiMethod = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApiMethods = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TWebDIHelpers = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TWebRouteHelpers = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDextServiceCollectionExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOutputFormatterRegistry = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IOutputFormatterContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IOutputFormatter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IOutputFormatterSelector = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IOutputFormatterRegistry = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonOutputFormatter = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TMediaTypeHeaderValue = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDefaultOutputFormatterSelector = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THandlerInvoker = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyHttpResponse = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyHttpRequest = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyHttpContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyWebServer = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IIndySSLHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyOpenSSLHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyTaurusSSLHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TIndyFormFile = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THandlerInjector = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHttpContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHttpRequest = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IHttpResponse = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IApplicationBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IWebHost = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IWebHostBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRequestDelegate = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStaticHandler = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TMiddlewareDelegate = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOpenAPIResponseMetadata = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TEndpointMetadata = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCookieOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IFormFile = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IFormFileCollection = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDextAppBuilder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IWebApplication = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IStartup = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDextWebHost = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TFormFileCollection = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type EHttpException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ENotFoundException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type EUnauthorizedException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type EForbiddenException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type EValidationException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TExceptionHandlerOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TProblemDetails = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TExceptionHandlerMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THttpLoggingOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THttpLoggingMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCompressionMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderMiddlewareExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRequestLoggingMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStartupLockMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type EBindingException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TBindingSource = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type BindingAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type FromBodyAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type FromQueryAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type FromRouteAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type FromHeaderAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type FromServicesAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IModelBinder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TModelBinder = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TModelBinderHelper = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IBindingSourceProvider = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TBindingSourceProvider = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IApplicationBuilderWithModelBinding = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderWithModelBinding = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderModelBindingExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ITenantResolutionStrategy = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ITenantStore = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TMultiTenancyMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IDextPipeline = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDextPipeline = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TOutputFormatterContext = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TJsonResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStatusCodeResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TContentResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStreamResult = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type Results = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRoutePattern = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRouteDefinition = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IRouteMatcher = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRouteMatcher = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type ERouteException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextRouteAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextGetAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextPostAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextPutAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextDeleteAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextPatchAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextHeadAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextOptionsAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type DextControllerAttribute = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type EDextHttpException = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TRoutingMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TContentTypeProvider = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStaticFileOptions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TStaticFileMiddleware = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TApplicationBuilderStaticFilesExtensions = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type HttpStatus = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type IApiVersionReader = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TQueryStringApiVersionReader = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type THeaderApiVersionReader = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TCompositeApiVersionReader = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TDextApplication = Type</div></div>
+<div class="api-item">
+<div class="api-signature">type TWebHostBuilder = Type</div></div>
+</div>
+
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

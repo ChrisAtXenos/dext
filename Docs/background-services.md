@@ -13,7 +13,7 @@ Implemente uma classe herdando de `TBackgroundService` e sobrescreva o método `
 ```pascal
 uses
   Dext.Hosting.BackgroundService,
-  Dext.Core.CancellationToken;
+  Dext.Threading.CancellationToken;
 
 type
   TWorkerService = class(TBackgroundService)

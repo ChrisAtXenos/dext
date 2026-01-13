@@ -1,0 +1,36 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{CF443CB0-685E-4195-81A6-50A87870F983}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="DextASTParser.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DextASTParser">
+        <MSBuild Projects="DextASTParser.dproj"/>
+    </Target>
+    <Target Name="DextASTParser:Clean">
+        <MSBuild Projects="DextASTParser.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DextASTParser:Make">
+        <MSBuild Projects="DextASTParser.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DextASTParser"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DextASTParser:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DextASTParser:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

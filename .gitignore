@@ -15,3 +15,15 @@ Win64
 test-results.json
 /Tests/Testing/test-results.xml
 test-results.html
+
+# Generated Documentation Artifacts
+Docs/API/xml/
+
+# Node.js dependencies
+node_modules/
+*.rsm
+*.otares
+*.identcache
+*.dsk
+*.tvsconfig
+*.~*

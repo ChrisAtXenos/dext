@@ -98,7 +98,7 @@ You can cancel a running pipeline using a `TCancellationTokenSource`.
 
 ```pascal
 var
-  CTS: TCancellationTokenSource; // from Dext.Core.CancellationToken
+  CTS: TCancellationTokenSource; // from Dext.Threading.CancellationToken
 begin
   CTS := TCancellationTokenSource.Create;
   

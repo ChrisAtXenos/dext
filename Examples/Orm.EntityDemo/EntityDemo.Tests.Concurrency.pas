@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   EntityDemo.Tests.Base,
   EntityDemo.Entities,
+  EntityDemo.DbConfig,
   Dext.Entity,
   Dext.Entity.Drivers.FireDAC,
   Dext.Entity.Dialects,
@@ -24,7 +25,10 @@ implementation
 procedure TConcurrencyTest.Run;
 var
   Context2: TDbContext;
+  Dialect: ISQLDialect;
 begin
+  Dialect := TDbConfig.CreateDialect;
+  
   Log('🛡️ Running Optimistic Concurrency Tests...');
   Log('========================================');
 
@@ -43,8 +47,8 @@ begin
 
   // 2. Simulate User A (Context 1) and User B (Context 2)
   
-  // Create a second context sharing the same DB connection
-  Context2 := TDbContext.Create(TFireDACConnection.Create(FConn, False), TSQLiteDialect.Create);
+  // Create a second context sharing the same DB connection with the CORRECT dialect
+  Context2 := TDbContext.Create(TFireDACConnection.Create(FConn, False), TDbConfig.CreateDialect);
   try
     Context2.Entities<TProduct>; // Register in second context
     
@@ -78,9 +82,11 @@ begin
         LogError('Caught unexpected exception: ' + E.ClassName + ' - ' + E.Message);
     end;
     
-    // Verify DB state
-    // Check DB directly
-    var DBPrice: Double := FConn.ExecSQLScalar('SELECT "Price" FROM "products" WHERE "Id" = ' + P.Id.ToString);
+    // Verify DB state (use proper quoting for each database)
+    var SQL := Format('SELECT %s FROM %s WHERE %s = %d', 
+      [Dialect.QuoteIdentifier('Price'), Dialect.QuoteIdentifier('products'), 
+       Dialect.QuoteIdentifier('Id'), P.Id]);
+    var DBPrice: Double := FConn.ExecSQLScalar(SQL);
     AssertTrue(DBPrice = 150, 'DB Price is 150 (User A)', 'DB Price mismatch: ' + DBPrice.ToString);
     
     // 3. Concurrent Delete Scenario

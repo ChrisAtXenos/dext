@@ -43,7 +43,7 @@ uses
   System.Classes,
   System.Rtti,
   System.Generics.Collections,
-  Dext.Core.CancellationToken,
+  Dext.Threading.CancellationToken,
   Dext.Auth.Identity;
 
 type

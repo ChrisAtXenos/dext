@@ -42,7 +42,8 @@ uses
   Dext.Entity.Mapping,
   Dext.Entity.TypeConverters,
   Dext.Types.Nullable,
-  Dext.Types.UUID;
+  Dext.Types.UUID,
+  Dext.Entity.Cache;
 
 type
   ISQLColumnMapper = interface
@@ -148,7 +149,127 @@ type
     property Params: TDictionary<string, TValue> read FParams;
   end;
 
+  TSQLParamCollector = class
+  private
+    FParams: TDictionary<string, TValue>;
+    FParamCount: Integer;
+
+    function GetNextParamName: string;
+    procedure Resolve(const Ex: IExpression);
+    procedure ProcessBinary(const C: TBinaryExpression);
+    procedure ProcessArithmetic(const C: TArithmeticExpression);
+    procedure ProcessLogical(const C: TLogicalExpression);
+    procedure ProcessUnary(const C: TUnaryExpression);
+    procedure ProcessLiteral(const C: TLiteralExpression);
+  public
+    constructor Create(AParams: TDictionary<string, TValue>);
+    procedure Collect(const AExpression: IExpression);
+  end;
+
 implementation
+
+{ TSQLParamCollector }
+
+constructor TSQLParamCollector.Create(AParams: TDictionary<string, TValue>);
+begin
+  FParams := AParams;
+  FParamCount := 0; 
+end;
+
+function TSQLParamCollector.GetNextParamName: string;
+begin
+  Inc(FParamCount);
+  Result := 'p' + IntToStr(FParamCount);
+end;
+
+procedure TSQLParamCollector.Collect(const AExpression: IExpression);
+begin
+  if AExpression <> nil then
+    Resolve(AExpression);
+end;
+
+procedure TSQLParamCollector.Resolve(const Ex: IExpression);
+begin
+  if Ex is TBinaryExpression then
+    ProcessBinary(TBinaryExpression(Ex))
+  else if Ex is TLogicalExpression then
+    ProcessLogical(TLogicalExpression(Ex))
+  else if Ex is TUnaryExpression then
+    ProcessUnary(TUnaryExpression(Ex))
+  else if Ex is TArithmeticExpression then
+    ProcessArithmetic(TArithmeticExpression(Ex))
+  else if Ex is TConstantExpression then
+    // No params
+  else if Ex is TPropertyExpression then
+    // No params
+  else if Ex is TLiteralExpression then
+    ProcessLiteral(TLiteralExpression(Ex))
+  else
+    raise Exception.Create('Unknown expression type in ParamCollector: ' + Ex.ToString);
+end;
+
+procedure TSQLParamCollector.ProcessBinary(const C: TBinaryExpression);
+var
+  I: Integer;
+  ArrayValue: TValue;
+begin
+  // Standard traversal order must match TSQLWhereGenerator exactly:
+  // 1. IN/NOT IN with Array -> Loop elements
+  // 2. Others -> Resolve Left -> Resolve Right (or Literal)
+  
+  if (C.BinaryOperator = boIn) or (C.BinaryOperator = boNotIn) then
+  begin
+    if (C.Right is TLiteralExpression) and TLiteralExpression(C.Right).Value.IsArray then
+    begin
+       ArrayValue := TLiteralExpression(C.Right).Value;
+       for I := 0 to ArrayValue.GetArrayLength - 1 do
+       begin
+         var PName := GetNextParamName;
+         var PVal := ArrayValue.GetArrayElement(I);
+         FParams.Add(PName, PVal);
+       end;
+       
+       // Important: Must resolve Left side as it might contain parameters too!
+       Resolve(C.Left);
+       Exit;
+    end;
+  end;
+  
+  Resolve(C.Left);
+  
+  if C.Right is TLiteralExpression then
+  begin
+    FParams.Add(GetNextParamName, TLiteralExpression(C.Right).Value);
+  end
+  else
+    Resolve(C.Right);
+end;
+
+procedure TSQLParamCollector.ProcessArithmetic(const C: TArithmeticExpression);
+begin
+  Resolve(C.Left);
+  Resolve(C.Right);
+end;
+
+procedure TSQLParamCollector.ProcessLogical(const C: TLogicalExpression);
+begin
+  Resolve(C.Left);
+  Resolve(C.Right);
+end;
+
+procedure TSQLParamCollector.ProcessUnary(const C: TUnaryExpression);
+begin
+  if C.UnaryOperator = uoNot then
+    Resolve(C.Expression)
+  else
+    // IsNull/IsNotNull has no params (uses PropertyName)
+    ;
+end;
+
+procedure TSQLParamCollector.ProcessLiteral(const C: TLiteralExpression);
+begin
+  FParams.Add(GetNextParamName, C.Value);
+end;
 
 { TSQLGeneratorHelper }
 
@@ -603,17 +724,18 @@ var
   SoftDeleteAttr: SoftDeleteAttribute;
   Prop: TRttiProperty;
   ColumnName: string;
-  ParamName: string;
   PropName: string;
   DeletedVal, NotDeletedVal: Variant;
   IsSoftDelete: Boolean;
   PropMap: TPropertyMap;
+  TargetPropType: PTypeInfo;
 begin
   Result := '';
   IsSoftDelete := False;
   PropName := '';
   DeletedVal := True;
   NotDeletedVal := False;
+  TargetPropType := nil;
   
   Ctx := TRttiContext.Create;
   Typ := Ctx.GetType(T);
@@ -627,7 +749,7 @@ begin
     DeletedVal := FMap.SoftDeleteDeletedValue;
     NotDeletedVal := FMap.SoftDeleteNotDeletedValue;
   end
-  // 2. Check Attribute
+   // 2. Check Attribute
   else
   begin
     for Attr in Typ.GetAttributes do
@@ -636,93 +758,147 @@ begin
       begin
         SoftDeleteAttr := SoftDeleteAttribute(Attr);
         IsSoftDelete := True;
-        PropName := SoftDeleteAttr.ColumnName;
+        PropName := SoftDeleteAttr.ColumnName; // This is actually the COLUMN NAME in the attribute
         DeletedVal := SoftDeleteAttr.DeletedValue;
         NotDeletedVal := SoftDeleteAttr.NotDeletedValue;
         Break;
       end;
     end;
   end;
-  
+
   if not IsSoftDelete then Exit;
-  
-  // Find actual column name
-  ColumnName := PropName; // Default to Property Name
-  
+
+  // Find actual column name and Property Type
+  // Note: PropName from attribute is the COLUMN NAME usually, but let's try to match property first
+  ColumnName := PropName;
+
+  // Searching for the property that maps to this column (or has this name)
   for Prop in Typ.GetProperties do
   begin
-    if SameText(Prop.Name, PropName) then
+    var PropColumnName: string := Prop.Name;
+
+    // Check Prop Map
+    if (FMap <> nil) and FMap.Properties.TryGetValue(Prop.Name, PropMap) then
     begin
-      // Priority 1: Fluent Property Map
-      PropMap := nil;
-      if (FMap <> nil) and FMap.Properties.TryGetValue(Prop.Name, PropMap) then
-      begin
-        if PropMap.ColumnName <> '' then
-        begin
-          ColumnName := PropMap.ColumnName;
-          Break;
-        end;
-      end;
-      
-      // Priority 2: Column Attribute
+       if PropMap.ColumnName <> '' then PropColumnName := PropMap.ColumnName;
+    end
+    else
+    begin
+      // Check Column Attribute
       for Attr in Prop.GetAttributes do
       begin
         if Attr is ColumnAttribute then
         begin
-          ColumnName := ColumnAttribute(Attr).Name;
+          PropColumnName := ColumnAttribute(Attr).Name;
           Break;
         end;
       end;
+    end;
+
+    // Match found if Property Name OR Column Name matches
+    if SameText(Prop.Name, PropName) or SameText(PropColumnName, PropName) then
+    begin
+      ColumnName := PropColumnName;
+      TargetPropType := Prop.PropertyType.Handle;
       Break;
     end;
   end;
-  
+
   if FIgnoreQueryFilters then Exit;
 
-  // Generate filter
-  ParamName := 'pSoftDelete';
-  
+  // Generate filter (Start)
+  // NOTE: We use Literals instead of Parameters (pSoftDelete) to ensure compatibility with SQL Caching.
+  // Cached queries re-hydrate parameters from the Specification, which does not contain System Filters.
+  // Since SoftDelete values are metadata-driven (static constants), using literals is safe.
+
   if FOnlyDeleted then
   begin
-     FParams.AddOrSetValue(ParamName, TValue.FromVariant(DeletedVal));
-     Result := Format('%s = :%s', 
-        [FDialect.QuoteIdentifier(ColumnName), ParamName]);
-  end
-  else
-  begin
-     // Use literal value for default state to optimize query plan
+     // ---------------------------------------------------------
+     // Case 1: Show ONLY Deleted items
+     // ---------------------------------------------------------
+
+     // Determine Literal Value for "Deleted" state
      var LiteralVal: string;
-     
-     if VarIsType(NotDeletedVal, varBoolean) then
+
+     var IsTargetBool := (TargetPropType <> nil) and
+       ((TargetPropType = TypeInfo(Boolean)) or (SameText(string(TargetPropType.Name), 'Boolean')));
+
+     if IsTargetBool then
      begin
-       if Boolean(NotDeletedVal) then
-         LiteralVal := '1'
+       var BoolVal: Boolean;
+       if VarIsType(DeletedVal, varBoolean) then
+         BoolVal := DeletedVal
+       else if VarIsNumeric(DeletedVal) then
+         BoolVal := (Integer(DeletedVal) <> 0)
        else
-         LiteralVal := '0';
+         BoolVal := StrToBoolDef(VarToStr(DeletedVal), True);
+       
+       LiteralVal := FDialect.BooleanToSQL(BoolVal);
+     end
+     else if VarIsType(DeletedVal, varBoolean) then
+     begin
+        LiteralVal := FDialect.BooleanToSQL(DeletedVal);
+     end
+     else if VarIsNull(DeletedVal) then
+     begin
+        LiteralVal := 'NULL';
      end
      else
      begin
-       // For strings, we need quotes. For numbers, we don't.
-       // Keep it simple for now, generic VarToStr mostly works for numbers and simple strings might fail if not quoted, 
-       // but typically SoftDelete values are numbers or booleans.
-       // Safest is to handle string quoting if it looks like a string but not a number.
-       // However, let's trust VarToStr for numbers and handle boolean explicitly as it's the current crashboard.
-       LiteralVal := VarToStr(NotDeletedVal);
+       LiteralVal := VarToStr(DeletedVal);
+       if VarIsType(DeletedVal, varString) or VarIsType(DeletedVal, varUString) then
+         LiteralVal := QuotedStr(LiteralVal);
+     end;
+
+     if LiteralVal = 'NULL' then
+       Result := Format('%s IS NULL', [FDialect.QuoteIdentifier(ColumnName)])
+     else
+       Result := Format('%s = %s', [FDialect.QuoteIdentifier(ColumnName), LiteralVal]);
+  end
+  else
+  begin
+     // ---------------------------------------------------------
+     // Case 2: Show ONLY Active (Not Deleted) items (Default)
+     // ---------------------------------------------------------
+     
+     var LiteralVal: string;
+     var IsTargetBool := (TargetPropType <> nil) and
+       ((TargetPropType = TypeInfo(Boolean)) or (SameText(string(TargetPropType.Name), 'Boolean')));
+
+     if IsTargetBool then
+     begin
+       var BoolVal: Boolean;
+       if VarIsType(NotDeletedVal, varBoolean) then
+         BoolVal := NotDeletedVal
+       else if VarIsNumeric(NotDeletedVal) then
+         BoolVal := (Integer(NotDeletedVal) <> 0)
+       else
+         BoolVal := StrToBoolDef(VarToStr(NotDeletedVal), False);
        
+       LiteralVal := FDialect.BooleanToSQL(BoolVal);
+     end
+     else if VarIsType(NotDeletedVal, varBoolean) then
+     begin
+       LiteralVal := FDialect.BooleanToSQL(NotDeletedVal);
+     end
+     else if VarIsNull(NotDeletedVal) then
+     begin
+        LiteralVal := 'NULL';
+     end
+     else
+     begin
+       LiteralVal := VarToStr(NotDeletedVal);
        if VarIsType(NotDeletedVal, varString) or VarIsType(NotDeletedVal, varUString) then
          LiteralVal := QuotedStr(LiteralVal);
      end;
-  
-     // A simplified approach compatible with the previous one:
-     // If NotDeletedVal is 0, we treat NULL as 0.
-     // Previous logic: COALESCE(Col, NotDeletedVal) = NotDeletedVal (matches NULL and 0)
-     
-     // Let's stick to the previous implementation as it was tested:
-     FParams.AddOrSetValue(ParamName, TValue.FromVariant(NotDeletedVal));
-     Result := Format('COALESCE(%s, %s) = :%s', 
-       [FDialect.QuoteIdentifier(ColumnName), 
-        LiteralVal, 
-        ParamName]);
+   
+     // For PostgreSQL/Boolean, COALESCE requires consistent types
+     // But since we are using literals, strict typing is handled by the dialect's SQL syntax
+     if LiteralVal = 'NULL' then
+        Result := Format('%s IS NULL', [FDialect.QuoteIdentifier(ColumnName)])
+     else
+        Result := Format('COALESCE(%s, %s) = %s',
+          [FDialect.QuoteIdentifier(ColumnName), LiteralVal, LiteralVal]);
   end;
 end;
 
@@ -753,27 +929,9 @@ begin
 end;
 
 function TSQLGenerator<T>.GetDialectEnum: TDatabaseDialect;
-var
-  QuotedTest: string;
 begin
-  // Convert ISQLDialect to TDatabaseDialect enum
-  // We detect the dialect by checking the quote identifier format
-  QuotedTest := FDialect.QuoteIdentifier('test');
-  
-  if QuotedTest.StartsWith('[') then
-    Result := ddSQLServer  // SQL Server uses [brackets]
-  else if QuotedTest.StartsWith('`') then
-    Result := ddMySQL      // MySQL uses `backticks`
-  else if QuotedTest.StartsWith('"') then
-  begin
-    // Both PostgreSQL and SQLite use double quotes
-    // Check BooleanToSQL to differentiate
-    var BoolTest := FDialect.BooleanToSQL(True);
-    if BoolTest = 'TRUE' then
-      Result := ddPostgreSQL  // PostgreSQL uses TRUE/FALSE
-    else
-      Result := ddSQLite;     // SQLite uses 1/0
-  end
+  if FDialect <> nil then
+    Result := FDialect.GetDialect
   else
     Result := ddUnknown;
 end;
@@ -1248,9 +1406,33 @@ var
   SoftDeleteFilter, DiscriminatorFilter: string;
   SortCol: string;
   P: TRttiProperty;
+  // Caching
+  Sig: string;
+  CachedSQL: string;
+  Collector: TSQLParamCollector;
 begin
   FParams.Clear;
   FParamCount := 0;
+  
+  // 1. Check Cache
+  if ASpec <> nil then
+  begin
+    Sig := Format('%s:%s:%s:Ign:%d:Del:%d', 
+      [(FDialect as TObject).ClassName, GetTableName, ASpec.GetSignature, 
+       Ord(FIgnoreQueryFilters), Ord(FOnlyDeleted)]);
+    if TSQLCache.Instance.TryGetSQL(Sig, CachedSQL) then
+    begin
+      // Re-hydrate parameters using Collector (fast traversal)
+      Collector := TSQLParamCollector.Create(FParams);
+      try
+        Collector.Collect(ASpec.GetExpression);
+      finally
+        Collector.Free;
+      end;
+      Result := CachedSQL;
+      Exit;
+  end;
+  end;
   
   WhereGen := TSQLWhereGenerator.Create(FDialect, TSQLColumnMapper<T>.Create);
     
@@ -1446,6 +1628,10 @@ begin
       Result := SB.ToString;
     end;
     
+    // Add to cache
+    if (ASpec <> nil) and (Result <> '') then
+      TSQLCache.Instance.AddSQL(Sig, Result);
+      
   finally
     SB.Free;
   end;
@@ -1639,6 +1825,7 @@ var
   PropTypeHandle: PTypeInfo;
   Underlying: PTypeInfo;
   IsSoftDeleteColumn: Boolean;
+  IsRequired : Boolean;
   SoftDeleteDefaultValue: Variant;
   SoftDelAttr: SoftDeleteAttribute;
 begin
@@ -1656,6 +1843,7 @@ begin
       IsMapped := True;
       IsPK := False;
       IsAutoInc := False;
+      IsRequired := False;
       ColName := Prop.Name;
       
       PropMap := nil;
@@ -1679,7 +1867,10 @@ begin
           
         if (PropMap = nil) or not PropMap.IsAutoInc then
            if Attr is AutoIncAttribute then IsAutoInc := True;
-           
+
+        if Attr is RequiredAttribute then
+          IsRequired := true;
+
         if Attr is ForeignKeyAttribute then
         begin
              // Use FK Attribute to define column name if not explicitly mapped
@@ -1735,6 +1926,7 @@ begin
         // Handle Nullable<T>
         if IsNullable(Prop.PropertyType.Handle) then
         begin
+          IsRequired := false;  // can't be nullable<T> and required
           Underlying := GetUnderlyingType(Prop.PropertyType.Handle);
           if Underlying <> nil then
             PropTypeHandle := Underlying;
@@ -1751,6 +1943,35 @@ begin
         end;
         
         ColType := FDialect.GetColumnType(PropTypeHandle, IsAutoInc);
+      end;
+      
+      // Apply MaxLength for string columns - check from PropMap or Attribute
+      var MaxLen: Integer := 0;
+      if (PropMap <> nil) and (PropMap.MaxLength > 0) then
+        MaxLen := PropMap.MaxLength
+      else
+      begin
+        // Check for MaxLengthAttribute
+        for Attr in Prop.GetAttributes do
+        begin
+          if Attr is MaxLengthAttribute then
+          begin
+            MaxLen := MaxLengthAttribute(Attr).Length;
+            Break;
+          end;
+        end;
+      end;
+      
+      // For string types with MaxLength, replace generic types with sized VARCHAR
+
+      if (MaxLen > 0) and (PropTypeHandle.Kind in [tkString, tkUString, tkWString, tkChar, tkWChar]) then
+      begin
+        if GetDialectEnum = ddSQLServer then
+          ColType := Format('NVARCHAR(%d)', [MaxLen])
+        else if GetDialectEnum = ddOracle then
+          ColType := Format('VARCHAR2(%d)', [MaxLen])
+        else
+          ColType := Format('VARCHAR(%d)', [MaxLen]);
       end;
 
       SB.Append(ColType);
@@ -1776,18 +1997,22 @@ begin
         PKCols.Add(FDialect.QuoteIdentifier(ColName));
         if IsAutoInc then
         begin
-            SB.Append(' PRIMARY KEY'); 
+            SB.Append(' PRIMARY KEY');
             HasAutoInc := True;
         end
         else
-           SB.Append(' NOT NULL');
-      end
-      else if IsSoftDeleteColumn then
+          IsRequired := true;
+      end;
+
+      if IsRequired then
+        SB.Append(' NOT NULL');
+
+      if (not IsPk) and IsSoftDeleteColumn then
       begin
         SB.Append(' DEFAULT ').Append(VarToStr(SoftDeleteDefaultValue));
       end;
     end; // End of Properties Loop
-    
+
     // Add Composite PK constraint or Single PK constraint (if not AutoInc)
     if (PKCols.Count > 0) and not HasAutoInc then
     begin

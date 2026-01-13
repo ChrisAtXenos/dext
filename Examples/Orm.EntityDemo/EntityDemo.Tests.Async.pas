@@ -8,7 +8,7 @@ uses
   System.Threading, 
   EntityDemo.Tests.Base,
   Dext.Threading.Async,
-  Dext.Core.CancellationToken;
+  Dext.Threading.CancellationToken;
 
 type
   TAsyncTest = class(TBaseTest)

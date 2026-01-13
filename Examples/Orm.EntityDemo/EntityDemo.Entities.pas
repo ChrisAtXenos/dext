@@ -3,6 +3,7 @@
 interface
 
 uses
+  System.Classes,
   System.SysUtils,
   System.Generics.Collections,
   Dext.Entity,
@@ -28,7 +29,11 @@ type
 
     [PK, AutoInc]
     property Id: Integer read FId write FId;
+    
+    [MaxLength(255)]
     property Street: string read FStreet write FStreet;
+    
+    [MaxLength(100)]
     property City: string read FCity write FCity;
     
     [NotMapped]
@@ -55,11 +60,15 @@ type
     [PK, AutoInc]
     property Id: Integer read FId write FId;
 
-    [Column('full_name')]
+    [Column('full_name'), MaxLength(255)]
     property Name: string read FName write FName;
 
     property Age: Integer read FAge write FAge;
+    
+    [MaxLength(255)]
     property Email: string read FEmail write FEmail;
+    
+    [MaxLength(100)]
     property City: string read FCity write FCity;
     
     [Column('address_id')]
@@ -97,7 +106,10 @@ type
   public
     [PK, AutoInc]
     property Id: Integer read FId write FId;
+    
+    [MaxLength(255)]
     property Name: string read FName write FName;
+    
     property Price: Double read FPrice write FPrice;
     
     [Version]
@@ -114,9 +126,10 @@ type
     [PK, Column('key_1')]
     property Key1: Integer read FKey1 write FKey1;
 
-    [PK, Column('key_2')]
+    [PK, Column('key_2'), MaxLength(50)] // MaxLength required for MySQL PK
     property Key2: string read FKey2 write FKey2;
 
+    [MaxLength(255)]
     property Value: string read FValue write FValue;
   end;
 
@@ -138,9 +151,10 @@ type
     [PK, AutoInc]
     property Id: Integer read FId write FId;
     
+    [MaxLength(255)]
     property Title: string read FTitle write FTitle;
     
-    [Column('content_type')]
+    [Column('content_type'), MaxLength(100)]
     property ContentType: string read FContentType write FContentType;
     
     /// <summary>
@@ -162,23 +176,29 @@ type
     FId: Integer;
     FTitle: string;
     FSummary: string;
-    FBody: string;
+    FBody: TStrings;
     FWordCount: Integer;
+    procedure SetBody(const Value: TStrings);
   public
+    constructor Create;
+    destructor Destroy; override;
+
     [PK, AutoInc]
     property Id: Integer read FId write FId;
     
+    [MaxLength(255)]
     property Title: string read FTitle write FTitle;
     
     /// <summary>
     ///   Short summary - always loaded
     /// </summary>
+    [MaxLength(500)]
     property Summary: string read FSummary write FSummary;
     
     /// <summary>
-    ///   Large text field - should be lazy loaded
+    ///   Large text field - should be lazy loaded (LONGTEXT in MySQL)
     /// </summary>
-    property Body: string read FBody write FBody;
+    property Body: TStrings read FBody write SetBody;
     
     [Column('word_count')]
     property WordCount: Integer read FWordCount write FWordCount;
@@ -384,6 +404,29 @@ end;
 procedure TUserWithProfile.SetProfile(const Value: TUserProfile);
 begin
   FProfile := Lazy<TUserProfile>.CreateFrom(Value);
+end;
+
+{ TArticle }
+
+constructor TArticle.Create;
+begin
+  inherited Create;
+  FBody := TStringList.Create;
+end;
+
+destructor TArticle.Destroy;
+begin
+  FBody.Free;
+  inherited;
+end;
+
+procedure TArticle.SetBody(const Value: TStrings);
+begin
+  if FBody <> Value then
+  begin
+    FBody.Free;
+    FBody := Value;
+  end;
 end;
 
 { TTask - Soft Delete Test Entity }

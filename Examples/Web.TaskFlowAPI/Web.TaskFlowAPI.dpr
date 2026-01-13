@@ -78,6 +78,9 @@ begin
         WriteLn('📝 [LOG] Response sent');
       end);
 
+    // ✅ Response Compression (gzip/deflate)
+    AppBuilder.UseMiddleware(TCompressionMiddleware);
+
     // Rota raiz
     AppBuilder.MapGet('/',
       procedure(Context: IHttpContext)

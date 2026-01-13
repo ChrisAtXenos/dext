@@ -69,7 +69,8 @@ Um ORM moderno focado em produtividade e performance.
   - **Table-Per-Hierarchy (TPH)**: Suporte total para classes base e subclasses em uma única tabela.
   - **Hydration Polimórfica**: Instanciação automática da subclasse correta durante a recuperação de dados.
   - **Mapeamento via Atributos**: Uso de `[Inheritance]`, `[DiscriminatorColumn]` e `[DiscriminatorValue]`.
-- **Multi-Database**: Suporte para SQL Server, PostgreSQL, Firebird, MySQL, Oracle e SQLite.
+- **Multi-Database**: Suporte totalmente testado para **SQL Server, PostgreSQL, Firebird, MySQL/MariaDB** e **SQLite** (165 testes passando em todos). Oracle em beta.
+- **Auto-Detecção de Dialeto**: Identificação determinística via Enum (`ddPostgreSQL`, etc) para configuração zero.
 - **Drivers de Alta Performance**:
   - **Driver FireDAC Padrão**: Completo com compatibilidade TDataSet
   - **Driver FireDAC Phys**: Acesso "bare metal" sem TDataSet para máxima performance
@@ -108,7 +109,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 ## 📚 Índice de Documentação
 
 ### 🚀 Começando
-
+- **📖 [O Livro do Dext](Docs/Book.pt-br/README.md)** ⭐ NOVO - Guia completo da instalação aos tópicos avançados | [🇺🇸 English](Docs/Book/README.md)
 
 ### 🌐 Web API
 - **Roteamento & Endpoints**
@@ -140,7 +141,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - [Ciclo de Vida & Integridade](Docs/application-lifecycle.md)
 - [Async Programming](Docs/async-api.md)
 - [Caching](Docs/caching.md)
-- **Dext CLI Tool**: Ferramenta de linha de comando poderosa.
+- [Dext CLI Tool](Docs/cli.md) ⭐ NOVO - Inclui **Web Dashboard** (`dext ui`), **Gerador de Documentação** (`dext doc`) e **Gerador de Facade** (`dext facade`).
   - 🖥️ **Dashboard UI**: Interface visual web (`dext ui`) para gerenciamento de projetos, configurações e análise de testes.
   - 🛠️ **Environment Manager**: Detecção e configuração automática de versões do Delphi instaladas.
   - 🔍 **Test Discovery**: Encontra e executa testes automaticamente.
@@ -150,6 +151,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - [Começando](Docs/testing.pt-br.md)
 
 ### 📰 Artigos e Tutoriais
+- [A História por trás do Dext Framework: Por que criamos?](https://www.cesarromero.com.br/blog/dext-story/)
 - [Domain Model e CQRS: Modernizando sua Arquitetura Delphi](https://www.cesarromero.com.br/blog/enterprise-patterns-delphi/)
 - [Como implementar CQRS e APIs de Alta Performance sem escrever Controllers](https://www.cesarromero.com.br/blog/database-as-api-cqrs/)
 
@@ -162,7 +164,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 
 ## 📦 Instalação e Configuração
 
-> 📖 **Guia Detalhado**: Para um passo a passo completo e configuração avançada, leia o [Guia de Instalação](Docs/Installation.md).
+> 📖 **Guia Detalhado**: Para um passo a passo completo e configuração avançada, leia o [Guia de Instalação](Docs/installation.md).
 
 1. **Clone o repositório:**
    ```bash
@@ -192,7 +194,7 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
        - `$(DEXT)\Data`
        - `$(DEXT)\Hosting`
        - `$(DEXT)\Web`
-       - *(Veja o [Guia de Instalação](Docs/Installation.pt-br.md) para a lista completa)*
+       - *(Veja o [Guia de Instalação](Docs/installation.pt-br.md) para a lista completa)*
 
    > 📝 **Nota**: Arquivos compilados (`.dcu`, binários) serão gerados no diretório `.\Output`.
 

@@ -30,7 +30,7 @@ interface
 uses
   System.Classes,
   System.SysUtils,
-  Dext.Core.CancellationToken;
+  Dext.Threading.CancellationToken;
 
 type
   /// <summary>

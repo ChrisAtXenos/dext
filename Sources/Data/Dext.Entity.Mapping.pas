@@ -303,7 +303,8 @@ begin
     begin
        if (Attr is ColumnAttribute) or (Attr is PKAttribute) or (Attr is AutoIncAttribute) or 
           (Attr is ForeignKeyAttribute) or (Attr is NotMappedAttribute) or (Attr is FieldAttribute) or
-          (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is PrecisionAttribute) then
+          (Attr is RequiredAttribute) or (Attr is MaxLengthAttribute) or (Attr is PrecisionAttribute) or
+          (Attr is TypeConverterAttribute) then
        begin
          if PropMap = nil then PropMap := GetOrAddProperty(Prop.Name);
          

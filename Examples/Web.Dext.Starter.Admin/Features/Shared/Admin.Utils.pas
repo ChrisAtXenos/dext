@@ -21,12 +21,12 @@ begin
   AppDir := ExtractFilePath(ParamStr(0));
   AppDir := ExpandFileName(AppDir);
   
-  // Estratégia: Subir até encontrar 'Dext.Starter.Admin'  
+  // Estratégia: Subir até encontrar 'Web.Dext.Starter.Admin'  
   SearchDir := AppDir;
   for I := 0 to 5 do
   begin
-    // Verifica se existe Dext.Starter.Admin neste nível
-    TargetPath := TPath.Combine(SearchDir, 'Dext.Starter.Admin');
+    // Verifica se existe Web.Dext.Starter.Admin neste nível
+    TargetPath := TPath.Combine(SearchDir, 'Web.Dext.Starter.Admin');
     if TDirectory.Exists(TargetPath) then
     begin
       CandidatePath := TPath.Combine(TargetPath, RelativePath);
@@ -52,7 +52,7 @@ begin
   end;
   
   // Último fallback: mesmo que não exista, retorna o path esperado
-  Result := TPath.Combine(AppDir, '..\Dext.Starter.Admin\' + RelativePath);
+  Result := TPath.Combine(AppDir, '..\Web.Dext.Starter.Admin\' + RelativePath);
 end;
 
 end.

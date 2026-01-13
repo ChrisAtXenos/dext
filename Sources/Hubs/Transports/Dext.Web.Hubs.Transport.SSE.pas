@@ -40,7 +40,7 @@ uses
   System.SysUtils,
   System.Rtti,
   Dext.Auth.Identity,
-  Dext.Core.CancellationToken,
+  Dext.Threading.CancellationToken,
   Dext.Web.Hubs.Interfaces,
   Dext.Web.Hubs.Connections,
   Dext.Web.Hubs.Protocol.Json,

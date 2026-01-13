@@ -172,13 +172,13 @@ begin
   Article := TArticle.Create;
   Article.Title := 'Long Article Title';
   Article.Summary := 'This is a short summary';
-  Article.Body := LargeText;
+  Article.Body.Text := LargeText;
   Article.WordCount := 5000;
-  
   FContext.Entities<TArticle>.Add(Article);
   FContext.SaveChanges;
   SavedArticleId := Article.Id;
-  
+
+  var NormalizedExpected := Article.Body.Text;
   // Clear context
   FContext.Clear;
   
@@ -194,31 +194,23 @@ begin
     AssertTrue(LoadedArticle.WordCount = 5000, 'Word count correct', 'Word count incorrect');
     
     LogSuccess('Article metadata loaded without large body');
-    
-    // Access Body - should load large text
-    var BodyLength := Length(LoadedArticle.Body);
-    var ExpectedLength := Length(LargeText);
-    
+
+    var NormalizedBody := LoadedArticle.Body.Text;
+    var BodyLength := Length(NormalizedBody);
+    var ExpectedLength := Length(NormalizedExpected);
+
     if BodyLength <> ExpectedLength then
     begin
-      WriteLn(Format('  ⚠️  Length mismatch: Got %d, Expected %d (diff: %d)', [BodyLength, ExpectedLength, BodyLength - ExpectedLength]));
-
-      // Check last characters
-      if BodyLength > 0 then
-      begin
-        WriteLn(Format('  Last char in loaded: #%d (%s)', [Ord(LoadedArticle.Body[BodyLength]), LoadedArticle.Body[BodyLength]]));
-        WriteLn(Format('  Last char in original: #%d (%s)', [Ord(LargeText[ExpectedLength]), LargeText[ExpectedLength]]));
-        
-        // Check if it's just a trailing space/newline
-        if (BodyLength = ExpectedLength + 1) and (LoadedArticle.Body[BodyLength] = ' ') then
-          WriteLn('  ℹ️  Difference is a trailing space (acceptable)');
-      end;
+      WriteLn(Format('  ⚠️  Length mismatch (Normalized): Got %d, Expected %d (diff: %d)', 
+        [BodyLength, ExpectedLength, BodyLength - ExpectedLength]));
     end;
     
-    AssertTrue(BodyLength = ExpectedLength, 'Large text loaded correctly', Format('Text size mismatch: %d vs %d', [BodyLength, ExpectedLength]));
+    AssertTrue(BodyLength = ExpectedLength,
+      'Large text loaded correctly (Normalized)', 
+      Format('Text size mismatch: %d vs %d', [BodyLength, ExpectedLength]));
     
     // Verify content
-    AssertTrue(LoadedArticle.Body = LargeText, 'Text content matches', 'Text content mismatch');
+    AssertTrue(NormalizedBody = NormalizedExpected, 'Text content matches', 'Text content mismatch');
   end;
   
   WriteLn('');

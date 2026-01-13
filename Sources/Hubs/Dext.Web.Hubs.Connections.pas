@@ -41,7 +41,7 @@ uses
   System.Generics.Collections,
   Dext.Web.Hubs.Interfaces,
   Dext.Web.Hubs.Types,
-  Dext.Core.CancellationToken,
+  Dext.Threading.CancellationToken,
   Dext.Auth.Identity;
 
 type

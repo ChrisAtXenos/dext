@@ -239,6 +239,10 @@ type
 
     function GetModelBuilder: TModelBuilder;
     property ModelBuilder: TModelBuilder read GetModelBuilder;
+
+    procedure SetOnLog(const AValue: TProc<string>);
+    function GetOnLog: TProc<string>;
+    property OnLog: TProc<string> read GetOnLog write SetOnLog;
   end;
 
 /// <summary>

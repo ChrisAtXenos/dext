@@ -14,13 +14,15 @@ REM Build configuration
 set BUILD_CONFIG=Debug
 set PLATFORM=Win32
 
-REM Output paths matching .dproj configuration: ..\Output\$(Platform)\$(Config)
-set BASE_OUTPUT=%~dp0..\Output
-set OUTPUT_PATH=%BASE_OUTPUT%\%PLATFORM%\%BUILD_CONFIG%
+REM Extract ProductVersion from BDS (e.g., 37.0)
+for %%i in ("%BDS%") do set PRODUCT_VERSION=%%~nxi
+
+REM Output paths matching .dproj configuration: $(dext)\Output\$(ProductVersion)_$(Platform)_$(Config)
+set DEXT=%~dp0..
+set OUTPUT_PATH=%DEXT%\Output\%PRODUCT_VERSION%_%PLATFORM%_%BUILD_CONFIG%
 
 REM Create output directories if they don't exist
-if not exist "%BASE_OUTPUT%" mkdir "%BASE_OUTPUT%"
-if not exist "%BASE_OUTPUT%\%PLATFORM%" mkdir "%BASE_OUTPUT%\%PLATFORM%"
+if not exist "%DEXT%\Output" mkdir "%DEXT%\Output"
 if not exist "%OUTPUT_PATH%" mkdir "%OUTPUT_PATH%"
 
 echo Output directory: %OUTPUT_PATH%

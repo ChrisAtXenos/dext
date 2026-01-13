@@ -39,7 +39,7 @@ requires
 contains
   Dext.Core.Activator in 'Core\Base\Dext.Core.Activator.pas',
   Dext.Core.Memory in 'Core\Base\Dext.Core.Memory.pas',
-  Dext.Core.CancellationToken in 'Core\Base\Dext.Core.CancellationToken.pas',
+  Dext.Threading.CancellationToken in 'Core\Dext.Threading.CancellationToken.pas',
   Dext.Core.ValueConverters in 'Core\Base\Dext.Core.ValueConverters.pas',
   Dext.Utils in 'Core\Base\Dext.Utils.pas',
   Dext.Types.Nullable in 'Core\Base\Dext.Types.Nullable.pas',
@@ -88,6 +88,7 @@ contains
   Dext.Mapper in 'Core\Dext.Mapper.pas',
   Dext.DI.Attributes in 'Core\Dext.DI.Attributes.pas',
   Dext.Core.SmartTypes in 'Core\Dext.Core.SmartTypes.pas',
+  Dext.Core.Reflection in 'Core\Dext.Core.Reflection.pas',
   Dext.Configuration.Yaml in 'Core\Dext.Configuration.Yaml.pas',
   Dext.Yaml in 'Core\Dext.Yaml.pas';
 

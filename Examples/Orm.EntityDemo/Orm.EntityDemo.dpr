@@ -1,5 +1,4 @@
-﻿
-program Orm.EntityDemo;
+﻿program Orm.EntityDemo;
 
 {$APPTYPE CONSOLE}
 
@@ -11,7 +10,6 @@ uses
   FireDAC.Comp.Client,
   EntityDemo.DbConfig in 'EntityDemo.DbConfig.pas',
   EntityDemo.Tests.AdvancedQuery in 'EntityDemo.Tests.AdvancedQuery.pas',
-  EntityDemo.Tests.Base in 'EntityDemo.Tests.Base.pas',
   EntityDemo.Tests.Bulk in 'EntityDemo.Tests.Bulk.pas',
   EntityDemo.Tests.CompositeKeys in 'EntityDemo.Tests.CompositeKeys.pas',
   EntityDemo.Tests.Concurrency in 'EntityDemo.Tests.Concurrency.pas',
@@ -31,7 +29,14 @@ uses
   EntityDemo.Tests.SoftDelete in 'EntityDemo.Tests.SoftDelete.pas',
   EntityDemo.Tests.Async in 'EntityDemo.Tests.Async.pas',
   EntityDemo.Tests.TypeSystem in 'EntityDemo.Tests.TypeSystem.pas',
-  EntityDemo.Entities.Info in 'EntityDemo.Entities.Info.pas';
+  EntityDemo.Tests.TypeConverter in 'EntityDemo.Tests.TypeConverter.pas',
+  EntityDemo.Tests.Dialect in 'EntityDemo.Tests.Dialect.pas',
+  EntityDemo.TypeConverterExample in 'EntityDemo.TypeConverterExample.pas',
+  EntityDemo.Entities.Info in 'EntityDemo.Entities.Info.pas',
+  EntityDemo.Tests.Base in 'EntityDemo.Tests.Base.pas',
+  EntityDemo.Tests.SQLCache in 'EntityDemo.Tests.SQLCache.pas',
+  EntityDemo.Tests.CustomDialect in 'EntityDemo.Tests.CustomDialect.pas',
+  EntityDemo.CustomDialect in 'EntityDemo.CustomDialect.pas';
 
 procedure ConfigureDatabase(Provider: TDatabaseProvider);
 begin
@@ -52,12 +57,13 @@ begin
     dpSQLServerWindowsAuthetication: TDbConfig.ConfigureSQLServerWindowsAuth('localhost', 'dext_test');
     // Option 5: SQL Server with SQL Authentication
     dpSQLServer: TDbConfig.ConfigureSQLServer('localhost', 'dext_test', 'sa', 'SQL@d3veloper');
+    // Option 6: MySQL / MariaDB
+    dpMySQL: TDbConfig.ConfigureMySQL('localhost', 3306, 'dext_test', 'root', 'root',
+      'libmariadb.dll', 'C:\Program Files\MariaDB 12.1\');
   else
     raise Exception.Create('Database not supported');
-// TODO:
-//    dpMySQL:
-//    dpOracle:
   end;
+
 
   if Provider in [dpSQLite, dpSQLiteMemory] then
   begin
@@ -76,7 +82,15 @@ begin
   TBaseTest.CurrentTestName := TestClass.ClassName;
   Test := TestClass.Create;
   try
-    Test.Run;
+    try
+      Test.Run;
+    except
+      on E: Exception do
+      begin
+        WriteLn('❌ Error running test ', TestClass.ClassName, ': ', E.Message);
+        TBaseTest.ReportFailure(TestClass.ClassName + ': ' + E.Message);
+      end;
+    end;
   finally
     Test.Free;
   end;
@@ -120,8 +134,16 @@ begin
   RunTest(TAsyncTest);
   // 18. TypeSystem Tests
   RunTest(TTypeSystemTest);
-
+  // 19. TypeConverter Tests
+  RunTest(TTypeConverterTest);
+  // 20. Dialect Tests
+  RunTest(TDialectTest);
+  // 21. Custom Dialect Tests
+  RunTest(TCustomDialectTest);
+  // 22. SQL Cache Tests
+  RunTest(TSQLCacheTest);
   // Print summary at the end
+
   TBaseTest.PrintSummary;
 end;
 
@@ -131,7 +153,24 @@ begin
     WriteLn('🚀 Dext Entity ORM Demo Suite');
     WriteLn('=============================');
     WriteLn('');
-    ConfigureDatabase(dpSQLiteMemory);
+
+    var Provider := dpSQLiteMemory; // Default
+    if ParamCount > 0 then
+    begin
+      var Arg := ParamStr(1).ToLower;
+      if Arg = 'sqlite' then Provider := dpSQLite
+      else if Arg = 'sqlitememory' then Provider := dpSQLiteMemory
+      else if Arg = 'postgresql' then Provider := dpPostgreSQL
+      else if Arg = 'firebird' then Provider := dpFirebird
+      else if Arg = 'mysql' then Provider := dpMySQL
+      else if Arg = 'mariadb' then Provider := dpMySQL
+      else if Arg = 'sqlserver' then Provider := dpSQLServer
+      else if Arg = 'sqlserverauth' then Provider := dpSQLServerWindowsAuthetication;
+    end;
+
+    ConfigureDatabase(Provider);
+    TDbConfig.EnsureDatabaseExists; // Create database if not exists
+    TBaseTest.DebugSql := False;
     RunAllTests;
   except
     on E: Exception do
@@ -139,5 +178,6 @@ begin
   end;
 
   // Only pause if not running in automated mode
-  ConsolePause;
+  if ParamCount = 0 then
+    ConsolePause;
 end.

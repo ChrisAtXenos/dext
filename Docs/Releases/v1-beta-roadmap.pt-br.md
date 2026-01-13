@@ -74,6 +74,7 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 | **Soft Delete** | ✅ Pronto | Atributo `[SoftDelete]` |
 | **Optimistic Concurrency** | ✅ Pronto | Atributo `[Version]` |
 | **FireDAC Phys Driver** | ✅ Pronto | Driver físico para integração transparente com FireDAC |
+| **Auto-Detecção de Dialeto** | ✅ Pronto | Identificação determinística via Enum (`ddPostgreSQL`, etc) |
 | **Field Mapping** | ✅ Pronto | Mapeamento por fields (além de properties) para evitar disparar setters ao carregar do banco |
 
 
@@ -117,17 +118,17 @@ Para detalhes técnicos e status granular de cada módulo, consulte:
 O foco agora é criar **um exemplo para cada funcionalidade** e unificar a documentação.
 
 ### Documentação
-- [ ] **Criar "The Dext Book"**: Um único arquivo Markdown (ou Wiki) compilando todos os guias (similar ao manual do Laravel/Django).
-- [ ] **API Reference**: Gerar documentação automática do código (PasDoc ou similar) se possível, ou focar em guias práticos.
+- [x] **Criar "The Dext Book"**: Documentação multi-arquivo abrangente cobrindo todos os aspectos do framework. [English](../../Docs/Book/README.md) | [Português](../../Docs/Book.pt-br/README.md)
+- [x] **API Reference**: Geração automática de documentação utilizando **DextDoc** (Custom Node.js Generator + Mermaid.js).
 
 ### Novos Exemplos Necessários
-1.  **Dext.Examples.Streaming**: Demonstrar download e upload de arquivos grandes (Stream Writing + Multipart).
-2.  **Dext.Examples.MultiTenancy**: Demonstrar implementação completa de SaaS (Schema por Tenant).
-3.  **Dext.Examples.ComplexQuerying**: Demonstrar queries avançadas do ORM com JSON, Arrays e relatórios.
+- [x] **Dext.Examples.Streaming**: Demonstrar download e upload de arquivos grandes (Stream Writing + Multipart). ✅ Pronto (Testes Pendentes)
+- [x] **Dext.Examples.MultiTenancy**: Demonstrar implementação completa de SaaS (Schema por Tenant). ✅ Pronto (Testes Pendentes)
+- [x] **Dext.Examples.ComplexQuerying**: Demonstrar queries avançadas do ORM com JSON, Arrays e relatórios. ✅ Pronto (Testes Pendentes)
 
 ### Atualização de Exemplos Existentes
-- [ ] Atualizar `Web.TaskFlowAPI` para usar os novos recursos de Cookies e Compression.
-- [ ] Revisar `Web.Dext.Starter.Admin` para garantir uso das melhores práticas atuais.
+- [x] Atualizar `Web.TaskFlowAPI` para usar os novos recursos de Cookies e Compression. ✅ Pronto (Testes Pendentes)
+- [x] Revisar `Web.Dext.Starter.Admin` para garantir uso das melhores práticas atuais. ✅ Pronto (Testes Pendentes)
 
 ---
 
@@ -153,7 +154,7 @@ Implementar testes de integração rodando a suite de testes do ORM contra conta
 | **PostgreSQL** | ✅ Sim | ✅ Sim | 🟢 Estável |
 | **SQL Server** | ✅ Sim | ✅ Sim | 🟢 Estável |
 | **Firebird** | ✅ Sim | ✅ Sim | 🟢 Estável |
-| **MySQL / MariaDB** | ✅ Sim | ❌ Não (Manual) | 🟡 Beta (Precisa de Validação) |
+| **MySQL / MariaDB** | ✅ Sim | ✅ Sim | 🟢 Estável |
 | **Oracle** | ✅ Sim | ❌ Não (Manual) | 🟡 Beta (Precisa de Validação) |
 | **InterBase** | ✅ Sim | ❌ Não (Manual) | 🟡 Beta (Precisa de Validação) |
 

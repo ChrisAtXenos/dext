@@ -16,7 +16,7 @@ O núcleo do ORM está funcional, suportando operações CRUD, mapeamento básic
 - [x] **Entity Mapping**: Atributos `[Table]`, `[Column]`, `[PK]`, `[AutoInc]`, `[NotMapped]`.
 - [x] **Identity Map**: Cache de primeiro nível para garantir instância única por Contexto.
 - [x] **Database Drivers**: Abstração de driver (FireDAC implementado).
-- [x] **Dialects**: Suporte multi-banco (SQLite, PostgreSQL, **SQL Server**).
+- [x] **Dialects**: Suporte multi-banco (SQLite, PostgreSQL, MySQL/MariaDB, Firebird, SQL Server) com **Auto-Detecção via Enum**.
 - [x] **Schema Generation**: Geração automática de scripts `CREATE TABLE`.
 - [x] **Naming Strategies**: Convenções de nomenclatura configuráveis (SnakeCase, CamelCase).
 - [x] **Fluent Mapping**: Mapeamento externo via código (`TEntityMap<T>`) para isolamento do domínio.
@@ -196,6 +196,19 @@ Foco em otimização extrema, gerenciamento de memória e observabilidade.
 - [x] **No Tracking Queries** 🔥: Queries sem tracking para APIs read-only.
   - *Status*: ✅ **Implementado e Validado**
   - *Documentação*: [NO_TRACKING.md](NO_TRACKING.md)
+
+#### 4. Critical Performance & Scalability (✅ Completed)
+- [x] **SQL Cache (AST Reuse)**: Cache thread-safe de geração de SQL.
+  - Reutiliza estrutura da query (AST) evitando alocações e processamento repetitivo.
+  - Suporte a flag `Enabled` para debugging.
+  - *Status*: ✅ **Implementado e Validado**
+- [x] **Custom SQL Dialect Generator**: Mecanismo flexível para override de geração SQL.
+  - Permite correções e adaptações sem alterar o núcleo.
+  - *Status*: ✅ **Implementado e Validado**
+- [x] **Singleton Thread Safety Audit**: Auditoria e Hardening de singletons críticos.
+  - `TTypeConverterRegistry`: Protegido com `TCriticalSection` (Fix).
+  - `TSQLCache` e `TDextFireDACManager`: Validados.
+  - *Status*: ✅ **Auditado e Seguro**
 
 #### 3. Framework Garbage Collector
 - [ ] **Background Disposal**: Serviço que coleta objetos marcados para destruição.
@@ -399,9 +412,9 @@ Inspirado no Dapper para cenários de alta performance onde o controle total do 
 ### Expansão Planejada
 
 4. **MySQL/MariaDB**
-   - **Status**: 🟡 **Implementado (Beta)**
-   - *Nota*: Dialeto implementado, aguardando validação via testes automatizados.
-   - *Ação*: Ajuda bem-vinda para criar ambiente de testes Docker.
+   - **Status**: ✅ **Implementado e Validado**
+   - *Nota*: Dialeto implementado e totalmente validado com 165 testes passando.
+   - *Validação*: Completada em Janeiro de 2026.
 
 #### Prioridade 2 - Comunidade (Help Wanted)
 5. **Oracle**
@@ -424,7 +437,7 @@ Inspirado no Dapper para cenários de alta performance onde o controle total do 
 
 ---
 
-**Última Atualização**: 21 de Dezembro de 2025  
+**Última Atualização**: 08 de Janeiro de 2026  
 **Versão**: Beta 0.95+  
 **Comparativo**: [ORM_COMPARISON_2024.md](ORM_COMPARISON_2024.md)
 

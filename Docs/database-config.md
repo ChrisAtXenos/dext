@@ -45,6 +45,9 @@ TDbConfig.SetProvider(dpFirebird);
 
 // Use SQL Server
 TDbConfig.SetProvider(dpSQLServer);
+
+// Use MySQL / MariaDB
+TDbConfig.SetProvider(dpMySQL);
 ```
 
 ## Configuration
@@ -86,6 +89,24 @@ TDbConfig.ConfigureFirebird(
   'C:\Data\myapp.fdb',  // Database file
   'SYSDBA',             // Username
   'masterkey'           // Password
+);
+```
+
+### MySQL / MariaDB
+
+```pascal
+// Default configuration (localhost:3306/dext_test)
+TDbConfig.ConfigureMySQL;
+
+// Custom configuration with Vendor libraries (Recommended for 64-bit)
+TDbConfig.ConfigureMySQL(
+  'localhost',          // Host
+  3306,                 // Port
+  'dext_test',          // Database
+  'root',               // Username
+  'secret',             // Password
+  'libmariadb.dll',     // VendorLib
+  'C:\Program Files\MariaDB 12.1' // VendorHome (MariaDB installation path)
 );
 ```
 
@@ -245,6 +266,28 @@ TDbConfig.ConfigureSQLServer(
 2.  **Paging**: Requires SQL Server 2012+ (`OFFSET ... FETCH`).
 3.  **Drop Table**: Uses `DROP TABLE IF EXISTS` (SQL Server 2016+).
 
+### MySQL / MariaDB
+
+- **Server-based**: Requires MariaDB or MySQL server running
+- **Best for**: Web applications, horizontal scaling
+- **Reset**: Drops all tables (via EnsureCreated)
+
+```pascal
+TDbConfig.ConfigureMySQL('localhost', 3306, 'dext_test', 'root', 'password');
+```
+
+**Connection String Example**:
+```
+Server=localhost;Port=3306;Database=dext_test;User_Name=root;Password=password
+```
+
+#### MySQL/MariaDB Specifics
+
+1.  **Vendor Libraries**: Highly recommended to specify `VendorLib` (e.g., `libmariadb.dll`) and `VendorHome` (installation path) to avoid loading issues, especially in 64-bit applications.
+2.  **Quoting**: Dext correctly handles backtick quoting (`` ` ``) automatically for identifiers.
+3.  **Automatic DB Creation**: `TDbConfig.EnsureDatabaseExists` can be used to create the database if it doesn't exist before running the application.
+4.  **Column Lengths**: MariaDB requires an explicit length for string columns used in keys (Primary Keys or Indexes). Use `[MaxLength(n)]` on your entity properties.
+
 ## API Reference
 
 ### TDatabaseProvider
@@ -255,8 +298,8 @@ type
     dpSQLite,
     dpPostgreSQL,
     dpFirebird,
-    dpMySQL,      // Coming soon
-    dpSQLServer,  // Coming soon
+    dpMySQL,
+    dpSQLServer,
     dpOracle      // Coming soon
   );
 ```
@@ -273,6 +316,8 @@ type
 | `ConfigureSQLite(...)` | Configure SQLite connection |
 | `ConfigurePostgreSQL(...)` | Configure PostgreSQL connection |
 | `ConfigureFirebird(...)` | Configure Firebird connection |
+| `ConfigureMySQL(...)` | Configure MySQL/MariaDB connection |
+| `ConfigureSQLServer(...)` | Configure SQL Server connection |
 | `ResetDatabase` | Drop and recreate database |
 
 ## Best Practices

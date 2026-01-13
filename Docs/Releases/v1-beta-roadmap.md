@@ -67,13 +67,14 @@ For technical details and granular status of each module, check:
 | **Multi-Tenancy** | ✅ Ready | Schema-based, DB-based, Column-based |
 | **Advanced Types** (UUID, JSON, Arrays) | ✅ Ready | Automatic serialization |
 | **Bulk Operations** | ✅ Ready | Bulk Update/Delete |
-| **Advanced Querying** | 🟡 Partial | `Join` and `GroupBy` (In-Memory ✅, SQL Pending ⚠️) |
+| **Advanced Querying** | ✅ Ready | `Join` (Inner, Left, Right, Full) and `GroupBy` with full SQL generation |
 | **Inheritance Mapping** (TPH) | ✅ Ready | Discriminator column supported |
 | **Lazy Loading** | ✅ Ready | `Lazy<T>`, `IList<T>`, and `ILazy<T>` wrapper |
 | **Scaffolding** (DB First) | ✅ Ready | Entity generation from Database Schema |
 | **Soft Delete** | ✅ Ready | `[SoftDelete]` attribute |
 | **Optimistic Concurrency** | ✅ Ready | `[Version]` attribute |
 | **FireDAC Phys Driver** | ✅ Ready | Physical driver for transparent integration with FireDAC |
+| **Dialect Auto-Detection** | ✅ Ready | Enum-based deterministic dialect identification (`ddPostgreSQL`, etc) |
 | **Field Mapping** | ✅ Ready | Field-based mapping (in addition to properties) to avoid triggering setters when loading from database |
 
 
@@ -129,17 +130,17 @@ For technical details and granular status of each module, check:
 The focus now is to create **one example for each feature** and unify the documentation.
 
 ### Documentation
-- [ ] **Create "The Dext Book"**: A single Markdown file (or Wiki) compiling all guides (similar to Laravel/Django documentation).
-- [ ] **API Reference**: Generate automatic code documentation (PasDoc or similar) if possible, or focus on practical guides.
+- [x] **Create "The Dext Book"**: A comprehensive multi-file documentation covering all framework aspects. [English](../../Docs/Book/README.md) | [Português](../../Docs/Book.pt-br/README.md)
+- [/] **API Reference**: Custom solution in progress using [DelphiAST](https://github.com/RomanYankovsky/DelphiAST). Tool: [`Tools/DextASTParser`](../../Tools/DextASTParser/README.md) - generates AST XML from Delphi sources.
 
 ### New Examples Needed
-1.  **Dext.Examples.Streaming**: Demonstrate large file download and upload (Stream Writing + Multipart).
-2.  **Dext.Examples.MultiTenancy**: Demonstrate complete SaaS implementation (Schema per Tenant).
-3.  **Dext.Examples.ComplexQuerying**: Demonstrate advanced ORM queries with JSON, Arrays, and reports.
+- [x] **Dext.Examples.Streaming**: Demonstrate large file download and upload (Stream Writing + Multipart). ✅ Ready (Pending Tests)
+- [x] **Dext.Examples.MultiTenancy**: Demonstrate complete SaaS implementation (Schema per Tenant). ✅ Ready (Pending Tests)
+- [x] **Dext.Examples.ComplexQuerying**: Demonstrate advanced ORM queries with JSON, Arrays, and reports. ✅ Ready (Pending Tests)
 
 ### Updating Existing Examples
-- [ ] Update `Web.TaskFlowAPI` to use new Cookie and Compression features.
-- [ ] Review `Web.Dext.Starter.Admin` to ensure use of current best practices.
+- [x] Update `Web.TaskFlowAPI` to use new Cookie and Compression features. ✅ Ready (Pending Tests)
+- [x] Review `Web.Dext.Starter.Admin` to ensure use of current best practices. ✅ Ready (Pending Tests)
 
 ---
 
@@ -165,7 +166,7 @@ Implement integration tests running the ORM test suite against Docker containers
 | **PostgreSQL** | ✅ Yes | ✅ Yes | 🟢 Stable |
 | **SQL Server** | ✅ Yes | ✅ Yes | 🟢 Stable |
 | **Firebird** | ✅ Yes | ✅ Yes | 🟢 Stable |
-| **MySQL / MariaDB** | ✅ Yes | ❌ No (Manual) | 🟡 Beta (Needs Validation) |
+| **MySQL / MariaDB** | ✅ Yes | ✅ Yes | 🟢 Stable |
 | **Oracle** | ✅ Yes | ❌ No (Manual) | 🟡 Beta (Needs Validation) |
 | **InterBase** | ✅ Yes | ❌ No (Manual) | 🟡 Beta (Needs Validation) |
 

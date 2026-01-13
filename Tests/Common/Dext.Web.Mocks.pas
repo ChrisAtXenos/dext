@@ -13,7 +13,8 @@ uses
   Dext.DI.Interfaces,
   Dext.Web.Indy,
   Dext.Web.Interfaces,
-  Dext.Auth.Identity;
+  Dext.Auth.Identity,
+  Dext.Json;
 
 type
   TMockHttpRequest = class(TInterfacedObject, IHttpRequest)
@@ -25,7 +26,7 @@ type
     FRouteParams: TDictionary<string, string>;
     FHeaders: TDictionary<string, string>;
     FCookies: TDictionary<string, string>;
-    FFiles: TList<IFormFile>;
+    FFiles: IFormFileCollection;
     FRemoteIpAddress: string;
   public
     constructor Create(const AQueryString: string; const AMethod: string = 'GET'; const APath: string = '/api/test');
@@ -42,11 +43,11 @@ type
     function GetHeader(const AName: string): string;
     function GetQueryParam(const AName: string): string;
     function GetCookies: TDictionary<string, string>;
-    function GetFiles: TList<IFormFile>;
+    function GetFiles: IFormFileCollection;
 
     property RemoteIpAddress: string read FRemoteIpAddress write FRemoteIpAddress;
     property Cookies: TDictionary<string, string> read GetCookies;
-    property Files: TList<IFormFile> read GetFiles;
+    property Files: IFormFileCollection read GetFiles;
   end;
 
   TMockHttpResponse = class(TInterfacedObject, IHttpResponse)
@@ -61,6 +62,7 @@ type
 
     // IHttpResponse
     function GetStatusCode: Integer;
+    function GetContentType: string;
     function Status(AValue: Integer): IHttpResponse;
     procedure SetStatusCode(AValue: Integer);
     procedure SetContentType(const AValue: string);
@@ -68,7 +70,8 @@ type
     procedure Write(const AContent: string); overload;
     procedure Write(const ABuffer: TBytes); overload;
     procedure Write(const AStream: TStream); overload;
-    procedure Json(const AJson: string);
+    procedure Json(const AJson: string); overload;
+    procedure Json(const AValue: TValue); overload;
     procedure AddHeader(const AName, AValue: string);
     procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
     procedure AppendCookie(const AName, AValue: string); overload;
@@ -189,7 +192,7 @@ begin
   // Inicializar outros campos
   FHeaders := TDictionary<string, string>.Create;
   FCookies := TDictionary<string, string>.Create(TIStringComparer.Ordinal);
-  FFiles := TList<IFormFile>.Create;
+  FFiles := TFormFileCollection.Create(TList<IFormFile>.Create);
   FBodyStream := TMemoryStream.Create;
   FRemoteIpAddress := '127.0.0.1'; // Default mock IP
 
@@ -207,7 +210,6 @@ begin
   FRouteParams.Free;
   FHeaders.Free;
   FCookies.Free;
-  FFiles.Free;
   FBodyStream.Free;
   inherited Destroy;
 end;
@@ -265,7 +267,7 @@ begin
   Result := FCookies;
 end;
 
-function TMockHttpRequest.GetFiles: TList<IFormFile>;
+function TMockHttpRequest.GetFiles: IFormFileCollection;
 begin
   Result := FFiles;
 end;
@@ -286,9 +288,21 @@ begin
   inherited Destroy;
 end;
 
+function TMockHttpResponse.GetContentType: string;
+begin
+  Result := FContentType;
+end;
+
 function TMockHttpResponse.GetStatusCode: Integer;
 begin
   Result := FStatusCode;
+end;
+
+procedure TMockHttpResponse.Json(const AValue: TValue);
+begin
+  var JsonStr := TDextJson.Serialize(AValue);
+  FContentText := JsonStr;
+  FContentType := 'application/json';
 end;
 
 function TMockHttpResponse.Status(AValue: Integer): IHttpResponse;

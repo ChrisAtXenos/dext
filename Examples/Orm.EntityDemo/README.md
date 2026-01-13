@@ -70,6 +70,9 @@ ConfigureDatabase(dpFirebird);
 
 // SQL Server
 ConfigureDatabase(dpSQLServer);
+
+// MySQL / MariaDB
+ConfigureDatabase(dpMySQL);
 ```
 
 ---
@@ -218,6 +221,32 @@ TDbConfig.ConfigureSQLServerWindowsAuth('localhost', 'dext_test');
 TDbConfig.ConfigureSQLServer('localhost', 'dext_test', 'sa', 'password');
 ```
 
+### MySQL / MariaDB
+
+> **Note**: For MySQL/MariaDB you need to configure the client library path.
+
+```pascal
+// With VendorLib and VendorHome (recommended for 64-bit)
+TDbConfig.ConfigureMySQL(
+  'localhost',           // Host
+  3306,                  // Port
+  'dext_test',           // Database
+  'root',                // Username
+  'password',            // Password
+  'libmariadb.dll',      // VendorLib
+  'C:\Program Files\MariaDB 12.1'  // VendorHome
+);
+
+// Minimal configuration (if libmariadb.dll is in PATH)
+TDbConfig.ConfigureMySQL('localhost', 3306, 'dext_test', 'root', 'password');
+```
+
+**Prerequisites for MariaDB:**
+1. Install MariaDB Server (e.g., MariaDB 12.1)
+2. Ensure `libmariadb.dll` is accessible (either in PATH or specify VendorHome)
+3. For 64-bit Delphi apps, use 64-bit MariaDB installation
+4. The database will be created automatically if it doesn't exist
+
 ---
 
 ## 🔧 Project Structure
@@ -243,6 +272,15 @@ Ensure FireDAC drivers are linked in your uses clause:
 - PostgreSQL: `FireDAC.Phys.PG`
 - Firebird: `FireDAC.Phys.FB`
 - SQL Server: `FireDAC.Phys.MSSQL`
+- MySQL/MariaDB: `FireDAC.Phys.MySQL`
+
+### MySQL "VendorLib not found"
+For MySQL/MariaDB, ensure you specify the correct VendorHome and VendorLib:
+```pascal
+// 64-bit MariaDB 12.1 example
+TDbConfig.ConfigureMySQL('localhost', 3306, 'dext_test', 'root', 'password',
+  'libmariadb.dll', 'C:\Program Files\MariaDB 12.1');
+```
 
 ### "Table already exists"
 The tests automatically drop tables before running. If you see this:

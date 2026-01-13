@@ -33,8 +33,8 @@ uses
   System.SysUtils,
   System.TypInfo,
   System.Variants,
-  Dext,
   Dext.Collections,
+  Dext.Core.Reflection,
   Dext.Core.Activator,
   Dext.Core.ValueConverters,
   Dext.Entity.TypeSystem,
@@ -528,7 +528,7 @@ begin
       begin
         SafeWriteLn(Format('ERROR getting value for col %s: %s', [ColName, E.Message]));
         raise;
-      end;
+    end;
     end;
     if FProps.TryGetValue(ColName.ToLower, Prop) then
     begin
@@ -1172,7 +1172,7 @@ begin
       begin
         SafeWriteLn('ERROR in TDbSet.ToList during fetch: ' + E.Message);
         raise;
-      end;
+    end;
     end;
 
     if (LSpec <> nil) and (Length(LSpec.GetIncludes) > 0) then
@@ -1269,13 +1269,20 @@ begin
     if TargetType.TypeKind <> tkClass then Exit;
     TargetDbSet := FContext.DataSet(TargetType.Handle);
 
-    var IdStrings: TArray<string>;
-    SetLength(IdStrings, IDs.Count);
+    // Use Variant array to preserve types (Integer, String, GUID) for correct parameter binding
+    // Ensure we handle Nullable types correctly before converting to variant
+    var IdValues: TArray<Variant>;
+    SetLength(IdValues, IDs.Count);
     for var k := 0 to IDs.Count - 1 do
-      IdStrings[k] := IDs[k].ToString;
+    begin
+      if IDs[k].IsEmpty then
+        IdValues[k] := Null
+      else
+        IdValues[k] := IDs[k].AsVariant;
+    end;
 
-    // FIX: Commented out expression logic to verify compilation
-    var Expr: IExpression := TPropExpression.Create('Id').&In(IdStrings);
+    // Use Variant array to preserve types (Integer, String, GUID) for correct parameter binding
+    var Expr: IExpression := TPropExpression.Create('Id').&In(IdValues);
 
     TargetList := TargetDbSet.ListObjects(Expr);
     LoadedMap := TDictionary<TValue, TObject>.Create;

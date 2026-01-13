@@ -12,9 +12,53 @@ The Dext ORM Scaffolding tool allows you to automatically generate Delphi Entity
 - **Naming Conventions**: Converts `snake_case` database names to `PascalCase` Delphi names (e.g., `user_id` -> `UserId`, `order_items` -> `TOrderItems`).
 - **Mapping Styles**: Supports generating standard Attributes (`[Table]`, `[Column]`) or Fluent Mapping (`RegisterMappings`).
 
-## Usage
+## CLI Usage (Recommended)
 
-The scaffolding logic is encapsulated in the `Dext.Entity.Scaffolding` unit.
+The easiest way to use scaffolding is via the Dext CLI:
+
+```bash
+dext scaffold --connection <string> --driver <driver> [options]
+```
+
+### Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--connection` | `-c` | FireDAC connection string or database file path (required) |
+| `--driver` | `-d` | Database driver: `sqlite`, `pg`, `mssql`, `firebird` (required) |
+| `--output` | `-o` | Output file path (default: `Entities.pas`) |
+| `--unit` | `-u` | Unit name (default: derived from output filename) |
+| `--fluent` | | Use Fluent Mapping instead of Attributes |
+| `--tables` | `-t` | Comma-separated table names to include (default: all) |
+| `--help` | | Show help message |
+
+### Examples
+
+**SQLite** (simple file path):
+```bash
+dext scaffold -c "myapp.db" -d sqlite -o Models/Entities.pas
+```
+
+**PostgreSQL**:
+```bash
+dext scaffold -c "host=localhost;database=myapp;user=postgres;password=secret" -d pg --fluent
+```
+
+**SQL Server** (Windows Auth):
+```bash
+dext scaffold -c "Server=.;Database=MyDB;Trusted_Connection=yes" -d mssql -t "users,orders,products"
+```
+
+**Firebird**:
+```bash
+dext scaffold -c "Database=C:\Data\mydb.fdb;User=SYSDBA;Password=masterkey" -d firebird -o MyEntities.pas
+```
+
+---
+
+## Programmatic Usage
+
+For advanced scenarios or integration into custom tools, you can use the scaffolding API directly in your Delphi code. The logic is encapsulated in the `Dext.Entity.Scaffolding` unit.
 
 ### 1. Basic Usage (Attribute Mapping)
 

@@ -10,6 +10,7 @@ uses
   FireDAC.Phys.PG,
   FireDAC.Phys.FB,
   FireDAC.Phys.MSSQL, // Add MSSQL Driver
+  FireDAC.Phys.MySQL, // Add MySQL/MariaDB Driver
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Drivers.FireDAC,
   Dext.Entity.Dialects;
@@ -49,6 +50,14 @@ type
     class var FSQLServerDatabase: string;
     class var FSQLServerUsername: string;
     class var FSQLServerPassword: string;
+    class var FMySQLHost: string;
+    class var FMySQLPort: Integer;
+    class var FMySQLDatabase: string;
+    class var FMySQLUsername: string;
+    class var FMySQLPassword: string;
+    class var FMySQLVendorLib: string;
+    class var FMySQLVendorHome: string;
+    class var FMySQLDriverLink: TFDPhysMySQLDriverLink;
   public
     /// <summary>
     ///   Initialize default configuration
@@ -129,15 +138,38 @@ type
     ); static;
     
     /// <summary>
+    ///   Configure MySQL/MariaDB connection
+    /// </summary>
+    /// <param name="AVendorLib">Path to libmysql.dll or libmariadb.dll (optional if in PATH)</param>
+    /// <param name="AVendorHome">Base directory containing lib folder (optional)</param>
+    class procedure ConfigureMySQL(
+      const AHost: string = 'localhost';
+      APort: Integer = 3306;
+      const ADatabase: string = 'dext_test';
+      const AUsername: string = 'root';
+      const APassword: string = '';
+      const AVendorLib: string = '';
+      const AVendorHome: string = ''
+    ); static;
+    
+    /// <summary>
     ///   Drop and recreate database (for testing)
     /// </summary>
     class procedure ResetDatabase; static;
+    
+    /// <summary>
+    ///   Ensures the database exists, creating it if necessary.
+    ///   For server-based databases (MySQL, PostgreSQL, SQL Server).
+    /// </summary>
+    class procedure EnsureDatabaseExists; static;
   end;
 
 implementation
 
 uses
-  System.IOUtils;
+  System.IOUtils,
+  System.Variants,
+  Data.DB;
 
 { TDbConfig }
 
@@ -166,6 +198,13 @@ begin
   FSQLServerDatabase := 'dext_test';
   FSQLServerUsername := 'sa';
   FSQLServerPassword := 'Password123!';
+  
+  // Default MySQL/MariaDB configuration
+  FMySQLHost := 'localhost';
+  FMySQLPort := 3306;
+  FMySQLDatabase := 'dext_test';
+  FMySQLUsername := 'root';
+  FMySQLPassword := '';
 end;
 
 class function TDbConfig.GetProvider: TDatabaseProvider;
@@ -241,6 +280,20 @@ begin
       end;
     end;
     
+    dpMySQL:
+    begin
+      FDConn.DriverName := 'MySQL';
+      FDConn.Params.Values['Server'] := FMySQLHost;
+      FDConn.Params.Values['Port'] := FMySQLPort.ToString;
+      FDConn.Params.Values['Database'] := FMySQLDatabase;
+      FDConn.Params.Values['User_Name'] := FMySQLUsername;
+      FDConn.Params.Values['Password'] := FMySQLPassword;
+      FDConn.Params.Values['CharacterSet'] := 'utf8mb4';
+      
+      // VendorLib/Home are now handled by TFDPhysMySQLDriverLink in ConfigureMySQL
+      // to avoid caching issues and ensure correct driver loading.
+    end;
+    
     else
       raise Exception.CreateFmt('Database provider %s not yet implemented', [GetProviderName]);
   end;
@@ -255,6 +308,7 @@ begin
     dpPostgreSQL: Result := TPostgreSQLDialect.Create;
     dpFirebird:   Result := TFirebirdDialect.Create;
     dpSQLServer:  Result := TSQLServerDialect.Create;
+    dpMySQL:      Result := TMySQLDialect.Create;
     else
       raise Exception.CreateFmt('Dialect for %s not yet implemented', [GetProviderName]);
   end;
@@ -345,6 +399,46 @@ begin
   WriteLn(Format('✅ SQL Server configured: %s/%s (Windows Authentication)', [AHost, ADatabase]));
 end;
 
+class procedure TDbConfig.ConfigureMySQL(
+  const AHost: string;
+  APort: Integer;
+  const ADatabase: string;
+  const AUsername: string;
+  const APassword: string;
+  const AVendorLib: string;
+  const AVendorHome: string
+);
+begin
+  TDbConfig.SetProvider(dpMySQL);
+  FMySQLHost := AHost;
+  FMySQLPort := APort;
+  FMySQLDatabase := ADatabase;
+  FMySQLUsername := AUsername;
+  FMySQLPassword := APassword;
+  FMySQLVendorLib := AVendorLib;
+  FMySQLVendorHome := AVendorHome;
+  
+  // Configure Driver Link globally for MySQL
+  if FMySQLDriverLink = nil then
+    FMySQLDriverLink := TFDPhysMySQLDriverLink.Create(nil);
+
+  if (AVendorLib <> '') or (AVendorHome <> '') then
+  begin
+    FMySQLDriverLink.Release;
+    if AVendorLib <> '' then
+      FMySQLDriverLink.VendorLib := AVendorLib;
+
+    if AVendorHome <> '' then
+      FMySQLDriverLink.VendorHome := AVendorHome;
+  end;
+
+  WriteLn(Format('✅ MySQL/MariaDB configured: %s:%d/%s', [AHost, APort, ADatabase]));
+  if AVendorLib <> '' then
+    WriteLn('   VendorLib (DriverLink): ' + AVendorLib);
+  if AVendorHome <> '' then
+    WriteLn('   VendorHome (DriverLink): ' + AVendorHome);
+end;
+
 class procedure TDbConfig.ResetDatabase;
 begin
   case FCurrentProvider of
@@ -382,5 +476,114 @@ begin
   end;
 end;
 
-end.
+class procedure TDbConfig.EnsureDatabaseExists;
+var
+  FDConn: TFDConnection;
+  SQL: string;
+begin
+  case FCurrentProvider of
+    dpMySQL:
+    begin
+      // Connect without specifying database, then CREATE DATABASE
+      FDConn := TFDConnection.Create(nil);
+      try
+        FDConn.DriverName := 'MySQL';
+        FDConn.Params.Values['Server'] := FMySQLHost;
+        FDConn.Params.Values['Port'] := FMySQLPort.ToString;
+        FDConn.Params.Values['User_Name'] := FMySQLUsername;
+        FDConn.Params.Values['Password'] := FMySQLPassword;
+        FDConn.Params.Values['CharacterSet'] := 'utf8mb4';
+        
+        // Don't specify database - we're creating it
+        // FDConn.Params.Values['Database'] := ...
+        
+        if FMySQLVendorLib <> '' then
+          FDConn.Params.Values['VendorLib'] := FMySQLVendorLib;
+        if FMySQLVendorHome <> '' then
+          FDConn.Params.Values['VendorHome'] := FMySQLVendorHome;
+        
+        FDConn.Connected := True;
+        
+        SQL := Format('CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', 
+          [FMySQLDatabase]);
+        FDConn.ExecSQL(SQL);
+        WriteLn('✅ Database created or already exists: ' + FMySQLDatabase);
+        
+        FDConn.Connected := False;
+      finally
+        FDConn.Free;
+      end;
+    end;
+    
+    dpPostgreSQL:
+    begin
+      // For PostgreSQL, CREATE DATABASE doesn't support IF NOT EXISTS
+      // We need to check first
+      FDConn := TFDConnection.Create(nil);
+      try
+        FDConn.DriverName := 'PG';
+        FDConn.Params.Values['Server'] := FPostgreSQLHost;
+        FDConn.Params.Values['Port'] := FPostgreSQLPort.ToString;
+        FDConn.Params.Values['Database'] := 'postgres';  // Connect to default db
+        FDConn.Params.Values['User_Name'] := FPostgreSQLUsername;
+        FDConn.Params.Values['Password'] := FPostgreSQLPassword;
+        
+        FDConn.Connected := True;
+        
+        // PostgreSQL doesn't have CREATE DATABASE IF NOT EXISTS, so we check and create
+        SQL := Format('SELECT 1 FROM pg_database WHERE datname = ''%s''', [FPostgreSQLDatabase]);
+        var Query := FDConn.ExecSQLScalar(SQL);
+        if VarIsNull(Query) then
+        begin
+          SQL := Format('CREATE DATABASE %s', [FPostgreSQLDatabase]);
+          FDConn.ExecSQL(SQL);
+          WriteLn('✅ Database created: ' + FPostgreSQLDatabase);
+        end
+        else
+          WriteLn('✅ Database already exists: ' + FPostgreSQLDatabase);
+        
+        FDConn.Connected := False;
+      finally
+        FDConn.Free;
+      end;
+    end;
+    
+    dpSQLServer:
+    begin
+      FDConn := TFDConnection.Create(nil);
+      try
+        FDConn.DriverName := 'MSSQL';
+        FDConn.Params.Values['Server'] := FSQLServerHost;
+        FDConn.Params.Values['Database'] := 'master';  // Connect to master db
+        FDConn.Params.Values['ODBCAdvanced'] := 'TrustServerCertificate=yes';
+        
+        if FSQLServerUsername = '' then
+        begin
+          FDConn.Params.Values['OSAuthent'] := 'Yes';
+        end
+        else
+        begin
+          FDConn.Params.Values['User_Name'] := FSQLServerUsername;
+          FDConn.Params.Values['Password'] := FSQLServerPassword;
+        end;
+        
+        FDConn.Connected := True;
+        
+        SQL := Format('IF NOT EXISTS (SELECT name FROM master.sys.databases WHERE name = ''%s'') ' +
+                       'CREATE DATABASE [%s]', [FSQLServerDatabase, FSQLServerDatabase]);
+        FDConn.ExecSQL(SQL);
+        WriteLn('✅ Database created or already exists: ' + FSQLServerDatabase);
+        
+        FDConn.Connected := False;
+      finally
+        FDConn.Free;
+      end;
+    end;
+    
+  else
+    // SQLite, Firebird - database file is created automatically
+    WriteLn('ℹ️  Database file will be created automatically for ' + GetProviderName);
+  end;
+end;
 
+end.

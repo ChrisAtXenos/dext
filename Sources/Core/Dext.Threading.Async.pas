@@ -34,7 +34,7 @@ uses
   System.TimeSpan,
   System.Rtti,
   System.TypInfo,
-  Dext.Core.CancellationToken;
+  Dext.Threading.CancellationToken;
 
 type
   /// <summary>

@@ -44,13 +44,9 @@ procedure TSoftDeleteTest.ResetData;
     if FContext <> nil then
       FContext.Clear;
 
-    try
-      Cmd := FContext.Connection.CreateCommand('DELETE FROM tasks') as IDbCommand;
-      Cmd.ExecuteNonQuery;
-    except
-    // ignore
+    Cmd := FContext.Connection.CreateCommand('DELETE FROM ' + FContext.Dialect.QuoteIdentifier('tasks')) as IDbCommand;
+    Cmd.ExecuteNonQuery;
   end;
-end;
 
 procedure TSoftDeleteTest.Run;
 begin

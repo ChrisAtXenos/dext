@@ -174,7 +174,7 @@
 
         <DCCReference Include="Dext.Utils.pas"/>
 
-        <DCCReference Include="Dext.Core.CancellationToken.pas"/>
+        <DCCReference Include="Dext.Threading.CancellationToken.pas"/>
         <DCCReference Include="Dext.Hosting.BackgroundService.pas"/>
 
 

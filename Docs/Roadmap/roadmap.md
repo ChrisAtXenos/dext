@@ -275,7 +275,7 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
     - ✅ **Schema-based**: Isolamento por schemas (PostgreSQL/SQL Server).
     - ✅ **Database-based**: Conexão dinâmica por `ConnectionString`.
     - ✅ **Automatic Creation**: `EnsureCreated` cria schemas automaticamente.
-  - 📚 Documentação: [ORM Type System Guide](../ORM-Type-System-Guide.md)
+  - 📚 Documentação: [ORM Type System Guide](../orm-type-system-guide.md)
 - [x] **Migrations**: Sistema de migração de schema (✅ Core Completo).
   - ✅ **Dext CLI**: Ferramenta `dext.exe` para gerenciamento de migrações.
   - ✅ **Registry**: Sistema de registro de migrações (`IMigration`).
@@ -283,7 +283,8 @@ Plano estratégico focado em Dext SO4 (Fórum/Social) e melhorias de Core (Nulla
   - [x] **Builder**: API fluente para definição de schema (`CreateTable`, `AddColumn`, etc.).
   - ✅ **Rollback**: Reversão de migrações (`migrate:down`).
   - ✅ **Generation**: Criação de novas migrações (`migrate:generate`).
-  - [ ] **Scaffolding**: Geração automática de classes (Próximo passo).
+  - [x] **Scaffolding**: Geração automática de classes (Próximo passo).
+  - [x] **Facade Generator**: Geração automática de `Dext.pas` a partir de `Dext.Core` (`dext facade`).
   - [ ] **Stored Procedures**: Mapeamento e execução de Stored Procedures e Functions.
 
 ### 6. Ecossistema & Tooling (📅 Planejado para v1.1)

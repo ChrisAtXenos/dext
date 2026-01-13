@@ -161,8 +161,8 @@ Cada funcionalidade do CLI deve expor uma API REST:
 ```
 GET    /api/projects              # Lista projetos
 POST   /api/projects              # Cria projeto
-GET    /api/projects/:id          # Detalhes do projeto
-DELETE /api/projects/:id          # Remove projeto
+GET    /api/projects/{id}          # Detalhes do projeto
+DELETE /api/projects/{id}          # Remove projeto
 
 POST   /api/build                 # Compila projeto
 POST   /api/run                   # Compila e executa

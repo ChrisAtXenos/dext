@@ -47,8 +47,8 @@ contains
   Dext.Entity.Core in 'Data\Dext.Entity.Core.pas',
   Dext.Entity.Drivers.FireDAC.Phys in 'Data\Dext.Entity.Drivers.FireDAC.Phys.pas',
   Dext.Entity.Drivers.FireDAC in 'Data\Dext.Entity.Drivers.FireDAC.pas',
-  Dext.Entity.Drivers.Interfaces in 'Data\Dext.Entity.Drivers.Interfaces.pas',
   Dext.Entity.Dialects in 'Data\Dext.Entity.Dialects.pas',
+  Dext.Entity.Drivers.Interfaces in 'Data\Dext.Entity.Drivers.Interfaces.pas',
   Dext.Specifications.SQL.Generator in 'Data\Dext.Specifications.SQL.Generator.pas',
   Dext.Entity.Tenancy in 'Data\Dext.Entity.Tenancy.pas',
   Dext.Entity.TypeConverters in 'Data\Dext.Entity.TypeConverters.pas',
@@ -71,6 +71,7 @@ contains
   Dext.Entity.LazyLoading in 'Data\Dext.Entity.LazyLoading.pas',
   Dext.Entity.Grouping in 'Data\Dext.Entity.Grouping.pas',
   Dext.Entity.Joining in 'Data\Dext.Entity.Joining.pas',
-  Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas';
+  Dext.Entity.Prototype in 'Data\Dext.Entity.Prototype.pas',
+  Dext.Entity.Cache in 'Data\Dext.Entity.Cache.pas';
 
 end.

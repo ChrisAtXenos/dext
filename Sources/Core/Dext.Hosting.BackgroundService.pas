@@ -32,7 +32,7 @@ uses
   System.Classes,
   System.Generics.Collections,
   Dext.DI.Interfaces,
-  Dext.Core.CancellationToken; // ✅ Added
+  Dext.Threading.CancellationToken; // ✅ Added
 
 type
   IHostedService = interface

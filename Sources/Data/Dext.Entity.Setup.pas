@@ -25,6 +25,7 @@ type
     FParams: TDictionary<string, string>;
     FPooling: Boolean;
     FPoolMax: Integer;
+    FOptimizations: TFireDACOptimizations; // Connect Optimizations
     FDialect: ISQLDialect;
     FCustomConnection: IDbConnection;
   public
@@ -38,6 +39,7 @@ type
     property Params: TDictionary<string, string> read FParams;
     property Pooling: Boolean read FPooling write FPooling;
     property PoolMax: Integer read FPoolMax write FPoolMax;
+    property Optimizations: TFireDACOptimizations read FOptimizations write FOptimizations;
     property Dialect: ISQLDialect read FDialect write FDialect;
     property CustomConnection: IDbConnection read FCustomConnection write FCustomConnection;
 
@@ -49,6 +51,8 @@ type
     function UseDriver(const ADriverName: string): TDbContextOptions;
     function UseConnectionDef(const ADefName: string): TDbContextOptions;
     function WithPooling(Enable: Boolean = True; MaxSize: Integer = 50): TDbContextOptions;
+    function ConfigureOptimizations(AOpts: TFireDACOptimizations): TDbContextOptions;
+    function UseCustomDialect(const ADialect: ISQLDialect): TDbContextOptions;
   end;
 
   /// <summary>
@@ -72,6 +76,8 @@ begin
   FParams := TDictionary<string, string>.Create;
   FPooling := False;
   FPoolMax := 50;
+  // Default legacy optimization behavior (Matches original hardcoded logic)
+  FOptimizations := [optDisableMacros, optDisableEscapes, optDirectExecute];
 end;
 
 destructor TDbContextOptions.Destroy;
@@ -101,9 +107,7 @@ begin
   FConnectionDefName := '';
   FParams.AddOrSetValue('Database', DatabaseFile);
   FParams.AddOrSetValue('LockingMode', 'Normal');
-  // SQLite implies SQLiteDialect, but injection happens later or we set it here if we want defaults
-  if FDialect = nil then
-    FDialect := TSQLiteDialect.Create;
+  // Dialect is auto-detected by TDbContext from the connection driver
   Result := Self;
 end;
 
@@ -111,6 +115,18 @@ function TDbContextOptions.WithPooling(Enable: Boolean; MaxSize: Integer): TDbCo
 begin
   FPooling := Enable;
   FPoolMax := MaxSize;
+  Result := Self;
+end;
+
+function TDbContextOptions.ConfigureOptimizations(AOpts: TFireDACOptimizations): TDbContextOptions;
+begin
+  FOptimizations := AOpts;
+  Result := Self;
+end;
+
+function TDbContextOptions.UseCustomDialect(const ADialect: ISQLDialect): TDbContextOptions;
+begin
+  FDialect := ADialect;
   Result := Self;
 end;
 
@@ -151,9 +167,8 @@ begin
       end;
     end;
     
-    // Resource options
-    if FPooling then
-      TDextFireDACManager.Instance.ApplyResourceOptions(FDConn);
+    // Resource options (Applying configured optimizations)
+    TDextFireDACManager.Instance.ApplyResourceOptions(FDConn, FOptimizations);
 
     Result := TFireDACConnection.Create(FDConn, True);
   except
@@ -163,24 +178,8 @@ begin
 end;
 
 function TDbContextOptions.BuildDialect: ISQLDialect;
-var
-  LDriver: string;
 begin
-  if FDialect <> nil then
-    Exit(FDialect);
-
-  LDriver := FDriverName.ToLower;
-
-  if LDriver.Contains('sqlite') then
-    Result := Dext.Entity.Dialects.TSQLiteDialect.Create
-  else if LDriver.Contains('pg') or LDriver.Contains('post') then
-    Result := Dext.Entity.Dialects.TPostgreSQLDialect.Create
-  else if LDriver.Contains('mssql') or LDriver.Contains('sqlserver') then
-    Result := Dext.Entity.Dialects.TSQLServerDialect.Create
-  else if LDriver.Contains('fb') or LDriver.Contains('firebird') then
-    Result := Dext.Entity.Dialects.TFirebirdDialect.Create
-  else
-    Result := Dext.Entity.Dialects.TSQLiteDialect.Create; // Default
+  Result := FDialect;
 end;
 
 { TDbContextOptionsBuilder }

@@ -56,7 +56,7 @@ You can use `TUUID` directly in your Controller Actions or Minimal API endpoints
 
 ```pascal
 // Function with TUUID parameter
-App.MapGet('/products/:id',
+App.MapGet('/products/{id}',
   function(Context: IHttpContext): IResult
   begin
     // Automatically binds from URL segment

@@ -97,10 +97,11 @@ type
     FQuery: TFDQuery;
     FConnection: TFDConnection;
     FDialect: TDatabaseDialect;
+    FOnLog: TProc<string>;
     procedure SetParamValue(Param: TFDParam; const AValue: TValue);
     function GetDialect: TDatabaseDialect;
   public
-    constructor Create(AConnection: TFDConnection);
+    constructor Create(AConnection: TFDConnection; ADialect: TDatabaseDialect);
     destructor Destroy; override;
     
     procedure SetSQL(const ASQL: string);
@@ -121,6 +122,9 @@ type
   private
     FConnection: TFDConnection;
     FOwnsConnection: Boolean;
+    FOnLog: TProc<string>;
+    FDialect: TDatabaseDialect;
+    procedure DetectDialect;
   public
     constructor Create(AConnection: TFDConnection; AOwnsConnection: Boolean = True);
     destructor Destroy; override;
@@ -137,6 +141,13 @@ type
     function GetConnectionString: string;
     procedure SetConnectionString(const AValue: string);
     property ConnectionString: string read GetConnectionString write SetConnectionString;
+    
+    function GetDialect: TDatabaseDialect;
+    property Dialect: TDatabaseDialect read GetDialect;
+    
+    procedure SetOnLog(AValue: TProc<string>);
+    function GetOnLog: TProc<string>;
+    property OnLog: TProc<string> read GetOnLog write SetOnLog;
     
     property Connection: TFDConnection read FConnection;
   end;
@@ -269,10 +280,11 @@ end;
 
 { TFireDACCommand }
 
-constructor TFireDACCommand.Create(AConnection: TFDConnection);
+constructor TFireDACCommand.Create(AConnection: TFDConnection; ADialect: TDatabaseDialect);
 begin
   inherited Create;
   FConnection := AConnection;
+  FDialect := ADialect;
   FQuery := TFDQuery.Create(nil);
   FQuery.Connection := FConnection;
 end;
@@ -300,25 +312,7 @@ begin
 end;
 
 function TFireDACCommand.GetDialect: TDatabaseDialect;
-var
-  DriverID: string;
 begin
-  if FDialect <> ddUnknown then
-    Exit(FDialect);
-    
-  DriverID := FConnection.DriverName.ToLower;
-  
-  if DriverID.Contains('pg') or DriverID.Contains('postgres') then
-    FDialect := ddPostgreSQL
-  else if DriverID.Contains('mysql') or DriverID.Contains('maria') then
-    FDialect := ddMySQL
-  else if DriverID.Contains('mssql') or DriverID.Contains('sqlserver') then
-    FDialect := ddSQLServer
-  else if DriverID.Contains('sqlite') then
-    FDialect := ddSQLite
-  else
-    FDialect := ddUnknown;
-    
   Result := FDialect;
 end;
 
@@ -327,46 +321,78 @@ var
   Converter: ITypeConverter;
   ConvertedValue: TValue;
 begin
-  Converter := TTypeConverterRegistry.Instance.GetConverter(AValue.TypeInfo);
   if AValue.IsEmpty then
   begin
     Param.Clear;
-    if Param.DataType = ftUnknown then
-      Param.DataType := ftString; 
-  end
-  else
-  begin
-    // Try to find a type converter
-    Converter := TTypeConverterRegistry.Instance.GetConverter(AValue.TypeInfo);
-    if Converter <> nil then
+    // Set correct DataType for empty values - byte arrays need ftBlob!
+    if AValue.TypeInfo <> nil then
     begin
-      // Convert value using converter
-      ConvertedValue := Converter.ToDatabase(AValue, GetDialect);
-      
-      // Fix for PostgreSQL UUID "operator does not exist" error
-      // Explicitly handle TGUID, TUUID and String-formatted GUIDs
-      if (AValue.TypeInfo = TypeInfo(TGUID)) or (AValue.TypeInfo = TypeInfo(TUUID)) then
+      var TypeName := string(AValue.TypeInfo.Name);
+      if (TypeName = 'TBytes') or (TypeName = 'TArray<System.Byte>') or (TypeName = 'TArray<Byte>') then
+        Param.DataType := ftBlob
+      // Do not force ftString for unknown types, let FireDAC or the query handle it, 
+      // or at least leave it as ftUnknown so it doesn't conflict if the parameter is actually an integer/date in the query
+      else if Param.DataType = ftUnknown then
       begin
-        Param.DataType := ftGuid;
-        Param.AsString := ConvertedValue.AsString;
-      end
-      // aggressive check for GUID strings to handle cases where TValue lost strict type info
-      else if (ConvertedValue.Kind in [tkString, tkUString, tkWString]) and 
-              ((Length(ConvertedValue.AsString) = 36) or (Length(ConvertedValue.AsString) = 38)) and
-              (ConvertedValue.AsString.IndexOf('-') > 0) then // Simple heuristic check
-      begin
-         // Only force ftGuid if it looks like a GUID. Postgres requires this for = operator.
-         // Valid GUID ex: 550e8400-e29b-41d4-a716-446655440000 (36) or {550e8400...} (38)
-         Param.DataType := ftGuid;
-         Param.AsString := ConvertedValue.AsString;
-      end
-      else
-      // Set param value (converted value is typically a string or integer)
-      case ConvertedValue.Kind of
+         // If we really don't know, ftString is often a safe default for NULLs in some DBs,
+         // but for others (like strict SQL) it might be an issue. 
+         // However, the error "Parameter [P2] data type is unknown" suggests we MUST set it.
+         // If TypeInfo is present but value is empty, we can try to infer from TypeInfo kind.
+         case AValue.TypeInfo.Kind of
+           tkInteger, tkInt64: Param.DataType := ftInteger;
+           tkFloat: 
+             if AValue.TypeInfo = TypeInfo(TDateTime) then Param.DataType := ftDateTime
+             else if AValue.TypeInfo = TypeInfo(TDate) then Param.DataType := ftDate
+             else if AValue.TypeInfo = TypeInfo(TTime) then Param.DataType := ftTime
+             else Param.DataType := ftFloat;
+           tkString, tkUString, tkWString, tkChar, tkWChar: Param.DataType := ftString;
+           tkEnumeration:
+             if AValue.TypeInfo = TypeInfo(Boolean) then Param.DataType := ftBoolean
+             else Param.DataType := ftInteger;
+           else
+             Param.DataType := ftString; // Fallback
+         end;
+      end;
+    end
+    else if Param.DataType = ftUnknown then
+      Param.DataType := ftString; // Ultimate fallback if no TypeInfo
+    Exit;
+  end;
+  
+  // Try to find a type converter
+  Converter := TTypeConverterRegistry.Instance.GetConverter(AValue.TypeInfo);
+
+  
+  if Converter <> nil then
+  begin
+    // Convert value using converter
+    ConvertedValue := Converter.ToDatabase(AValue, GetDialect);
+
+    
+    // Fix for PostgreSQL UUID "operator does not exist" error
+    // Explicitly handle TGUID, TUUID and String-formatted GUIDs
+    if (AValue.TypeInfo = TypeInfo(TGUID)) or (AValue.TypeInfo = TypeInfo(TUUID)) then
+    begin
+      Param.DataType := ftGuid;
+      Param.AsString := ConvertedValue.AsString;
+    end
+    // aggressive check for GUID strings to handle cases where TValue lost strict type info
+    else if (ConvertedValue.Kind in [tkString, tkUString, tkWString]) and
+            ((Length(ConvertedValue.AsString) = 36) or (Length(ConvertedValue.AsString) = 38)) and
+            (ConvertedValue.AsString.IndexOf('-') > 0) then // Simple heuristic check
+    begin
+       // Only force ftGuid if it looks like a GUID. Postgres requires this for = operator.
+       // Valid GUID ex: 550e8400-e29b-41d4-a716-446655440000 (36) or {550e8400...} (38)
+       Param.DataType := ftGuid;
+       Param.AsString := ConvertedValue.AsString;
+    end
+    else
+    // Set param value (converted value is typically a string or integer)
+    case ConvertedValue.Kind of
         tkInteger, tkInt64:
         begin
           Param.DataType := ftInteger;
-          Param.AsInteger := ConvertedValue.AsInteger;
+          Param.AsLargeInt := ConvertedValue.AsInt64;
         end;
         tkFloat:
         begin
@@ -393,27 +419,53 @@ begin
         end;
         tkString, tkUString, tkWString, tkChar, tkWChar:
         begin
-          Param.AsWideString := ConvertedValue.AsString;
+          // Use ftWideMemo for large strings to avoid FireDAC size limits
+          if Length(ConvertedValue.AsString) > 4000 then
+          begin
+            Param.DataType := ftWideMemo;
+            Param.Size := Length(ConvertedValue.AsString);
+            Param.AsWideMemo := ConvertedValue.AsString;
+          end
+          else
+            Param.AsWideString := ConvertedValue.AsString;
         end;
         tkDynArray:
         begin
-          if ConvertedValue.TypeInfo = TypeInfo(TBytes) then
+          // Check for byte arrays by name (TBytes / TArray<Byte> / TArray<System.Byte>)
+          // TypeInfo(TBytes) may not match TArray<System.Byte> pointer
+          var IsByteArray := False;
+          if ConvertedValue.TypeInfo <> nil then
           begin
+            var TypeName := string(ConvertedValue.TypeInfo.Name);
+            IsByteArray := (TypeName = 'TBytes') or 
+                           (TypeName = 'TArray<System.Byte>') or 
+                           (TypeName = 'TArray<Byte>');
+
+          end;
+          
+          if IsByteArray then
+          begin
+             // Explicitly set ftBlob. FireDAC needs this for Postgres bytea.
+             Param.DataType := ftBlob;
              var Bytes := ConvertedValue.AsType<TBytes>;
              var RawStr: RawByteString;
              SetLength(RawStr, Length(Bytes));
              if Length(Bytes) > 0 then
                Move(Bytes[0], RawStr[1], Length(Bytes));
              Param.AsBlob := RawStr;
+
           end
           else
+          begin
             Param.Value := ConvertedValue.AsVariant;
+
+          end;
         end;
         else
           Param.Value := ConvertedValue.AsVariant;
-      end;
-    end
-    else
+    end;  // end case ConvertedValue.Kind
+  end  // end if Converter <> nil
+  else
   begin
     case AValue.Kind of
       tkInteger, tkInt64: 
@@ -454,22 +506,46 @@ begin
           Param.DataType := ftGuid;
           Param.AsString := AValue.AsString;
         end
+        // Use ftWideMemo for large strings to avoid FireDAC size limits (default is 32767 for ftString)
+        else if Length(AValue.AsString) > 4000 then
+        begin
+          Param.DataType := ftWideMemo;
+          Param.Size := Length(AValue.AsString);
+          Param.AsWideMemo := AValue.AsString;
+        end
         else
           Param.AsWideString := AValue.AsString;
       end;
       tkDynArray:
       begin
-        if AValue.TypeInfo = TypeInfo(TBytes) then
+        // Check for byte arrays by name (TBytes / TArray<Byte> / TArray<System.Byte>)
+        var IsByteArray := False;
+        if AValue.TypeInfo <> nil then
         begin
+          var TypeName := string(AValue.TypeInfo.Name);
+          IsByteArray := (TypeName = 'TBytes') or 
+                         (TypeName = 'TArray<System.Byte>') or 
+                         (TypeName = 'TArray<Byte>');
+
+        end;
+        
+        if IsByteArray then
+        begin
+           // Set ftBlob explicitly for PostgreSQL bytea compatibility
+           Param.DataType := ftBlob;
            var Bytes := AValue.AsType<TBytes>;
            var RawStr: RawByteString;
            SetLength(RawStr, Length(Bytes));
            if Length(Bytes) > 0 then
              Move(Bytes[0], RawStr[1], Length(Bytes));
            Param.AsBlob := RawStr;
+
         end
         else
+        begin
           Param.Value := AValue.AsVariant;
+
+        end;
       end;
       tkEnumeration:
       begin
@@ -516,12 +592,15 @@ begin
         end
         else
            Param.Value := AValue.AsVariant;
-      end;
+      end;  // end case AValue.Kind
     else
       Param.Value := AValue.AsVariant;
+      // If the value is Null and we haven't set a type, default to ftString
+      // This prevents "Data type is unknown" errors in FireDAC
+      if (VarIsNull(Param.Value) or VarIsEmpty(Param.Value)) and (Param.DataType = ftUnknown) then
+        Param.DataType := ftString;
     end;
-    end; // Close else block for type converter
-  end;
+  end;  // end else (no converter)
 end;
 
 procedure TFireDACCommand.ClearParams;
@@ -536,6 +615,7 @@ end;
 
 function TFireDACCommand.ExecuteNonQuery: Integer;
 begin
+  if Assigned(FOnLog) then FOnLog(FQuery.SQL.Text);
   FQuery.ExecSQL;
   Result := FQuery.RowsAffected;
 end;
@@ -546,6 +626,7 @@ var
   i: Integer;
   Src, Dest: TFDParam;
 begin
+  if Assigned(FOnLog) then FOnLog(FQuery.SQL.Text);
   // Create a new Query for the Reader to allow independent iteration
   Q := TFDQuery.Create(nil);
   try
@@ -574,6 +655,7 @@ end;
 
 function TFireDACCommand.ExecuteScalar: TValue;
 begin
+  if Assigned(FOnLog) then FOnLog(FQuery.SQL.Text);
   FQuery.Open;
   try
     if not FQuery.Eof then
@@ -649,7 +731,14 @@ begin
         end;
         tkString, tkUString, tkWString, tkChar, tkWChar:
         begin
-          Param.AsWideStrings[i] := Val.AsString;
+          if Length(Val.AsString) > 4000 then
+          begin
+            if Param.DataType <> ftWideMemo then Param.DataType := ftWideMemo;
+            if Param.Size < Length(Val.AsString) then Param.Size := Length(Val.AsString);
+            Param.AsWideStrings[i] := Val.AsString; // Arrays use AsWideStrings, no AsWideMemos array prop usually
+          end
+          else
+            Param.AsWideStrings[i] := Val.AsString;
         end;
         tkDynArray:
         begin
@@ -689,17 +778,17 @@ begin
                // Recursive call for inner value? No, just handle it here or duplicate logic.
                // Duplicating logic for simplicity to avoid recursion with index passing
                case InnerVal.Kind of
-                 tkInteger: 
-                 begin
-                   Param.DataType := ftInteger;
-                   Param.AsIntegers[i] := InnerVal.AsInteger;
-                 end;
+                 tkInteger:
+                   begin
+                     Param.DataType := ftInteger;
+                     Param.AsIntegers[i] := InnerVal.AsInteger;
+                   end;
                  tkInt64:
-                 begin
-                   Param.DataType := ftLargeInt;
-                   Param.AsLargeInts[i] := InnerVal.AsInt64;
-                 end;
-                  tkFloat:
+                   begin
+                     Param.DataType := ftLargeInt;
+                     Param.AsLargeInts[i] := InnerVal.AsInt64;
+                   end;
+                 tkFloat:
                   begin
                     if InnerVal.TypeInfo = TypeInfo(TDateTime) then
                     begin
@@ -724,6 +813,16 @@ begin
                   end;
                   tkString, tkUString, tkWString:
                   begin
+                    // Check for large strings in array param
+                    if Length(InnerVal.AsString) > 4000 then
+                    begin
+                       // Array DML with mixed sizes is tricky. FireDAC usually expects consistent types.
+                       // For safety, if we detect large strings, we might want to force the whole column to be WideMemo?
+                       // But SetParamArray sets values for one param name (an array of values).
+                       // We can set DataType on the Param once.
+                       if Param.DataType <> ftWideMemo then Param.DataType := ftWideMemo;
+                       if Param.Size < Length(InnerVal.AsString) then Param.Size := Length(InnerVal.AsString);
+                    end;
                     Param.AsWideStrings[i] := InnerVal.AsString;
                   end;
                   tkDynArray:
@@ -801,11 +900,13 @@ end;
 
 function TFireDACConnection.CreateCommand(const ASQL: string): IDbCommand;
 var
-  Cmd: IDbCommand;
+  LCmd: TFireDACCommand;
 begin
-  Cmd := TFireDACCommand.Create(FConnection);
-  Cmd.SetSQL(ASQL);
-  Result := Cmd;
+  LCmd := TFireDACCommand.Create(FConnection, GetDialect);
+  LCmd.FOnLog := FOnLog;
+  if ASQL <> '' then
+    LCmd.SetSQL(ASQL);
+  Result := LCmd;
 end;
 
 function TFireDACConnection.GetLastInsertId: Variant;
@@ -821,6 +922,16 @@ end;
 function TFireDACConnection.IsConnected: Boolean;
 begin
   Result := FConnection.Connected;
+end;
+
+procedure TFireDACConnection.SetOnLog(AValue: TProc<string>);
+begin
+  FOnLog := AValue;
+end;
+
+function TFireDACConnection.GetOnLog: TProc<string>;
+begin
+  Result := FOnLog;
 end;
 
 function TFireDACConnection.TableExists(const ATableName: string): Boolean;
@@ -875,6 +986,24 @@ begin
   if FConnection.Connected then
     FConnection.Connected := False;
   FConnection.ConnectionString := AValue;
+end;
+
+procedure TFireDACConnection.DetectDialect;
+var
+  DriverID: string;
+begin
+  if FDialect <> ddUnknown then Exit;
+
+  DriverID := FConnection.DriverName.ToLower;
+  
+  FDialect := TDialectFactory.DetectDialect(DriverID);
+end;
+
+function TFireDACConnection.GetDialect: TDatabaseDialect;
+begin
+  if FDialect = ddUnknown then
+    DetectDialect;
+  Result := FDialect;
 end;
 
 end.

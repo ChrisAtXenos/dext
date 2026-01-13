@@ -30,6 +30,7 @@ interface
 uses
   System.SysUtils,
   System.Rtti,
+  System.TypInfo,
   Dext.Specifications.Interfaces,
   Dext.Specifications.OrderBy;
 
@@ -214,6 +215,7 @@ type
     
     function &In(const Values: TArray<string>): TFluentExpression; overload;
     function &In(const Values: TArray<Integer>): TFluentExpression; overload;
+    function &In(const Values: TArray<Variant>): TFluentExpression; overload;
     function NotIn(const Values: TArray<string>): TFluentExpression; overload;
     function NotIn(const Values: TArray<Integer>): TFluentExpression; overload;
     
@@ -260,7 +262,37 @@ begin
 end;
 
 function TBinaryExpression.ToString: string;
+var
+  Lit: TLiteralExpression;
+  ArrayLen: Integer;
+  I: Integer;
+  ArraySig: string;
 begin
+  // Special handling for IN/NOT IN operators to ensure unique cache signatures
+  // The array length MUST be part of the signature to avoid cache collisions
+  if (FOperator = boIn) or (FOperator = boNotIn) then
+  begin
+    if FRight is TLiteralExpression then
+    begin
+      Lit := TLiteralExpression(FRight);
+      // Force array length extraction - works even when TValue.IsArray returns false
+      try
+        ArrayLen := Lit.Value.GetArrayLength;
+        ArraySig := '[#' + IntToStr(ArrayLen) + ':';
+        for I := 0 to ArrayLen - 1 do
+        begin
+          if I > 0 then ArraySig := ArraySig + ',';
+          ArraySig := ArraySig + Lit.Value.GetArrayElement(I).ToString;
+        end;
+        ArraySig := ArraySig + ']';
+        Result := Format('(%s %d %s)', [FLeft.ToString, Ord(FOperator), ArraySig]);
+        Exit;
+      except
+        // Fall through to default behavior if array extraction fails
+      end;
+    end;
+  end;
+  
   Result := Format('(%s %d %s)', [FLeft.ToString, Ord(FOperator), FRight.ToString]);
 end;
 
@@ -301,8 +333,28 @@ begin
 end;
 
 function TLiteralExpression.ToString: string;
+var
+  I: Integer;
+  Len: Integer;
 begin
-  Result := FValue.ToString;
+  // Check for arrays using Kind instead of IsArray for Delphi 10.4 compatibility
+  // TValue.IsArray returns False for TArray<Variant> in older Delphi versions
+  if (FValue.Kind = tkDynArray) or (FValue.Kind = tkArray) or FValue.IsArray then
+  begin
+    Len := FValue.GetArrayLength;
+    // Include array length prefix to ensure unique cache signatures for IN queries
+    // This prevents cache collisions when same query structure has different param counts
+    // e.g., IN [1] -> "[#1:1]" vs IN [1,2] -> "[#2:1,2]"
+    Result := '[#' + IntToStr(Len) + ':';
+    for I := 0 to Len - 1 do
+    begin
+      if I > 0 then Result := Result + ',';
+      Result := Result + FValue.GetArrayElement(I).ToString;
+    end;
+    Result := Result + ']';
+  end
+  else
+    Result := FValue.ToString;
 end;
 
 { TLogicalExpression }
@@ -516,6 +568,14 @@ var
   Val: TValue;
 begin
   Val := TValue.From<TArray<Integer>>(Values);
+  Result.FExpression := TBinaryExpression.Create(FName, boIn, Val);
+end;
+
+function TPropExpression.&In(const Values: TArray<Variant>): TFluentExpression;
+var
+  Val: TValue;
+begin
+  Val := TValue.From<TArray<Variant>>(Values);
   Result.FExpression := TBinaryExpression.Create(FName, boIn, Val);
 end;
 

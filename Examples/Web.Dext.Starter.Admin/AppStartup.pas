@@ -163,6 +163,9 @@ begin
   // 2. Exception Handler (Global error handling)
   WebApp.UseExceptionHandler;
 
+  // 2.1 Response Compression (gzip/deflate)
+  WebApp.UseMiddleware(TCompressionMiddleware);
+
   // 3. JWT Authentication Middleware
   WebApp.UseJwtAuthentication(
     TJwtOptions.Create('dext-admin-secret-key-change-in-production-2024')

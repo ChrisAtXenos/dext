@@ -9,17 +9,9 @@ uses
   System.IOUtils,
   System.Generics.Collections,
   System.Generics.Defaults,
-  AST.Classes,
-  AST.Delphi.Parser,
-  AST.Delphi.Classes,
-  AST.Delphi.DataTypes,
-  AST.Delphi.Project,
-  AST.Intf,
-  AST.Parser.Options,
-  AST.Pascal.Parser,
-  AST.Delphi.Declarations,
-  AST.Delphi.SysTypes,
-  AST.Targets;
+  DelphiAST.Classes,
+  DelphiAST.Consts,
+  DelphiAST;
 
 type
   TOrdinalIgnoreCaseComparer = class(TEqualityComparer<string>)
@@ -32,6 +24,7 @@ type
   public
     UnitName: string;
     Types: TList<string>;
+    GenericTypes: TList<string>; // New: Store generic types for comments
     Consts: TList<string>;
     constructor Create(const AName: string);
     destructor Destroy; override;
@@ -43,22 +36,24 @@ type
     FSearchPattern: string;
     FExcludedUnits: THashSet<string>;
     FParsedUnits: TObjectList<TExtractedUnit>;
-    FProject: IASTDelphiProject; 
+    FGlobalTypeNames: THashSet<string>; // New: Global deduplication
+    
     procedure ScanFolder(const Folder: string);
     procedure ProcessFile(const FileName: string); virtual;
     function IsExcluded(const UnitName: string): Boolean;
-    function IsGeneric(Decl: TIDType): Boolean;
-    function GetFullTypeName(UnitName, TypeName: string): string;
+    function IsGeneric(Node: TSyntaxNode): Boolean;
+    function GetUnitName(Root: TSyntaxNode; const FileName: string): string;
   public
     property ParsedUnits: TObjectList<TExtractedUnit> read FParsedUnits;
     constructor Create(const SourcePath, Wildcard: string; const Excluded: TArray<string>);
     destructor Destroy; override;
     procedure Execute; virtual;
-    procedure GenerateArtifacts(const OutputPath: string; const BaseName: string); virtual;
+    procedure InjectIntoFile(const TargetFile: string);
   private
     FSkippedUnits: TList<string>;
     FProcessedUnits: Integer;
     function IsFieldName(const AName: string): Boolean;
+    function IsUnitProcessed(const UnitName: string): Boolean;
   end;
 
 implementation
@@ -81,12 +76,14 @@ constructor TExtractedUnit.Create(const AName: string);
 begin
   UnitName := AName;
   Types := TList<string>.Create;
+  GenericTypes := TList<string>.Create;
   Consts := TList<string>.Create;
 end;
 
 destructor TExtractedUnit.Destroy;
 begin
   Types.Free;
+  GenericTypes.Free;
   Consts.Free;
   inherited;
 end;
@@ -100,17 +97,13 @@ begin
   FSourcePath := SourcePath;
   FSearchPattern := Wildcard;
   FExcludedUnits := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create);
+  FGlobalTypeNames := THashSet<string>.Create(TOrdinalIgnoreCaseComparer.Create); // Case-insensitive
   for S in Excluded do
     FExcludedUnits.Add(S);
     
   FParsedUnits := TObjectList<TExtractedUnit>.Create(True);
   FSkippedUnits := TList<string>.Create;
   FProcessedUnits := 0;
-  FProject := TASTDelphiProject.Create('DextFacade');
-  // Optional: Set Target to define pointer sizes etc. if needed for parsing directives
-  // FProject.Target := TWINX64_Target; 
-  // FProject.Defines.Add('MSWINDOWS'); 
-  // FProject.Defines.Add('WIN64');
 end;
 
 destructor TFacadeGenerator.Destroy;
@@ -118,17 +111,46 @@ begin
   FParsedUnits.Free;
   FSkippedUnits.Free;
   FExcludedUnits.Free;
-  // FProject is ref counted
+  FGlobalTypeNames.Free;
   inherited;
 end;
 
 function TFacadeGenerator.IsFieldName(const AName: string): Boolean;
 begin
-  // Filter private field names like FValue, FItems, FData, etc.
-  // Pattern: starts with 'F' followed by uppercase letter
   Result := (Length(AName) >= 2) and 
             (AName[1] = 'F') and 
-            (AName[2] in ['A'..'Z']);
+            CharInSet(AName[2], ['A'..'Z']);
+end;
+
+function TFacadeGenerator.IsGeneric(Node: TSyntaxNode): Boolean;
+begin
+  // Check if declaration has type parameters
+  Result := Node.FindNode(ntTypeParams) <> nil;
+end;
+
+function TFacadeGenerator.GetUnitName(Root: TSyntaxNode; const FileName: string): string;
+begin
+  if (Root <> nil) and (Root.Typ = ntUnit) then
+    Result := Root.GetAttribute(anName)
+  else
+    Result := '';
+    
+  if Result = '' then
+    Result := TPath.GetFileNameWithoutExtension(FileName);
+end;
+
+function TFacadeGenerator.IsExcluded(const UnitName: string): Boolean;
+begin
+  Result := FExcludedUnits.Contains(UnitName);
+end;
+
+function TFacadeGenerator.IsUnitProcessed(const UnitName: string): Boolean;
+var
+  U: TExtractedUnit;
+begin
+  Result := False;
+  for U in FParsedUnits do
+    if SameText(U.UnitName, UnitName) then Exit(True);
 end;
 
 procedure TFacadeGenerator.Execute;
@@ -141,13 +163,11 @@ var
   FileName: string;
   SubFolder: string;
 begin
-  // Process files
   for FileName in TDirectory.GetFiles(Folder, FSearchPattern) do
   begin
     ProcessFile(FileName);
   end;
 
-  // Recurse directories
   for SubFolder in TDirectory.GetDirectories(Folder) do
   begin
     ScanFolder(SubFolder);
@@ -156,218 +176,159 @@ end;
 
 procedure TFacadeGenerator.ProcessFile(const FileName: string);
 var
-  LocalProject: IASTDelphiProject;
-  Parser: TASTDelphiUnit;
-  SourceCode: string;
-  UnitDecl: TExtractedUnit;
-  Decl: TIDDeclaration;
-  I: Integer;
+  Root, IntfNode, SectionNode, DeclNode: TSyntaxNode;
   UnitName: string;
+  UnitDecl: TExtractedUnit;
+  TypeName: string;
+  GenericParams: string;
+  
+  function IsValidType(Name: string): Boolean;
+  begin
+     Result := True;
+     // Filter obvious keywords if mistakenly parsed as name
+     if MatchStr(Name, ['type', 'const', 'var', 'class', 'interface', 'record', 'end']) then Exit(False);
+     if IsFieldName(Name) then Exit(False);
+  end;
+  
 begin
-  // Simple check to skip obviously irrelevant files
   if TPath.GetFileName(FileName).StartsWith('.') then Exit;
+  if TPath.GetFileName(FileName).Contains('.Aliases.inc') then Exit;
+  if TPath.GetFileName(FileName).Contains('.Uses.inc') then Exit;
   
   Writeln('Processing: ' + TPath.GetFileName(FileName));
   Inc(FProcessedUnits);
 
+  Root := nil;
   try
-    SourceCode := TFile.ReadAllText(FileName);
-  except
-    Writeln('Error reading file: ' + FileName);
-    Exit;
-  end;
-
-  // Use a local project to avoid state pollution and AVs with dangling pointers
-  LocalProject := TASTDelphiProject.Create('TempProject');
-  // Configure project
-  LocalProject.StopCompileIfError := False; // Recover from missing system units
-  
-  // Cast to class to access fields if not in interface
-  if LocalProject is TASTDelphiProject then
-  begin
-     TASTDelphiProject(LocalProject).Target := TWINX64_Target; 
-     TASTDelphiProject(LocalProject).AddUnitSearchPath(TPath.GetDirectoryName(FSourcePath), True);
-
-     // Define platform symbols to help parsing RTL/VCL units
-     LocalProject.Defines.Add('MSWINDOWS');
-     LocalProject.Defines.Add('WIN32'); // or WIN64, let's add both or specific
-     LocalProject.Defines.Add('WIN64');
-     LocalProject.Defines.Add('CPUX64');
-     LocalProject.Defines.Add('UNICODE');
-
-
-     // Try to add BDS sources if available
-     var BDS := GetEnvironmentVariable('BDS');
-     if BDS = '' then
-       BDS := 'C:\Program Files (x86)\Embarcadero\Studio\23.0';
-       
-     if BDS <> '' then
-     begin
-       var BDSSource := TPath.Combine(BDS, 'source');
-       if TDirectory.Exists(BDSSource) then
-       begin
-         TASTDelphiProject(LocalProject).AddUnitSearchPath(TPath.Combine(BDSSource, 'rtl'), True);
-         TASTDelphiProject(LocalProject).AddUnitSearchPath(TPath.Combine(BDSSource, 'data'), True);
-         // Writeln('Added BDS Sources from: ' + BDSSource); 
-       end
-       else
-       begin
-          // Try without 'source' subfolder? No, it should be there.
-          // Writeln('BDS Source not found at: ' + BDSSource);
-       end;
-     end;
-  end;
-  
-  // We parse the unit
-  try
-    Parser := TASTDelphiUnit.Create(LocalProject, FileName, SourceCode);
-    // Do NOT free Parser manually - it is ref-counted by LocalProject!
     try
-      if Parser.Compile(True) = CompileFail then
+      // Use TPasSyntaxTreeBuilder from DelphiAST.pas
+      Root := TPasSyntaxTreeBuilder.Run(FileName);
+    except
+      on E: Exception do
       begin
-        Writeln('  Compile failed for ' + FileName + '. Messages: ' + Parser.MessagesText);
-      end;
-
-      UnitName := Parser.Name;
-      if UnitName = '' then 
-        UnitName := TPath.GetFileNameWithoutExtension(FileName);
-
-      Writeln('  Unit: ' + UnitName);
-
-      if IsExcluded(UnitName) then 
-      begin
-        Writeln('  Excluded.');
+        Writeln('Error parsing ' + FileName + ': ' + E.Message);
         Exit;
       end;
-
-      UnitDecl := TExtractedUnit.Create(UnitName);
-      
-      if Parser.IntfScope <> nil then
-      begin
-        Writeln(Format('  Scope Items: %d', [Parser.IntfScope.Count]));
-        for I := 0 to Parser.IntfScope.Count - 1 do
-        begin
-          Decl := Parser.IntfScope.Items[I];
-          
-          if Decl.Name = '' then Continue;
-          if (Decl.ItemType = itUnit) then Continue; // Skip Unit metadata
-
-          // Basic Info
-          var DeclInfo := Format('    %-30s : %s', [Decl.Name, Decl.ClassName]);
-
-          if Decl.Visibility in [vPrivate, vStrictPrivate, vProtected, vStrictProtected] then 
-          begin
-            // Writeln(DeclInfo + ' -> Skipped (Visibility)'); // Too noisy for non-public?
-            Continue; 
-          end;
-
-          if Decl is TIDType then
-          begin
-            if IsGeneric(TIDType(Decl)) then 
-            begin
-               Writeln(DeclInfo + ' -> Skipped (Generic)');
-               Continue;
-            end;
-            
-            if (Decl is TIDClass) or 
-               (Decl is TIDInterface) or 
-               (Decl is TIDRecord) or 
-               (Decl is TIDEnum) or
-               (Decl is TIDClassOf) or
-               (Decl is TIDPointer) or 
-               (Decl is TIDProcType) then
-            begin
-               if (Decl.Name = UnitName) then Continue; 
-               
-               UnitDecl.Types.Add(Decl.Name);
-               Writeln(DeclInfo + ' -> Added (Type)');
-            end
-            else if (Decl.ItemType = itType) then
-            begin
-               if (Decl.Name = UnitName) then Continue;
-               
-               // Filter out keywords mistakenly parsed as types
-               if MatchStr(Decl.Name, ['public', 'protected', 'private', 'published', 'automated', 
-                                     'static', 'virtual', 'override', 'overload', 'reintroduce', 'default',
-                                     'abstract', 'dynamic', 'message', 'deprecated', 'platform', 'experimental',
-                                     'inline', 'assembler', 'register', 'pascal', 'cdecl', 'stdcall', 'safecall',
-                                     'forward', 'external', 'varargs', 'local', 'near', 'far', 'resident']) then
-               begin
-                  Writeln(DeclInfo + ' -> Skipped (Keyword)');
-                  Continue;
-               end;
-               
-               // Filter out field names (FValue, FItems, etc.)
-               if IsFieldName(Decl.Name) then
-               begin
-                  Writeln(DeclInfo + ' -> Skipped (Field)');
-                  Continue;
-               end;
-               
-               UnitDecl.Types.Add(Decl.Name);
-               Writeln(DeclInfo + ' -> Added (Alias)');
-            end;
-          end
-          else if Decl is TIDConstant then
-          begin
-               UnitDecl.Consts.Add(Decl.Name);
-               Writeln(DeclInfo + ' -> Added (Const)');
-          end;
-        end;
-      end
-      else
-        Writeln('  IntfScope is NIL - Parser likely failed completely or unit has no interface section.');
-      
-      if (UnitDecl.Types.Count > 0) or (UnitDecl.Consts.Count > 0) then
-        FParsedUnits.Add(UnitDecl)
-      else
-      begin
-        FSkippedUnits.Add(UnitName + ' (no public types/consts)');
-        UnitDecl.Free;
-      end;
-
-    finally
-      // Parser is managed by LocalProject (interface)
     end;
-  except
-    on E: Exception do
+
+    if Root = nil then Exit;
+
+    UnitName := GetUnitName(Root, FileName);
+    
+    if IsExcluded(UnitName) then 
     begin
-      Writeln('Error parsing ' + FileName + ': ' + E.Message);
+      Writeln('  Excluded: ' + UnitName);
+      Exit;
     end;
+
+    // Deduplicate units
+    if IsUnitProcessed(UnitName) then
+    begin
+       Writeln('  Duplicate unit skipped: ' + UnitName);
+       Exit;
+    end;
+
+    UnitDecl := TExtractedUnit.Create(UnitName);
+    
+    // Find Interface section
+    IntfNode := Root.FindNode(ntInterface);
+    if IntfNode <> nil then
+    begin
+      // Iterate interface sections (Type, Const, etc.)
+      for SectionNode in IntfNode.ChildNodes do
+      begin
+        if SectionNode.Typ = ntTypeSection then
+        begin
+          for DeclNode in SectionNode.ChildNodes do
+          begin
+            if DeclNode.Typ = ntTypeDecl then
+            begin
+              TypeName := DeclNode.GetAttribute(anName);
+              
+              if not IsValidType(TypeName) then Continue;
+
+              // Check for Generics
+              if IsGeneric(DeclNode) then 
+              begin
+                 // Add to generics list (no global check needed for comments, but optional)
+                 // Format: MyType<T>
+                 // Note: Extracting exact params from AST is harder without traversing ntTypeParams.
+                 // For now, we will just assume <T> as a placeholder or try to simple append <> if we don't parse deeply.
+                 // Actually, checking children of ntTypeParams would be better.
+                 // Let's just append IsGeneric marker for now to keep it simple as requested "commented reference".
+                 // Or we can try to reconstruct it.
+                 // Simplest is just storing the name, adding it to comments.
+                 GenericParams := '<T>'; // Default placeholder
+                 UnitDecl.GenericTypes.Add(TypeName + GenericParams); 
+                 Continue;
+              end;
+              
+              // Global Deduplication check
+              if FGlobalTypeNames.Contains(TypeName) then
+              begin
+                 //writeln('  Skipping duplicate type: ' + TypeName);
+                 Continue;
+              end;
+              
+              if not UnitDecl.Types.Contains(TypeName) then
+              begin
+                UnitDecl.Types.Add(TypeName);
+                FGlobalTypeNames.Add(TypeName); // Mark as used
+              end;
+            end;
+          end;
+        end
+        else if SectionNode.Typ = ntConstants then // Changed from ntConstSection
+        begin
+           for DeclNode in SectionNode.ChildNodes do
+           begin
+             if DeclNode.Typ = ntConstant then
+             begin
+               var ConstName := DeclNode.GetAttribute(anName);
+               
+               // Global Deduplication for constants too
+               if FGlobalTypeNames.Contains(ConstName) then Continue;
+               
+               if not UnitDecl.Consts.Contains(ConstName) then
+               begin
+                 UnitDecl.Consts.Add(ConstName);
+                 FGlobalTypeNames.Add(ConstName);
+               end;
+             end;
+           end;
+        end;
+      end;
+    end;
+
+    if (UnitDecl.Types.Count > 0) or (UnitDecl.Consts.Count > 0) or (UnitDecl.GenericTypes.Count > 0) then
+      FParsedUnits.Add(UnitDecl)
+    else
+      UnitDecl.Free;
+
+  finally
+    Root.Free;
   end;
 end;
 
-function TFacadeGenerator.IsExcluded(const UnitName: string): Boolean;
-begin
-  Result := FExcludedUnits.Contains(UnitName);
-end;
-
-function TFacadeGenerator.IsGeneric(Decl: TIDType): Boolean;
-begin
-  Result := Decl.IsGeneric;
-end;
-
-function TFacadeGenerator.GetFullTypeName(UnitName, TypeName: string): string;
-begin
-  Result := UnitName + '.' + TypeName;
-end;
-
-procedure TFacadeGenerator.GenerateArtifacts(const OutputPath, BaseName: string);
+procedure TFacadeGenerator.InjectIntoFile(const TargetFile: string);
 var
-  AliasesContent: TStringList;
-  UsesContent: TStringList;
-  UnitInfo: TExtractedUnit;
-  TypeName: string;
-  ConstName: string;
-  FileNameAliases: string;
-  FileNameUses: string;
-begin
-  AliasesContent := TStringList.Create;
-  UsesContent := TStringList.Create;
-  try
-    AliasesContent.Add('// Auto-generated Aliases');
+  Lines: TStringList;
+  NewLines: TStringList;
+  I: Integer;
+  InAliasesBlock, InUsesBlock: Boolean;
+  
+  // Local logic
+  procedure AddAliases;
+  var
+    LUnitInfo: TExtractedUnit;
+    LTypeName: string;
+    LConstName: string;
+    LGenericName: string;
+    HasConsts, HasGenerics: Boolean;
+  begin
+    NewLines.Add('  // Generated Aliases');
     
-    // Sort units for stability
+    // Sort units
     FParsedUnits.Sort(TComparer<TExtractedUnit>.Construct(
       function(const L, R: TExtractedUnit): Integer
       begin
@@ -375,95 +336,137 @@ begin
       end
     ));
 
-    // Pass 1: Types and Uses
-    for UnitInfo in FParsedUnits do
+    for LUnitInfo in FParsedUnits do
     begin
-      if (UnitInfo.Types.Count > 0) or (UnitInfo.Consts.Count > 0) then
-         UsesContent.Add('  ' + UnitInfo.UnitName + ',');
-
-      if UnitInfo.Types.Count > 0 then
+      // Normal Types
+      if LUnitInfo.Types.Count > 0 then
       begin
-        AliasesContent.Add('');
-        AliasesContent.Add('  // ' + UnitInfo.UnitName);
-        for TypeName in UnitInfo.Types do
-          AliasesContent.Add(Format('  %s = %s.%s;', [TypeName, UnitInfo.UnitName, TypeName]));
+        NewLines.Add('');
+        NewLines.Add('  // ' + LUnitInfo.UnitName);
+        for LTypeName in LUnitInfo.Types do
+          NewLines.Add(Format('  %s = %s.%s;', [LTypeName, LUnitInfo.UnitName, LTypeName]));
+      end;
+      
+      // Generic Types (Commented)
+      if LUnitInfo.GenericTypes.Count > 0 then
+      begin
+         if LUnitInfo.Types.Count = 0 then // Add header if not already added
+         begin
+            NewLines.Add('');
+            NewLines.Add('  // ' + LUnitInfo.UnitName);
+         end;
+         for LGenericName in LUnitInfo.GenericTypes do
+           NewLines.Add(Format('  // %s = %s.%s;', [LGenericName, LUnitInfo.UnitName, LGenericName]));
       end;
     end;
-
-    // Pass 2: Consts
-    var AnyConsts := False;
-    for UnitInfo in FParsedUnits do 
-      if UnitInfo.Consts.Count > 0 then 
-      begin
-        AnyConsts := True;
-        Break;
-      end;
-
-    if AnyConsts then
+    
+    // Constants
+    HasConsts := False;
+    for LUnitInfo in FParsedUnits do if LUnitInfo.Consts.Count > 0 then HasConsts := True;
+    
+    if HasConsts then
     begin
-      AliasesContent.Add('');
-      AliasesContent.Add('const');
-      for UnitInfo in FParsedUnits do
-      begin
-        if UnitInfo.Consts.Count > 0 then
+        NewLines.Add('');
+        NewLines.Add('const');
+        for LUnitInfo in FParsedUnits do
         begin
-           AliasesContent.Add('');
-           AliasesContent.Add('  // ' + UnitInfo.UnitName);
-           for ConstName in UnitInfo.Consts do
-             AliasesContent.Add(Format('  %s = %s.%s;', [ConstName, UnitInfo.UnitName, ConstName]));
+          if LUnitInfo.Consts.Count > 0 then
+          begin
+             NewLines.Add('  // ' + LUnitInfo.UnitName);
+             for LConstName in LUnitInfo.Consts do
+                NewLines.Add(Format('  %s = %s.%s;', [LConstName, LUnitInfo.UnitName, LConstName]));
+          end;
         end;
-      end; 
     end;
+  end;
+  
+  procedure AddUses;
+  var
+    LUnitInfo: TExtractedUnit;
+    LUnits: TList<string>;
+    i: Integer;
+  begin
+      NewLines.Add('  // Generated Uses');
+      LUnits := TList<string>.Create;
+      try
+        for LUnitInfo in FParsedUnits do
+        begin
+            // Include unit if traversed, even if only for generics (as reference) or constants
+           if (LUnitInfo.Types.Count > 0) or (LUnitInfo.Consts.Count > 0) or (LUnitInfo.GenericTypes.Count > 0) then
+              LUnits.Add(LUnitInfo.UnitName);
+        end;
+        
+        for i := 0 to LUnits.Count - 1 do
+        begin
+          if i < LUnits.Count - 1 then
+            NewLines.Add('  ' + LUnits[i] + ',')
+          else
+            NewLines.Add('  ' + LUnits[i]);
+        end;
+      finally
+        LUnits.Free;
+      end;
+  end;
+  
+begin
+  if not TFile.Exists(TargetFile) then
+  begin
+    Writeln('Target file not found: ' + TargetFile);
+    Exit;
+  end;
+  
+  Lines := TStringList.Create;
+  NewLines := TStringList.Create;
+  try
+    Lines.LoadFromFile(TargetFile);
     
-    // Remove last comma from uses
-    if UsesContent.Count > 0 then
+    InAliasesBlock := False;
+    InUsesBlock := False;
+    
+    for I := 0 to Lines.Count - 1 do
     begin
-      var LastIdx := UsesContent.Count - 1;
-      var LastLine := UsesContent[LastIdx];
-      if (LastLine.Length > 0) and (LastLine.EndsWith(',')) then
-         UsesContent[LastIdx] := LastLine.Substring(0, LastLine.Length - 1);
+      var Trimmed := Trim(Lines[I]);
+      
+      if Trimmed.StartsWith('// {BEGIN_DEXT_ALIASES}') then
+      begin
+         NewLines.Add(Lines[I]);
+         AddAliases;
+         InAliasesBlock := True;
+         Continue;
+      end;
+      
+      if Trimmed.StartsWith('// {END_DEXT_ALIASES}') then
+      begin
+         NewLines.Add(Lines[I]);
+         InAliasesBlock := False;
+         Continue;
+      end;
+      
+      if Trimmed.StartsWith('// {BEGIN_DEXT_USES}') then
+      begin
+         NewLines.Add(Lines[I]);
+         AddUses;
+         InUsesBlock := True;
+         Continue;
+      end;
+      
+      if Trimmed.StartsWith('// {END_DEXT_USES}') then
+      begin
+         NewLines.Add(Lines[I]);
+         InUsesBlock := False;
+         Continue;
+      end;
+      
+      if not InAliasesBlock and not InUsesBlock then
+         NewLines.Add(Lines[I]);
     end;
-
-    FileNameAliases := TPath.Combine(OutputPath, BaseName + '.Aliases.inc');
-    FileNameUses := TPath.Combine(OutputPath, BaseName + '.Uses.inc');
     
-    AliasesContent.SaveToFile(FileNameAliases);
-    UsesContent.SaveToFile(FileNameUses);
-    
-    Writeln('Generated ' + FileNameAliases);
-    Writeln('Generated ' + FileNameUses);
-    
-    // Processing Summary
-    Writeln('');
-    Writeln('========================================');
-    Writeln('  PROCESSING SUMMARY');
-    Writeln('========================================');
-    Writeln(Format('  Files Scanned:    %d', [FProcessedUnits]));
-    Writeln(Format('  Units Extracted:  %d', [FParsedUnits.Count]));
-    Writeln(Format('  Units Skipped:    %d', [FSkippedUnits.Count]));
-    
-    var TotalTypes := 0;
-    var TotalConsts := 0;
-    for UnitInfo in FParsedUnits do
-    begin
-      Inc(TotalTypes, UnitInfo.Types.Count);
-      Inc(TotalConsts, UnitInfo.Consts.Count);
-    end;
-    Writeln(Format('  Total Types:      %d', [TotalTypes]));
-    Writeln(Format('  Total Constants:  %d', [TotalConsts]));
-    Writeln('========================================');
-    
-    if FSkippedUnits.Count > 0 then
-    begin
-      Writeln('');
-      Writeln('Skipped Units:');
-      for var SkippedUnit in FSkippedUnits do
-        Writeln('  - ' + SkippedUnit);
-    end;
+    NewLines.SaveToFile(TargetFile);
+    Writeln('Injected code into ' + TargetFile);
     
   finally
-    AliasesContent.Free;
-    UsesContent.Free;
+    Lines.Free;
+    NewLines.Free;
   end;
 end;
 

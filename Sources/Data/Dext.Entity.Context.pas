@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -48,7 +48,8 @@ uses
   Dext,
   Dext.Entity.TypeSystem,
   Dext.Specifications.Fluent,
-  Dext.Specifications.Types;
+  Dext.Specifications.Types,
+  Dext.Core.Reflection;
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
@@ -105,6 +106,8 @@ type
     function Reference(const APropName: string): IReferenceEntry;
   end;
 
+
+
   /// <summary>
   ///   Concrete implementation of DbContext.
   ///   Manages database connection, transactions, and entity sets.
@@ -132,6 +135,9 @@ type
     FTenantProvider: ITenantProvider;
     FTenantConfigApplied: Boolean;
     FLastAppliedTenantId: string;
+    FOnLog: TProc<string>;
+    procedure SetOnLog(const AValue: TProc<string>);
+    function GetOnLog: TProc<string>;
     procedure ApplyTenantConfig(ACreateSchema: Boolean = False);
     function GetModelBuilder: TModelBuilder;
   protected
@@ -149,7 +155,7 @@ type
     class var FModelCache: TObjectDictionary<TClass, TModelBuilder>;
     class var FCriticalSection: TObject; // For thread safety
     
-    constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil); overload;
+    constructor Create(const AConnection: IDbConnection; const ADialect: ISQLDialect = nil; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil); overload;
     constructor Create(const AOptions: TDbContextOptions; const ATenantProvider: ITenantProvider = nil); overload;
     destructor Destroy; override;
     
@@ -171,6 +177,13 @@ type
     ///   Access the DbSet for a specific entity type.
     /// </summary>
     function DataSet(AEntityType: PTypeInfo): IDbSet;
+
+    /// <summary>
+    /// Preload the DBSets cache to avoid having to manually call Entities<T> for
+    ///  each type which are already exposed as properties on the current TDBContext
+    ///  implementation.
+    /// </summary>
+    procedure PreloadDbSets;
     procedure EnsureCreated;
     procedure ExecuteSchemaSetup;
     
@@ -188,6 +201,8 @@ type
     function Entities<T: class>: IDbSet<T>;
     
     function Entry(const AEntity: TObject): IEntityEntry;
+    
+    property OnLog: TProc<string> read GetOnLog write SetOnLog;
   end;
 
 implementation
@@ -300,11 +315,24 @@ begin
   FreeAndNil(FCriticalSection);
 end;
 
-constructor TDbContext.Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy = nil; const ATenantProvider: ITenantProvider = nil);
+constructor TDbContext.Create(const AConnection: IDbConnection; const ADialect: ISQLDialect; const ANamingStrategy: INamingStrategy; const ATenantProvider: ITenantProvider);
 begin
   inherited Create;
   FConnection := AConnection;
-  FDialect := ADialect;
+  
+  if ADialect <> nil then
+    FDialect := ADialect
+  else if (FConnection <> nil) and (FConnection.Dialect <> ddUnknown) then
+    FDialect := TDialectFactory.CreateDialect(FConnection.Dialect)
+  else
+    FDialect := nil; // Will likely cause issues if query generation is attempted without dialect
+
+  if FDialect = nil then
+  begin
+     // Optional: Raise warning or default to generic?
+     // We leave it nil, it might be set later or cause runtime error if used.
+  end;
+  
   if ANamingStrategy <> nil then
     FNamingStrategy := ANamingStrategy
   else
@@ -352,6 +380,18 @@ begin
   if FOwnsModelBuilder then
     FModelBuilder.Free;
   inherited;
+end;
+
+procedure TDbContext.SetOnLog(const AValue: TProc<string>);
+begin
+  FOnLog := AValue;
+  if FConnection <> nil then
+    FConnection.OnLog := AValue;
+end;
+
+function TDbContext.GetOnLog: TProc<string>;
+begin
+  Result := FOnLog;
 end;
 
 function TDbContext.QueryInterface(const IID: TGUID; out Obj): HResult;
@@ -406,6 +446,34 @@ procedure TDbContext.OnModelCreating(Builder: TModelBuilder);
 begin
   // Default implementation does nothing.
   // Override this in your derived context to configure mappings.
+end;
+
+procedure TDbContext.PreloadDbSets;
+var
+  ctx : TRttiContext;
+  typ : TRttiType;
+  props :  TArray<TRttiProperty>;
+  Prop : TRttiProperty;
+begin
+   Ctx := TRttiContext.Create;
+   try
+     Typ := Ctx.GetType(self.classtype);
+     Props := Typ.GetProperties;
+     for Prop in Props do
+     begin
+       // ignore any properties that are [NotMapped].  Only necessary if the
+       // property returns an interface type and calling the getter would
+       // be undesireable.
+       if Prop.HasAttribute<NotMappedAttribute> then
+         continue;
+       // assume that properties that hold an interface are likely models so
+       // invoke the getter which will auto register any Entities<T>
+       if Prop.IsReadable and (Prop.PropertyType.TypeKind = tkInterface) then
+         Prop.GetValue(Self);
+     end;
+   finally
+      Ctx.free;
+   end;
 end;
 
 function TDbContext.GetMapping(AType: PTypeInfo): TObject;
@@ -584,6 +652,8 @@ begin
   ApplyTenantConfig(True);
   Nodes := TObjectList<TEntityNode>.Create;
   Created := TList<PTypeInfo>.Create;
+  if fCache.count = 0 then
+    PreloadDBSets;
   Ctx := TRttiContext.Create;
   try
     // 1. Build Dependency Graph
@@ -690,13 +760,20 @@ begin
             
             if not FConnection.TableExists(TableName) then
             begin
+              if Assigned(FOnLog) then
+                FOnLog(SQL);
+
               try
                 CmdIntf := FConnection.CreateCommand(SQL);
                 Cmd := IDbCommand(CmdIntf);
                 Cmd.ExecuteNonQuery;
               except
                  on E: Exception do
-                   SafeWriteLn('Warning creating table for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+                 begin
+                   // Always log failed SQL if we have a logger
+                   if Assigned(FOnLog) then
+                     FOnLog('FAILED SQL: ' + SQL);
+                 end;
               end;
             end;
           end;
@@ -711,7 +788,7 @@ begin
       begin
         // Cycle detected or missing dependency.
         // For now, force create the remaining ones (might fail on FKs, but better than hanging)
-        SafeWriteLn('⚠️ Warning: Cyclic dependency or missing dependency detected in EnsureCreated. Force creating remaining tables...');
+
         for i := Nodes.Count - 1 downto 0 do
         begin
            Node := Nodes[i];
@@ -723,8 +800,7 @@ begin
                 Cmd := IDbCommand(CmdIntf);
                 Cmd.ExecuteNonQuery;
               except
-                 on E: Exception do
-                   SafeWriteLn('Error creating table (forced) for ' + string(Node.TypeInfo.Name) + ': ' + E.Message);
+                 on E: Exception do; // Ignore errors in forced creation
               end;
             end;
            Nodes.Delete(i);
@@ -738,6 +814,8 @@ begin
     Nodes.Free;
   end;
 end;
+
+{ TEntityNode }
 
 { TEntityNode }
 
