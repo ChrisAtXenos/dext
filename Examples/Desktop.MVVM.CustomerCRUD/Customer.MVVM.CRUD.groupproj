@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{9D49A0D7-583A-414E-B85C-3EFCA9A14102}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="DesktopMVVMCustomerCRUD.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="CustomerCRUD.Tests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DesktopMVVMCustomerCRUD">
+        <MSBuild Projects="DesktopMVVMCustomerCRUD.dproj"/>
+    </Target>
+    <Target Name="DesktopMVVMCustomerCRUD:Clean">
+        <MSBuild Projects="DesktopMVVMCustomerCRUD.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DesktopMVVMCustomerCRUD:Make">
+        <MSBuild Projects="DesktopMVVMCustomerCRUD.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="CustomerCRUD_Tests">
+        <MSBuild Projects="CustomerCRUD.Tests.dproj"/>
+    </Target>
+    <Target Name="CustomerCRUD_Tests:Clean">
+        <MSBuild Projects="CustomerCRUD.Tests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="CustomerCRUD_Tests:Make">
+        <MSBuild Projects="CustomerCRUD.Tests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DesktopMVVMCustomerCRUD;CustomerCRUD_Tests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DesktopMVVMCustomerCRUD:Clean;CustomerCRUD_Tests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DesktopMVVMCustomerCRUD:Make;CustomerCRUD_Tests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

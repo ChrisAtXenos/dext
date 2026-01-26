@@ -6,7 +6,7 @@ call "C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat"
 
 echo.
 echo ==========================================
-echo Building Dext Framework Packages
+echo Building Dext Framework Packages (Win32)
 echo ==========================================
 echo.
 
@@ -27,6 +27,11 @@ if not exist "%OUTPUT_PATH%" mkdir "%OUTPUT_PATH%"
 
 echo Output directory: %OUTPUT_PATH%
 echo.
+
+cd "%~dp0..\Sources\Dashboard"
+echo Building Dashboard Resources...
+powershell -NoProfile -ExecutionPolicy Bypass -File "build-resources.ps1" -OutputPath "%OUTPUT_PATH%"
+if %ERRORLEVEL% NEQ 0 goto Error
 
 cd "%~dp0..\Sources"
 
@@ -59,6 +64,15 @@ echo Building Dext.Testing...
 msbuild "Dext.Testing.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
 if %ERRORLEVEL% NEQ 0 goto Error
 
+echo.
+echo Building Dext.UI...
+msbuild "Dext.UI.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+if %ERRORLEVEL% NEQ 0 goto Error
+
+echo.
+echo Building Dext.Net...
+msbuild "Dext.Net.dproj" /t:Clean;Build /p:Configuration=%BUILD_CONFIG% /p:Platform=%PLATFORM% /p:DCC_DcuOutput="%OUTPUT_PATH%" /p:DCC_UnitSearchPath="%OUTPUT_PATH%" /v:minimal
+if %ERRORLEVEL% NEQ 0 goto Error
 
 echo.
 echo ==========================================

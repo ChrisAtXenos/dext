@@ -78,6 +78,15 @@ A modern ORM focused on productivity and performance.
   - Direct access to FireDAC's physical layer (IFDPhysConnection) for ultra-fast queries
 - **Performance**: High-Speed Metadata Cache (singleton-based) to minimize reflection overhead.
 
+### 🌐 Dext.Net (Networking) ⭐ NEW
+A high-performance, fluent HTTP client for modern connectivity.
+- **Fluent API**: Builder pattern for intuitive request construction (`Client.Get('/api').Header(...).Start`).
+- **Connection Pooling**: Native thread-safe pool reuses `THttpClient` instances for maximum throughput.
+- **Resilience**: Built-in support for Retries, Timeouts, and Circuit Breaker patterns.
+- **Authentication**: Pluggable providers (Bearer, Basic, ApiKey).
+- **Serialization**: Automatic JSON serialization/deserialization integration with `Dext.Json`.
+- **HTTP File Parser** ⭐ NEW: Parse and execute `.http` files (VS Code/IntelliJ REST Client format) with variable interpolation and environment variable support.
+
 ### ⚙️ Dext.Core (Infrastructure)
 The foundation of the framework, usable in any type of application.
 - **Dependency Injection**: Full and fast IOC container.
@@ -105,7 +114,23 @@ The definitive, modern testing framework for Delphi, inspired by NUnit, FluentAs
 - **Live Dashboard** ⭐ NEW: Monitor your tests in real-time with a beautiful dark-themed web dashboard and historical analysis.
 - **Code Coverage & CLI**: Run tests and generate SonarQube-ready coverage reports with `dext test --coverage`. Enforce quality gates with thresholds.
 
+### 🖥️ Dext.UI (Desktop Framework) ⭐ NEW
+A modern UI framework for building professional VCL desktop applications.
+- **Navigator Framework**: Flutter-inspired navigation with middleware pipeline support.
+  - Push/Pop/Replace navigation patterns
+  - Middleware support (Logging, Auth guards, Role checks)
+  - Pluggable adapters (Container, PageControl, MDI)
+  - `INavigationAware` lifecycle hooks (`OnNavigatedTo`, `OnNavigatedFrom`)
+- **Magic Binding**: Automatic two-way binding via attributes.
+  - `[BindEdit]`, `[BindText]`, `[BindCheckBox]` for property sync
+  - `[OnClickMsg]` for message-based event dispatch
+- **MVVM Patterns**: Clean architecture for desktop apps.
+  - ViewModel pattern with validation
+  - Controller pattern for orchestration
+  - View interfaces for decoupling
+
 ---
+
 
 ## 📚 Documentation Index
 
@@ -342,6 +367,7 @@ The repository contains practical example projects:
 - **`Examples/Web.DatabaseAsApi`**: Demonstrates Database as API feature - zero-code REST endpoints from entities.
 - **`Examples/Web.SmartPropsDemo`**: Demonstrates usage of Smart Properties with Model Binding and ORM persistence.
 - **`Examples/Hubs/HubsExample`** ⭐ NEW: Real-time communication demo with groups, messaging, and server-time broadcast. [Read the Guide](Examples/Hubs/README.md).
+- **`Examples/Desktop.MVVM.CustomerCRUD`** ⭐ NEW: Modern Desktop MVVM pattern with Navigator, DI, and unit testing. [Read the Guide](Examples/Desktop.MVVM.CustomerCRUD/README.md).
 
 
 ---

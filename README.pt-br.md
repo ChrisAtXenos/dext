@@ -77,6 +77,15 @@ Um ORM moderno focado em produtividade e performance.
   - Acesso direto à camada física do FireDAC (IFDPhysConnection) para queries ultra-rápidas
 - **Performance**: Cache de Metadados de Alta Velocidade (singleton) para minimizar overhead de Reflection.
 
+### 🌐 Dext.Net (Networking) ⭐ NOVO
+Um cliente HTTP fluente de alto desempenho para conectividade moderna.
+- **API Fluente**: Padrão Builder para construção intuitiva de requisições (`Client.Get('/api').Header(...).Start`).
+- **Connection Pooling**: Pool nativo thread-safe reutiliza instâncias de `THttpClient` para throughput máximo.
+- **Resiliência**: Suporte integrado para Retries, Timeouts e Circuit Breaker patterns.
+- **Autenticação**: Providers plugáveis (Bearer, Basic, ApiKey).
+- **Serialização**: Integração automática de serialização/deserialização JSON com `Dext.Json`.
+- **Parser de Arquivos HTTP** ⭐ NOVO: Parse e execute arquivos `.http` (formato VS Code/IntelliJ REST Client) com interpolação de variáveis e suporte a variáveis de ambiente.
+
 ### ⚙️ Dext.Core (Infraestrutura)
 A fundação do framework, utilizável em qualquer tipo de aplicação.
 - **Dependency Injection**: Container IOC completo e rápido.
@@ -104,7 +113,23 @@ O framework de testes definitivo e moderno para Delphi, inspirado em NUnit, Flue
 - **Live Dashboard** ⭐ NOVO: Monitore seus testes em tempo real com um dashboard web dark-theme moderno e histórico de execuções.
 - **Code Coverage & CLI**: Rode testes e gere relatórios de cobertura prontos para o SonarQube com `dext test --coverage`. Garanta qualidade com thresholds (Quality Gates).
 
+### 🖥️ Dext.UI (Desktop Framework) ⭐ NOVO
+Um framework de UI moderno para construir aplicações desktop VCL profissionais.
+- **Navigator Framework**: Navegação inspirada no Flutter com suporte a middleware pipeline.
+  - Padrões Push/Pop/Replace de navegação
+  - Suporte a Middleware (Logging, Auth guards, Role checks)
+  - Adapters plugáveis (Container, PageControl, MDI)
+  - Hooks de ciclo de vida `INavigationAware` (`OnNavigatedTo`, `OnNavigatedFrom`)
+- **Magic Binding**: Binding bidirecional automático via atributos.
+  - `[BindEdit]`, `[BindText]`, `[BindCheckBox]` para sincronização de propriedades
+  - `[OnClickMsg]` para despacho de eventos baseado em mensagens
+- **Padrões MVVM**: Arquitetura limpa para aplicações desktop.
+  - Padrão ViewModel com validação
+  - Padrão Controller para orquestração  
+  - Interfaces de View para desacoplamento
+
 ---
+
 
 ## 📚 Índice de Documentação
 
@@ -342,6 +367,7 @@ O repositório contém projetos de exemplo práticos:
 - **`Examples/Web.DatabaseAsApi`**: Demonstra a feature Database as API - REST endpoints zero-code a partir de entities.
 - **`Examples/Web.SmartPropsDemo`**: Demonstra o uso de Smart Properties com Model Binding e persistência ORM.
 - **`Examples/Hubs/HubsExample`** ⭐ NOVO: Demo de comunicação em tempo real com grupos, mensagens e broadcast de hora do servidor. [Leia o Guia](Examples/Hubs/README.md).
+- **`Examples/Desktop.MVVM.CustomerCRUD`** ⭐ NOVO: Desktop moderno com padrão MVVM, Navigator, DI e testes unitários. [Leia o Guia](Examples/Desktop.MVVM.CustomerCRUD/README.md).
 
 ---
 

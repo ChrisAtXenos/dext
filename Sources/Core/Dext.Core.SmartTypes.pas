@@ -319,7 +319,7 @@ end;
 
 class operator BooleanExpression.Implicit(const Value: Boolean): BooleanExpression;
 begin
-  Result := BooleanExpression.FromRuntime(True)
+  Result := BooleanExpression.FromRuntime(Value)
 end;
 
 class function BooleanExpression.InternalAnd(const Left, Right: BooleanExpression): BooleanExpression;

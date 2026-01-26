@@ -82,6 +82,14 @@
 - [Configuration](10-advanced/configuration.md) - `IOptions<T>`
 - [Async API](10-advanced/async-api.md) - `TAsyncTask`
 
+#### [11. Desktop UI (Dext.UI)](11-desktop-ui/README.md) ⭐ NEW
+- [Navigator Framework](11-desktop-ui/navigator.md) - Push/Pop navigation with middlewares
+- [Magic Binding](11-desktop-ui/magic-binding.md) - Declarative UI data binding
+- [MVVM Patterns](11-desktop-ui/mvvm-patterns.md) - Architecture guide
+
+#### [12. Networking (Dext.Net)](12-networking/rest-client.md) ⭐ NEW
+- [REST Client](12-networking/rest-client.md) - Fluent HTTP Client
+
 ---
 
 ### Appendix
@@ -107,6 +115,8 @@ Each chapter references working examples from the `Examples/` directory:
 | [Web.DextStore](../../Examples/Web.DextStore/) | Full E-commerce API |
 | [Orm.EntityDemo](../../Examples/Orm.EntityDemo/) | ORM Basics |
 | [Hubs](../../Examples/Hubs/) | Real-Time SignalR |
+| [Desktop.MVVM.CustomerCRUD](../../Examples/Desktop.MVVM.CustomerCRUD/) | Navigator, MVVM, Testing |
+
 
 ---
 

@@ -82,6 +82,14 @@
 - [Configuração](10-avancado/configuracao.md) - `IOptions<T>`
 - [API Assíncrona](10-avancado/async-api.md) - `TAsyncTask`
 
+#### [11. Desktop UI (Dext.UI)](11-desktop-ui/README.md) ⭐ NOVO
+- [Navigator Framework](11-desktop-ui/navigator.md) - Navegação Push/Pop com middlewares
+- [Magic Binding](11-desktop-ui/magic-binding.md) - Binding declarativo de UI
+- [Padrões MVVM](11-desktop-ui/mvvm-patterns.md) - Guia de arquitetura
+
+#### [12. Networking (Dext.Net)](12-networking/rest-client.md) ⭐ NOVO
+- [Cliente REST](12-networking/rest-client.md) - Cliente HTTP Fluente
+
 ---
 
 ### Apêndice
@@ -107,6 +115,8 @@ Cada capítulo referencia exemplos funcionais do diretório `Examples/`:
 | [Web.DextStore](../../Examples/Web.DextStore/) | API E-commerce Completa |
 | [Orm.EntityDemo](../../Examples/Orm.EntityDemo/) | ORM Básico |
 | [Hubs](../../Examples/Hubs/) | SignalR Tempo Real |
+| [Desktop.MVVM.CustomerCRUD](../../Examples/Desktop.MVVM.CustomerCRUD/) | Navigator, MVVM, Testes |
+
 
 ---
 
