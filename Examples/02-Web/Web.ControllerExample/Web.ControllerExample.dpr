@@ -15,7 +15,7 @@ uses
 
 var
   App: IWebApplication;
-  Builder: IApplicationBuilder;
+  Builder: TAppBuilder;
   AuthOptions: TJwtOptions;
 begin
   SetConsoleCharSet(65001); // Fix console encoding

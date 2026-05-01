@@ -11,7 +11,7 @@ uses
 var
   App: IWebApplication;
   RequestCount: Integer = 0;
-  Builder: IApplicationBuilder;
+  Builder: TAppBuilder;
 begin
   try
     WriteLn('💾 Dext Response Caching Demo');

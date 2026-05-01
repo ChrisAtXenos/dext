@@ -127,6 +127,7 @@ type
     Address: TAddress;
   end;
 
+var
   User: TUser;
   UserWithAddr: TUserWithAddress;
   Json: string;

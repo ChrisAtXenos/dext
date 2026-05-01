@@ -8,9 +8,12 @@ uses
   System.Classes,
   Dext,
   Dext.Web,
+  Dext.Collections,
+  Dext.DI.Interfaces,
   Dext.Web.Interfaces,
   Dext.Web.Results,
   Dext.Entity,
+  Dext.Entity.Core,
   Dext.Json,
   Dext.Entity.Prototype,
   Dext.Core.SmartTypes,
@@ -89,7 +92,7 @@ begin
       procedure(Options: TDbContextOptions)
       begin
         Options.UseSQLite('smart_props.db');
-        Options.WithPooling(True);
+        Options.WithPooling(True, 10);
       end);
 
     // Build services BEFORE seeding

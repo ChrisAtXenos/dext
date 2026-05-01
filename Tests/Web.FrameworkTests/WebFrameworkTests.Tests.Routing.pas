@@ -5,6 +5,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Net.HttpClient,
   Dext.Web.ApplicationBuilder.Extensions,
   Dext.Web.HandlerInvoker,
   Dext.Web.Interfaces,
@@ -71,7 +72,7 @@ end;
 
 procedure TRoutingTest.Run;
 var
-  Resp: IHttpResponse;
+  Resp: System.Net.HttpClient.IHTTPResponse;
 begin
   Log('Running Routing Tests...');
 

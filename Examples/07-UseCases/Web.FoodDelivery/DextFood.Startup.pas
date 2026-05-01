@@ -7,6 +7,7 @@ uses
   System.Rtti,
   System.SysUtils,
   Dext,
+  Dext.Collections,
   Dext.Entity,           // Facade para ORM (TDbContext, TSnakeCaseNamingStrategy)
   Dext.Entity.Core,      // Explicitly needed for IDbSet<T>
   Dext.RateLimiting,

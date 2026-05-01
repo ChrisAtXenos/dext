@@ -52,7 +52,7 @@ end;
 
 procedure TMultiTenancyStartup.Configure(const App: IWebApplication);
 var
-  WebApp: IWebApplicationBuilder;
+  WebApp: TAppBuilder;
 begin
   WebApp := App.GetBuilder;
 
@@ -81,7 +81,7 @@ end;
 class procedure TMultiTenancyStartup.InitializeDatabase(const Services: IServiceProvider);
 var
   Scope: IServiceScope;
-  ServiceObj: IInterface;
+  ServiceObj: TObject;
   DbCtx: TTenantDbContext;
 begin
   WriteLn('[*] Initializing Database...');

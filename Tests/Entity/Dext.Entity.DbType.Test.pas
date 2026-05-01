@@ -8,6 +8,7 @@ uses
   Data.DB,
   System.TypInfo,
   System.Generics.Collections,
+  Dext.Collections.Dict,
   Dext.Entity.Attributes,
   Dext.Entity.Mapping,
   Dext.Entity.Dialects,
@@ -54,7 +55,7 @@ var
   Dialect: ISQLDialect;
   ParamType: TFieldType;
   Found: Boolean;
-  Pair: TPair<string, TValue>;
+  Pair: Dext.Collections.Dict.TPair<string, TValue>;
   Typ: TFieldType;
   DateParamName, DecimalParamName: string;
   HasDate, HasBcd: Boolean;

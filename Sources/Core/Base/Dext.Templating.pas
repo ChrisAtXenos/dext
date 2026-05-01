@@ -30,7 +30,7 @@ unit Dext.Templating;
 
 interface
 
-{$MESSAGE HINT ' REMOVE System.Generics.Collections DEPENDENCY'}
+{$MESSAGE HINT 'TODO: REMOVE System.Generics.Collections DEPENDENCY'}
 
 uses
   System.Classes,

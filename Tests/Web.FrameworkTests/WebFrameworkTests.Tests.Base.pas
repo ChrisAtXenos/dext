@@ -5,10 +5,10 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Net.HttpClient,
   Dext.WebHost,
   Dext.DI.Interfaces,
-  Dext.Web.Interfaces,
-  System.Net.HttpClient;
+  Dext.Web.Interfaces;
 
 type
   TBaseTest = class
@@ -67,7 +67,7 @@ var
   HostRef: IWebHost; // Explicitly capture FHost for thread safety
   Retries: Integer;
   Success: Boolean;
-  Resp: IHttpResponse;
+  Resp: System.Net.HttpClient.IHTTPResponse;
 begin
   WriteLn('🔧 Setting up test...');
   Builder := TDextWebHost.CreateDefaultBuilder

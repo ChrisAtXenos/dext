@@ -154,7 +154,7 @@ end;
 
 procedure TAppStartup.Configure(const App: IWebApplication);
 var
-  WebApp: IApplicationBuilder;
+  WebApp: TAppBuilder;
 begin
   WebApp := App.GetBuilder;
 

@@ -976,6 +976,7 @@ end;
 // TRelationshipTests
 // ============================================================================
 
+{$HINTS OFF}
 procedure TRelationshipTests.Setup;
 var
   DbConn: IDbConnection;
@@ -1000,6 +1001,7 @@ begin
   
   SetupSchema;
 end;
+{$HINTS ON}
 
 procedure TRelationshipTests.SetupSchema;
 begin

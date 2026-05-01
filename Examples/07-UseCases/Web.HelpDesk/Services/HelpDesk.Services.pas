@@ -126,7 +126,7 @@ end;
 
 function TTicketService.GetMyTickets(UserId: Integer; AsRequester: Boolean): IList<TTicket>;
 var
-  t: TTicketProps;
+  t: TTicket;
 begin
   t := TTicket.Props;
   if AsRequester then
@@ -216,7 +216,7 @@ var
   Tickets: IList<TTicket>;
   Ticket: TTicket;
   TotalHours: Double;
-  t: TTicketProps;
+  t: TTicket;
 begin
   t := TTicket.Props;
 
@@ -259,7 +259,7 @@ end;
 function TUserService.Login(const Request: TLoginRequest): TTokenResponse;
 var
   User: TUser;
-  u: TUserProps;
+  u: TUser;
 begin
   u := TUser.Props;
   User := FDb.Users
@@ -278,7 +278,7 @@ end;
 
 function TUserService.Register(const Request: TRegisterUserRequest): TUser;
 var
-  u: TUserProps;
+  u: TUser;
 begin
   u := TUser.Props;
   if FDb.Users.Where(u.Email = Request.Email).Any then

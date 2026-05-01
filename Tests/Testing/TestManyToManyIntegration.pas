@@ -12,6 +12,7 @@ uses
   FireDAC.Stan.Async,
   FireDAC.Stan.Def,
   System.Classes,
+  System.Rtti,
   System.SysUtils,
   Dext.Assertions,
   Dext.Collections,
@@ -222,7 +223,7 @@ var
   S1: TStudentInt;
   C1: TCourseInt;
   Cmd: IDbCommand;
-  Val, Val2: Variant;
+  Val, Val2: TValue;
 begin
   S1 := TStudentInt.Create; 
   S1.Name := 'Alice';

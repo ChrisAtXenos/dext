@@ -13,7 +13,7 @@ uses
 
 var
   App: IWebApplication;
-  Builder: IWebApplicationBuilder;
+  Builder: TAppBuilder;
 begin
   SetConsoleCharSet;
   try

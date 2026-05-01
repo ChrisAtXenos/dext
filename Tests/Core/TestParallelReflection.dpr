@@ -21,10 +21,11 @@ type
   end;
 
 procedure StressReflection;
+var
+  Meta: TTypeMetadata;
 begin
   TParallel.For(1, 1000, procedure(I: Integer)
   var
-    Meta: TEntityClassMetadata;
     Handler: IPropertyHandler;
     Handler2: IPropertyHandler;
   begin
@@ -47,6 +48,15 @@ begin
   end);
 end;
 
+procedure PrintAggregateException(const E: EAggregateException);
+var
+  I: Integer;
+begin
+  Writeln('EAggregateException: ', E.Message);
+  for I := 0 to E.Count - 1 do
+    Writeln('  - ', E.InnerExceptions[I].ClassName, ': ', E.InnerExceptions[I].Message);
+end;
+
 begin
   try
     Writeln('Starting Stress Tests (Wave 8 Hardened)...');
@@ -60,13 +70,7 @@ begin
     Writeln('Stress Tests Passed 100%!');
   except
     on E: EAggregateException do
-    var
-      I: Integer;
-    begin
-      Writeln('EAggregateException: ', E.Message);
-      for I := 0 to E.Count - 1 do
-        Writeln('  - ', E.InnerExceptions[I].ClassName, ': ', E.InnerExceptions[I].Message);
-    end;
+      PrintAggregateException(E);
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
   end;

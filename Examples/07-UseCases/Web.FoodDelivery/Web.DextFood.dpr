@@ -7,6 +7,7 @@ uses
   System.SysUtils,
   Dext.Utils,
   Dext.Web,
+  Dext.DI.Interfaces,
   DextFood.Startup in 'DextFood.Startup.pas',
   DextFood.Domain in 'DextFood.Domain.pas',
   DextFood.Services in 'DextFood.Services.pas',

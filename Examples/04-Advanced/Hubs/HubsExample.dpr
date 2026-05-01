@@ -127,7 +127,7 @@ var
   TimeThread: TThread;
   TimeCounter: Integer;
   Running: Boolean;
-  Builder: IWebApplicationBuilder;
+  Builder: TAppBuilder;
 begin
   try
     WriteLn('===========================================');

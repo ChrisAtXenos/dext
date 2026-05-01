@@ -153,8 +153,6 @@ procedure TDataApiTest.Run;
 var
   Resp: System.Net.HttpClient.IHTTPResponse;
   JsonArray: IDextJsonArray;
-  content: string;
-  LItem: IDextJsonObject;
 begin
   Log('--- Starting Data API Tests ---');
   JsonDefaultSettings(JsonSettings.SnakeCase);

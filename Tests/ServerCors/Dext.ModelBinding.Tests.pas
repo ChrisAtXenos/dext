@@ -228,7 +228,7 @@ begin
 
         Value := Binder.BindRoute(TypeInfo(TRouteTest), MockContext);
         Test := Value.AsType<TRouteTest>;
-        Writeln('  isactive=' + BoolValue + ' -> ' + Test.Active.ToString(TUseBoolStrs.True));
+        Writeln('  isactive=' + BoolValue + ' -> ' + BoolToStr(Test.IsActive, True));
       finally
         // RouteParams.Free;
       end;
@@ -254,9 +254,6 @@ begin
         Test := Value.AsType<TRouteTest>;
         Writeln('  userguid=' + GuidStr + ' -> ' + GUIDToString(Test.UserGuid));
       finally
-        // RouteParams.Free;
-      end;
-    end;     finally
         // RouteParams.Free;
       end;
     end;

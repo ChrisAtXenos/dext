@@ -22,7 +22,7 @@ uses
   Dext.Web.Hosting.Tests in 'Dext.Web.Hosting.Tests.pas';
 
 var
-  TestResult: TTestResult;
+  TestResult: Boolean;
 begin
   SetConsoleCharSet();
   try

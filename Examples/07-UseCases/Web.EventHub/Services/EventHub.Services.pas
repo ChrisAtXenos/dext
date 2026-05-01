@@ -148,8 +148,8 @@ function TEventService.MapToResponse(Event: TEvent): TEventResponse;
 var
   SpeakerCount, ConfirmedCount: Integer;
   Venue: TVenue;
-  s: TSpeakerProps;
-  r: TRegistrationProps;
+  s: TSpeaker;
+  r: TRegistration;
 begin
   // Count speakers for this event
   s := TSpeaker.Props;
@@ -188,7 +188,7 @@ function TEventService.GetAllPublished: IList<TEventResponse>;
 var
   Events: IList<TEvent>;
   Event: TEvent;
-  e: TEventProps;
+  e: TEvent;
 begin
   Result := TCollections.CreateList<TEventResponse>;
   e := TEvent.Props;
@@ -305,8 +305,8 @@ end;
 
 function TEventService.GetMetrics: TDashboardMetrics;
 var
-  e: TEventProps;
-  r: TRegistrationProps;
+  e: TEvent;
+  r: TRegistration;
 begin
   e := TEvent.Props;
   r := TRegistration.Props;
@@ -335,7 +335,7 @@ var
   Speakers: IList<TSpeaker>;
   Speaker: TSpeaker;
   Resp: TSpeakerResponse;
-  s: TSpeakerProps;
+  s: TSpeaker;
 begin
   Result := TCollections.CreateList<TSpeakerResponse>;
   s := TSpeaker.Props;
@@ -355,7 +355,7 @@ function TSpeakerService.AddSpeaker(const Req: TAddSpeakerRequest): TSpeakerResp
 var
   Event: TEvent;
   Speaker: TSpeaker;
-  s: TSpeakerProps;
+  s: TSpeaker;
 begin
   // Validate event exists
   Event := FDb.Events.Find(Req.EventId);
@@ -399,8 +399,8 @@ function TAttendeeService.RegisterAttendee(const Req: TRegisterAttendeeRequest):
 var
   Existing: TAttendee;
   Attendee: TAttendee;
-  a: TAttendeeProps;
-  a2: TAttendeeProps;
+  a: TAttendee;
+  a2: TAttendee;
 begin
   // Check if email already registered
   a := TAttendee.Props;
@@ -480,8 +480,8 @@ var
   ExistingReg: TRegistration;
   ConfirmedCount: Integer;
   Reg: TRegistration;
-  r: TRegistrationProps;
-  r2: TRegistrationProps;
+  r: TRegistration;
+  r2: TRegistration;
 begin
   // Validate event exists
   Event := FDb.Events.Find(Req.EventId);
@@ -565,7 +565,7 @@ end;
 procedure TRegistrationService.PromoteFromWaitList(EventId: Integer);
 var
   NextInLine: TRegistration;
-  r: TRegistrationProps;
+  r: TRegistration;
 begin
   // Find the first WaitList registration (FIFO by RegisteredAt)
   r := TRegistration.Props;
@@ -586,7 +586,7 @@ function TRegistrationService.GetByEvent(EventId: Integer): IList<TRegistrationR
 var
   Regs: IList<TRegistration>;
   Reg: TRegistration;
-  r: TRegistrationProps;
+  r: TRegistration;
 begin
   Result := TCollections.CreateList<TRegistrationResponse>;
   r := TRegistration.Props;
@@ -601,7 +601,7 @@ function TRegistrationService.GetByAttendee(AttendeeId: Integer): IList<TRegistr
 var
   Regs: IList<TRegistration>;
   Reg: TRegistration;
-  r: TRegistrationProps;
+  r: TRegistration;
 begin
   Result := TCollections.CreateList<TRegistrationResponse>;
   r := TRegistration.Props;

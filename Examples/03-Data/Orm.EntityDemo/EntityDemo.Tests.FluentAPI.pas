@@ -16,6 +16,7 @@ implementation
 
 uses
   System.SysUtils,
+  Dext.Collections,
   Dext.Specifications.Fluent,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,

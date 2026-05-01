@@ -59,34 +59,37 @@ end;
 
 procedure DemoRequestRequest;
 var
-  LRestClient: IRestClient;
+  LRestClient: TRestClient;
 begin
   Writeln('--- Demo: TRestRequest Builder ---');
   Countdown.AddCount;
   
   LRestClient := TRestClient.Create('https://jsonplaceholder.typicode.com');
-  
-  TRestRequest
-    .Create(LRestClient, hmPOST, '/posts')
-    .Header('X-Custom-Header', 'DextValue')
-    .JsonBody('{"title": "foo", "body": "bar", "userId": 1}')
-    .Execute
-    .OnCompleteAsync(
-      procedure(Response: IRestResponse)
-      begin
-        Writeln('--- Demo: TRestRequest Response ---');
-        Writeln('POST Status: ', Response.StatusCode);
-        Writeln('POST Response: ', Response.ContentString);
-        Countdown.Signal;
-      end)
-    .OnExceptionAsync(
-      procedure(E: Exception)
-      begin
-        Writeln('--- Demo: TRestRequest Error ---');
-        Writeln('Error: ', E.Message);
-        Countdown.Signal;
-      end)
-    .Start;
+  try
+    TRestRequest
+      .Create(LRestClient, hmPOST, '/posts')
+      .Header('X-Custom-Header', 'DextValue')
+      .JsonBody('{"title": "foo", "body": "bar", "userId": 1}')
+      .Execute
+      .OnCompleteAsync(
+        procedure(Response: IRestResponse)
+        begin
+          Writeln('--- Demo: TRestRequest Response ---');
+          Writeln('POST Status: ', Response.StatusCode);
+          Writeln('POST Response: ', Response.ContentString);
+          Countdown.Signal;
+        end)
+      .OnExceptionAsync(
+        procedure(E: Exception)
+        begin
+          Writeln('--- Demo: TRestRequest Error ---');
+          Writeln('Error: ', E.Message);
+          Countdown.Signal;
+        end)
+      .Start;
+  finally
+    // TRestClient is a record wrapper over interface; no manual Free required.
+  end;
 end;
 
 procedure DemoWithCancellation;

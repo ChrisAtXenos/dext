@@ -84,6 +84,7 @@ implementation
 
 uses
   System.SysUtils,
+  HelpDesk.Domain.Entities,
   HelpDesk.Domain.Models,
   HelpDesk.Services;
 

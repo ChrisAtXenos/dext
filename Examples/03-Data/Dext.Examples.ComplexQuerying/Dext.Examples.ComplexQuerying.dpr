@@ -45,7 +45,7 @@ end;
 
 procedure TComplexQueryingStartup.Configure(const App: IWebApplication);
 var
-  WebApp: IWebApplicationBuilder;
+  WebApp: TAppBuilder;
 begin
   WebApp := App.GetBuilder;
 

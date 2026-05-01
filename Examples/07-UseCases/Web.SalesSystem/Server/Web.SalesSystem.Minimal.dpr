@@ -6,6 +6,7 @@ uses
   Dext.MM,
   Dext.Utils,
   Dext.Web,
+  Dext.DI.Interfaces,
   System.SysUtils,
   Sales.Startup in 'Sales.Startup.pas',
   Sales.Auth in 'Sales.Auth.pas',

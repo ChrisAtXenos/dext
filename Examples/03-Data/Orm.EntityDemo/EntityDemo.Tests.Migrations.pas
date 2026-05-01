@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.IOUtils,
+  Dext.Collections,
   Dext.Entity.Migrations.Operations,
   Dext.Entity.Migrations.Builder,
   Dext.Entity.Migrations.Model,
