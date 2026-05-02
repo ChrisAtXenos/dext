@@ -57,7 +57,7 @@ end;
 var
   Host: IWebHost;
 begin
-  SetConsoleOutputCP(CP_UTF8);
+  SetConsoleCharSet(65001);
   try
     TestDextJson;
     TestDextJsonRecords;

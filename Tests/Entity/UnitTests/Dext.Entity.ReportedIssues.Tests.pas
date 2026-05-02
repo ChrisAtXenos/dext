@@ -1,4 +1,4 @@
-unit Dext.Entity.ReportedIssues.Tests;
+﻿unit Dext.Entity.ReportedIssues.Tests;
 
 interface
 

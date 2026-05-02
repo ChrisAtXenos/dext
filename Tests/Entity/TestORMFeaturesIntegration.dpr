@@ -1,4 +1,4 @@
-program TestORMFeaturesIntegration;
+﻿program TestORMFeaturesIntegration;
 
 {$APPTYPE CONSOLE}
 {$TYPEINFO ON}

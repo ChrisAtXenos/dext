@@ -1,4 +1,4 @@
-program TestMultiTenancy;
+﻿program TestMultiTenancy;
 
 {$APPTYPE CONSOLE}
 

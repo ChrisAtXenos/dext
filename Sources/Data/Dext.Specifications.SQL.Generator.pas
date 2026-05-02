@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -1776,7 +1776,7 @@ begin
   FParamCount := 0;
   
   // 1. Check Cache
-  if ASpec <> nil then
+  if TSQLCache.Instance.Enabled then
   begin
     TenantId := '';
     if Assigned(FTenantProvider) and Assigned(FTenantProvider.Tenant) then
@@ -1902,7 +1902,14 @@ begin
 
         // TypeKind safety net for navigation properties not explicitly marked
         LKind := Prop.PropertyType.TypeKind;
-        if LKind in [tkClass, tkInterface] then Continue;
+        
+        if (LKind in [tkClass, tkInterface]) then
+        begin
+           // Allow class/interface ONLY if marked as JsonColumn
+           if (PropMap = nil) or (not PropMap.IsJsonColumn) then
+             Continue;
+        end;
+
         if (LKind = tkRecord) and Prop.PropertyType.Name.StartsWith('Lazy<') then Continue;
         
         if not First then SB.Append(', ');
@@ -2086,7 +2093,14 @@ begin
 
       // TypeKind safety net for navigation properties not explicitly marked
       LKind := Prop.PropertyType.TypeKind;
-      if LKind in [tkClass, tkInterface] then Continue;
+
+      if (LKind in [tkClass, tkInterface]) then
+      begin
+         // Allow class/interface ONLY if marked as JsonColumn
+         if (PropMap = nil) or (not PropMap.IsJsonColumn) then
+           Continue;
+      end;
+
       if (LKind = tkRecord) and Prop.PropertyType.Name.StartsWith('Lazy<') then Continue;
 
       if not First then SB.Append(', ');

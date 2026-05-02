@@ -1,4 +1,4 @@
-program TestSqlGenerationAdv;
+﻿program TestSqlGenerationAdv;
 
 {$APPTYPE CONSOLE}
 

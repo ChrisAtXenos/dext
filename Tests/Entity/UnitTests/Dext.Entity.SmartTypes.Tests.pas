@@ -1,4 +1,4 @@
-unit Dext.Entity.SmartTypes.Tests;
+﻿unit Dext.Entity.SmartTypes.Tests;
 
 interface
 

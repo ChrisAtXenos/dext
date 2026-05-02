@@ -1,4 +1,4 @@
-program Dext.Templating.UnitTests;
+﻿program Dext.Templating.UnitTests;
 
 {$IFNDEF TESTINSIGHT}
   {$APPTYPE CONSOLE}

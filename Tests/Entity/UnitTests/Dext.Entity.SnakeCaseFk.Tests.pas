@@ -1,4 +1,4 @@
-unit Dext.Entity.SnakeCaseFk.Tests;
+﻿unit Dext.Entity.SnakeCaseFk.Tests;
 
 interface
 

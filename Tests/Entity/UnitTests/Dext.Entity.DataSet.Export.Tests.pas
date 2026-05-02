@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet.Export.Tests;
+﻿unit Dext.Entity.DataSet.Export.Tests;
 
 interface
 
@@ -84,7 +84,7 @@ procedure TEntityDataSetExportTests.PopulateDataSet;
 var
   L: IList<TExportProduct>;
 begin
-  L := TCollections.CreateList<TExportProduct>(False); // Não assumir a posse aqui
+  L := TCollections.CreateList<TExportProduct>(False); // NÃ£o assumir a posse aqui
   L.Add(TExportProduct.Create(1, 'Notebook', 'Tech', 5000));
   L.Add(TExportProduct.Create(2, 'Smartphone', 'Tech', 3000));
   L.Add(TExportProduct.Create(3, 'Monitor', 'Hardware', 1500));
@@ -138,7 +138,7 @@ begin
   
   Json := FDataSet.AsJsonArray;
   
-  // Ordem alfabética: Keyboard, Monitor, Mouse, Notebook, Smartphone
+  // Ordem alfabÃ©tica: Keyboard, Monitor, Mouse, Notebook, Smartphone
   Should(Json.IndexOf('Keyboard')).BeLessThan(Json.IndexOf('Monitor'));
   Should(Json.IndexOf('Monitor')).BeLessThan(Json.IndexOf('Mouse'));
   Should(Json.IndexOf('Mouse')).BeLessThan(Json.IndexOf('Notebook'));

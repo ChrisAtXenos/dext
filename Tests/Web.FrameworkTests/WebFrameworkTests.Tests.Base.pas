@@ -1,4 +1,4 @@
-unit WebFrameworkTests.Tests.Base;
+﻿unit WebFrameworkTests.Tests.Base;
 
 interface
 

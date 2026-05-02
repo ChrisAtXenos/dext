@@ -1,4 +1,4 @@
-program Test.Dext.UI;
+﻿program Test.Dext.UI;
 
 {$APPTYPE CONSOLE}
 

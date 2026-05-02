@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet.NewFeatures.Tests;
+﻿unit Dext.Entity.DataSet.NewFeatures.Tests;
 
 interface
 

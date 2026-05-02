@@ -23,6 +23,7 @@ type
 var
   Host: IWebHost;
 begin
+  SetConsoleCharSet(65001);
   try
     WriteLn('🧪 Testing Route Parameters Support');
     WriteLn('=====================================');

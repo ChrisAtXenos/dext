@@ -1,4 +1,4 @@
-unit Dext.Entity.IdReturn.Tests;
+﻿unit Dext.Entity.IdReturn.Tests;
 
 interface
 
@@ -305,7 +305,7 @@ var
   CapturedColumn: string;
 begin
   // Verifies that PersistAdd passes the naming-strategy-transformed column name
-  // to GetReturningSQL — regression test for the a0ac0de naming strategy fix.
+  // to GetReturningSQL â€” regression test for the a0ac0de naming strategy fix.
   CapturedColumn := '';
 
   Cmd := Mock<IDbCommand>.Create;
@@ -330,7 +330,7 @@ begin
   Conn := Mock<IDbConnection>.Create;
   Conn.Setup.Returns(Cmd.Instance).When.CreateCommand(Arg.Any<string>);
 
-  // Use snake_case naming strategy — 'Id' should become 'id'
+  // Use snake_case naming strategy â€” 'Id' should become 'id'
   Ctx := TDbContext.Create(Conn.Instance, Dialect.Instance, TSnakeCaseNamingStrategy.Create);
   try
     Entity := TIntEntity.Create;

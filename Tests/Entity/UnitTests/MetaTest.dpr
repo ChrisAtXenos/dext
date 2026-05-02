@@ -1,4 +1,4 @@
-program MetaTest;
+﻿program MetaTest;
 {$APPTYPE CONSOLE}
 uses System.SysUtils, FireDAC.Comp.Client, FireDAC.Stan.Intf, Data.DB, FireDAC.Phys.SQLite, FireDAC.Phys.Intf, FireDAC.DApt, FireDAC.Stan.Def, FireDAC.Stan.ExprFuncs, FireDAC.Stan.Async;
 

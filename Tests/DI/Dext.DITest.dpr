@@ -61,6 +61,7 @@ var
   Logger, Logger2: ILogger;
   DataService: IDataService;
 begin
+  SetConsoleCharSet(65001);
   try
     // Configurar serviços usando TDextServices (API fluente)
     Provider := TDextServices.New()

@@ -1,4 +1,4 @@
-program TestUUID;
+﻿program TestUUID;
 
 {$APPTYPE CONSOLE}
 
@@ -12,6 +12,7 @@ var
   U: TUUID;
   S: string;
 begin
+  SetConsoleCharSet;
   WriteLn('► Testing Basic String Conversion...');
   
   // Test canonical format (no braces)

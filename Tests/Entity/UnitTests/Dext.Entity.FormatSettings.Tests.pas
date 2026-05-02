@@ -1,4 +1,4 @@
-unit Dext.Entity.FormatSettings.Tests;
+﻿unit Dext.Entity.FormatSettings.Tests;
 
 interface
 

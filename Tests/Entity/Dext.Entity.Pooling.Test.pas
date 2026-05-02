@@ -1,4 +1,4 @@
-unit Dext.Entity.Pooling.Test;
+﻿unit Dext.Entity.Pooling.Test;
 
 interface
 

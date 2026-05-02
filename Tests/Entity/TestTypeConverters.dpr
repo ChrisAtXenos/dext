@@ -162,7 +162,6 @@ begin
   if Converter <> nil then
     raise Exception.Create('Custom converter not cleared');
   WriteLn('  ✓ Cleared custom converters');
-  
   WriteLn('✓ Type Converter Registry tests passed');
   WriteLn('');
 end;

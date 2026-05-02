@@ -1,4 +1,4 @@
-unit Entities;
+﻿unit Entities;
 
 interface
 

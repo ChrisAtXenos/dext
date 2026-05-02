@@ -60,7 +60,7 @@ var
   DateParamName, DecimalParamName: string;
   HasDate, HasBcd: Boolean;
 begin
-  Log('🏷️  Testing [DbType] Attribute Propagation');
+  Log('🏺  Testing [DbType] Attribute Propagation');
   Log('=========================================');
 
   Dialect := TSQLiteDialect.Create;

@@ -265,7 +265,8 @@ uses
   System.Variants,
   Dext.Core.Reflection,
   Dext.Core.ValueConverters,
-  Dext.Json;
+  Dext.Json,
+  Dext.Utils;
 
 { ColumnTypeAttribute }
 
@@ -539,9 +540,11 @@ begin
   JsonStr := AValue.AsString;
   if JsonStr.Trim.IsEmpty then
     Exit(TValue.Empty);
-    
+
   if ATypeInfo.Kind in [tkClass, tkRecord, tkDynArray] then
-    Result := TDextJson.Deserialize(ATypeInfo, JsonStr)
+  begin
+    Result := TDextJson.Deserialize(ATypeInfo, JsonStr);
+  end
   else
     Result := AValue;
 end;

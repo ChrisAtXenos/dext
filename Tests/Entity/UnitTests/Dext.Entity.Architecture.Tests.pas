@@ -1,4 +1,4 @@
-unit Dext.Entity.Architecture.Tests;
+﻿unit Dext.Entity.Architecture.Tests;
 
 interface
 

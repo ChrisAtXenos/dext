@@ -1,4 +1,4 @@
-unit Dext.Entity.Async.Tests;
+﻿unit Dext.Entity.Async.Tests;
 
 interface
 

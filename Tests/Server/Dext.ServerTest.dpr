@@ -3,7 +3,7 @@ program Dext.ServerTest;
 uses
   Dext.MM,
   System.SysUtils,
-  System.Rtti,
+  Winapi.Windows,
   Dext.Utils,
   Dext.DI.Interfaces,
   Dext.Web.Interfaces,
@@ -24,24 +24,10 @@ type
 
   TTimeService = class(TInterfacedObject, ITimeService)
   public
-    constructor Create;
-    destructor Destroy; override;
     function GetCurrentTime: string;
   end;
 
 { TTimeService }
-
-constructor TTimeService.Create;
-begin
-  inherited Create;
-  DebugLog('TTimeService.Create');
-end;
-
-destructor TTimeService.Destroy;
-begin
-  DebugLog('TTimeService.Destroy');
-  inherited;
-end;
 
 function TTimeService.GetCurrentTime: string;
 begin
@@ -51,28 +37,20 @@ end;
 var
   Host: IWebHost;
 begin
+  SetConsoleCharSet(65001);
   try
     Writeln('=== Starting Dext Web Server ===');
 
     Host := TDextWebHost.CreateDefaultBuilder
       .ConfigureServices(procedure(Services: IServiceCollection)
       begin
-        // Registrar serviços usando a API fluente
         TDextServices.Create(Services)
           .AddSingleton<ITimeService, TTimeService>
           .AddSingleton<ILogger, TConsoleLogger>;
       end)
       .Configure(procedure(App: IApplicationBuilder)
-      var
-        ExceptionOptions: TExceptionHandlerOptions;
-        LoggingOptions: THttpLoggingOptions;
       begin
-        // Configurar pipeline
-        ExceptionOptions := TExceptionHandlerOptions.Development;
-        App.UseMiddleware(TExceptionHandlerMiddleware, TValue.From(ExceptionOptions));
-        
-        LoggingOptions := THttpLoggingOptions.Default;
-        App.UseMiddleware(THttpLoggingMiddleware, TValue.From(LoggingOptions));
+        App.UseMiddleware(THttpLoggingMiddleware);
 
         App.Map('/',
              procedure(Ctx: IHttpContext)
@@ -87,20 +65,21 @@ begin
                TimeService := TDextServices.GetService<ITimeService>(Ctx.Services);
                Ctx.Response.Write('Server time: ' + TimeService.GetCurrentTime);
              end)
-           .Map('/hello', procedure(Ctx: IHttpContext)
+           .Map('/hello',
+             procedure(Ctx: IHttpContext)
              begin
                Ctx.Response.Json('{"message": "Hello from Dext!", "status": "success"}');
              end)
-
-           .Map('/users/{id}', procedure(Ctx: IHttpContext)
+           .Map('/users/{id}',
+             procedure(Ctx: IHttpContext)
              var
                UserId: string;
              begin
                UserId := Ctx.Request.RouteParams['id'];
                Ctx.Response.Write(Format('User ID: %s', [UserId]));
              end)
-
-           .Map('/posts/{year}/{month}', procedure(Ctx: IHttpContext)
+           .Map('/posts/{year}/{month}',
+             procedure(Ctx: IHttpContext)
              var
                Year, Month: string;
              begin
@@ -111,13 +90,10 @@ begin
       end)
       .Build;
 
-    // 🚀 INICIAR SERVIDOR REAL!
     Host.Run;
-    // Manter servidor rodando até Enter
-    ConsolePause;
-    Host.Stop;
   except
     on E: Exception do
       Writeln('Server error: ', E.ClassName, ': ', E.Message);
   end;
+  ConsolePause;
 end.

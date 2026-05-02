@@ -1,4 +1,4 @@
-unit Dext.Entity.Scaffolding.Tests;
+﻿unit Dext.Entity.Scaffolding.Tests;
 
 interface
 

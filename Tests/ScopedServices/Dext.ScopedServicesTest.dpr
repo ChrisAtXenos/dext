@@ -82,6 +82,7 @@ end;
 var
   Host: IWebHost;
 begin
+  SetConsoleCharSet(65001);
   try
     WriteLn('=== Dext Scoped Services Test ===');
     WriteLn;

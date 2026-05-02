@@ -1,4 +1,4 @@
-unit Dext.Entity.DataSet.Tests;
+﻿unit Dext.Entity.DataSet.Tests;
 
 interface
 
@@ -884,13 +884,13 @@ begin
   try
     MasterDataSource.DataSet := FMasterDS;
 
-    // Configurar o vínculo clássico
+    // Configurar o vÃ­nculo clÃ¡ssico
     FDetailDS.MasterSource := MasterDataSource;
     FDetailDS.MasterFields := 'Id';
     FDetailDS.IndexFieldNames := 'OrderId';
     FDetailDS.Open;
 
-    // Master está no registro 100 (Setup posiciona First)
+    // Master estÃ¡ no registro 100 (Setup posiciona First)
     Should(FMasterDS.FieldByName('Id').AsInteger).Be(100);
     Should(FDetailDS.RecordCount).Be(2);
 

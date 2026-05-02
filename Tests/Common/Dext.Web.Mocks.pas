@@ -1,8 +1,6 @@
 // Dext.Web.Mocks.pas
 unit Dext.Web.Mocks;
 
-
-
 interface
 
 uses
@@ -19,7 +17,6 @@ uses
   Dext.Json;
 
 type
-  { Retrocompatibility aliases, kept as pure factories around Mock<T> }
   TMockHttpRequest = class
   public
     class function CreateInternal(const AQueryString: string; ABody: TStream): IHttpRequest; static;
@@ -51,7 +48,59 @@ var
 
 implementation
 
+type
+  TStatefulMockResponse = class(TInterfacedObject, IHttpResponse)
+  private
+    FStatusCode: Integer;
+    FContentType: string;
+    FHeaders: IStringDictionary;
+  public
+    constructor Create;
+    function GetStatusCode: Integer;
+    function GetContentType: string;
+    function Status(AValue: Integer): IHttpResponse;
+    procedure SetStatusCode(AValue: Integer);
+    procedure SetContentType(const AValue: string);
+    procedure SetContentLength(const AValue: Int64);
+    procedure Write(const AContent: string); overload;
+    procedure Write(const ABuffer: TBytes); overload;
+    procedure Write(const AStream: TStream); overload;
+    procedure Json(const AJson: string); overload;
+    procedure Json(const AValue: TValue); overload;
+    procedure AddHeader(const AName, AValue: string);
+    procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
+    procedure AppendCookie(const AName, AValue: string); overload;
+    procedure DeleteCookie(const AName: string);
+    property StatusCode: Integer read GetStatusCode write SetStatusCode;
+    property ContentType: string read GetContentType write SetContentType;
+  end;
+
+  TStatefulMockHttpContext = class(TInterfacedObject, IHttpContext)
+  private
+    FRequest: IHttpRequest;
+    FResponse: IHttpResponse;
+    FServices: IServiceProvider;
+    FUser: IClaimsPrincipal;
+    FItems: IDictionary<string, TValue>;
+  public
+    constructor Create(ARequest: IHttpRequest; AResponse: IHttpResponse; AServices: IServiceProvider);
+    function GetRequest: IHttpRequest;
+    function GetResponse: IHttpResponse;
+    procedure SetResponse(const AValue: IHttpResponse);
+    function GetServices: IServiceProvider;
+    procedure SetServices(const AValue: IServiceProvider);
+    function GetUser: IClaimsPrincipal;
+    procedure SetUser(const AValue: IClaimsPrincipal);
+    function GetItems: IDictionary<string, TValue>;
+    property Request: IHttpRequest read GetRequest;
+    property Response: IHttpResponse read GetResponse write SetResponse;
+    property Services: IServiceProvider read GetServices write SetServices;
+    property User: IClaimsPrincipal read GetUser write SetUser;
+    property Items: IDictionary<string, TValue> read GetItems;
+  end;
+
 { Helper }
+
 procedure ParseQueryStringInto(const AQueryString: string; out ADict: IStringDictionary);
 var
   I, PosEqual: Integer;
@@ -133,38 +182,147 @@ end;
 { TMockHttpResponse }
 
 class function TMockHttpResponse.Create: IHttpResponse;
-var
-  MockRes: Mock<IHttpResponse>;
 begin
-  MockRes := Mock<IHttpResponse>.Create;
+  Result := TStatefulMockResponse.Create;
+end;
 
-  MockRes.Setup.Returns(TValue.From<Integer>(200)).When.GetStatusCode;
-  MockRes.Setup.Returns(TValue.From<string>('text/plain')).When.GetContentType;
-  
-  // Note: Mock<T> dynamically handles unconfigured methods natively without failing 
-  // (unless explicitly configured). So write methods etc just swallow calls correctly!
+{ TStatefulMockResponse }
 
-  Result := MockRes.Instance;
+constructor TStatefulMockResponse.Create;
+begin
+  inherited Create;
+  FStatusCode := 200;
+  FContentType := 'text/plain';
+  FHeaders := TCollections.CreateStringDictionary(True);
+end;
+
+function TStatefulMockResponse.GetStatusCode: Integer;
+begin
+  Result := FStatusCode;
+end;
+
+function TStatefulMockResponse.GetContentType: string;
+begin
+  Result := FContentType;
+end;
+
+function TStatefulMockResponse.Status(AValue: Integer): IHttpResponse;
+begin
+  FStatusCode := AValue;
+  Result := Self;
+end;
+
+procedure TStatefulMockResponse.SetStatusCode(AValue: Integer);
+begin
+  FStatusCode := AValue;
+end;
+
+procedure TStatefulMockResponse.SetContentType(const AValue: string);
+begin
+  FContentType := AValue;
+end;
+
+procedure TStatefulMockResponse.SetContentLength(const AValue: Int64);
+begin
+end;
+
+procedure TStatefulMockResponse.Write(const AContent: string);
+begin
+end;
+
+procedure TStatefulMockResponse.Write(const ABuffer: TBytes);
+begin
+end;
+
+procedure TStatefulMockResponse.Write(const AStream: TStream);
+begin
+end;
+
+procedure TStatefulMockResponse.Json(const AJson: string);
+begin
+  FContentType := 'application/json';
+end;
+
+procedure TStatefulMockResponse.Json(const AValue: TValue);
+begin
+  FContentType := 'application/json';
+end;
+
+procedure TStatefulMockResponse.AddHeader(const AName, AValue: string);
+begin
+  FHeaders.AddOrSetValue(AName, AValue);
+end;
+
+procedure TStatefulMockResponse.AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions);
+begin
+end;
+
+procedure TStatefulMockResponse.AppendCookie(const AName, AValue: string);
+begin
+end;
+
+procedure TStatefulMockResponse.DeleteCookie(const AName: string);
+begin
 end;
 
 { TMockHttpContext }
 
 class function TMockHttpContext.Create(ARequest: IHttpRequest; AResponse: IHttpResponse;
   AServices: IServiceProvider): IHttpContext;
-var
-  MockCtx: Mock<IHttpContext>;
-  Items: IDictionary<string, TValue>;
 begin
-  MockCtx := Mock<IHttpContext>.Create;
+  Result := TStatefulMockHttpContext.Create(ARequest, AResponse, AServices);
+end;
 
-  Items := TCollections.CreateDictionary<string, TValue>;
+{ TStatefulMockHttpContext }
 
-  MockCtx.Setup.Returns(TValue.From<IHttpRequest>(ARequest)).When.GetRequest;
-  MockCtx.Setup.Returns(TValue.From<IHttpResponse>(AResponse)).When.GetResponse;
-  MockCtx.Setup.Returns(TValue.From<IServiceProvider>(AServices)).When.GetServices;
-  MockCtx.Setup.Returns(TValue.From<IDictionary<string, TValue>>(Items)).When.GetItems;
+constructor TStatefulMockHttpContext.Create(ARequest: IHttpRequest; AResponse: IHttpResponse;
+  AServices: IServiceProvider);
+begin
+  inherited Create;
+  FRequest := ARequest;
+  FResponse := AResponse;
+  FServices := AServices;
+  FItems := TCollections.CreateDictionary<string, TValue>;
+end;
 
-  Result := MockCtx.Instance;
+function TStatefulMockHttpContext.GetRequest: IHttpRequest;
+begin
+  Result := FRequest;
+end;
+
+function TStatefulMockHttpContext.GetResponse: IHttpResponse;
+begin
+  Result := FResponse;
+end;
+
+procedure TStatefulMockHttpContext.SetResponse(const AValue: IHttpResponse);
+begin
+  FResponse := AValue;
+end;
+
+function TStatefulMockHttpContext.GetServices: IServiceProvider;
+begin
+  Result := FServices;
+end;
+
+procedure TStatefulMockHttpContext.SetServices(const AValue: IServiceProvider);
+begin
+  FServices := AValue;
+end;
+
+function TStatefulMockHttpContext.GetUser: IClaimsPrincipal;
+begin
+  Result := FUser;
+end;
+
+procedure TStatefulMockHttpContext.SetUser(const AValue: IClaimsPrincipal);
+begin
+  FUser := AValue;
+end;
+
+function TStatefulMockHttpContext.GetItems: IDictionary<string, TValue>;
+begin
+  Result := FItems;
 end;
 
 { TMockFactory }

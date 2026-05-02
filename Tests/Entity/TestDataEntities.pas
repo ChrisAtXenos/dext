@@ -103,6 +103,19 @@ type
     property Metadata: TJsonMetadata read FMetadata write FMetadata;
   end;
 
+  // NOTE: TAutoGuidEntity is for PostgreSQL-specific test (gen_random_uuid())
+  [Table('test_autoguid_entities')]
+  TAutoGuidEntity = class
+  private
+    FId: TGUID;
+    FName: string;
+  public
+    [PK, AutoInc, Column('id')]
+    property Id: TGUID read FId write FId;
+    [Column('name')]
+    property Name: string read FName write FName;
+  end;
+
 implementation
 
 { TJsonEntity }

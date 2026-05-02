@@ -209,16 +209,20 @@ var
 begin
   // Arrange: replicate the exact scenario from the issue report
   LData := TMyData108.Create;
-  LData.Name := 'Dext User';
-  LPaginated := TPaginatedResult108<TMyData108>.Create(LData);
+  try
+    LData.Name := 'Dext User';
+    LPaginated := TPaginatedResult108<TMyData108>.Create(LData);
 
-  // Act: serialize via the generic helper (this was the original failing path)
-  LJson := TPaginatedJsonHelper108<TMyData108>.ToEnvelope(LPaginated);
+    // Act: serialize via the generic helper (this was the original failing path)
+    LJson := TPaginatedJsonHelper108<TMyData108>.ToEnvelope(LPaginated);
 
-  // Assert: refCount must NOT appear in output
-  Should(LJson).NotBeEmpty;
-  Should(LJson.ToLower.Contains('refcount')).BeFalse;
-  Should(LJson.ToLower.Contains('frefcount')).BeFalse;
+    // Assert: refCount must NOT appear in output
+    Should(LJson).NotBeEmpty;
+    Should(LJson.ToLower.Contains('refcount')).BeFalse;
+    Should(LJson.ToLower.Contains('frefcount')).BeFalse;
+  finally
+    LData.Free;
+  end;
 end;
 
 procedure TJsonIssue108RegressionTests.TestSerializeGeneric_OnlyContainsDeclaredProperties;

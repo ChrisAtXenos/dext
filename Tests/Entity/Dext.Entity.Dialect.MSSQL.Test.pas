@@ -1,4 +1,4 @@
-unit Dext.Entity.Dialect.MSSQL.Test;
+﻿unit Dext.Entity.Dialect.MSSQL.Test;
 
 interface
 
@@ -45,10 +45,10 @@ end;
 procedure TSQLServerDialectTest.AssertEqual(const Expected, Actual, Msg: string);
 begin
   if Expected = Actual then
-    WriteLn('   ✅ ', Msg)
+    WriteLn('   âœ… ', Msg)
   else
   begin
-    WriteLn('   ❌ ', Msg);
+    WriteLn('   âŒ ', Msg);
     WriteLn('      Expected: ', Expected);
     WriteLn('      Actual:   ', Actual);
   end;
@@ -56,7 +56,7 @@ end;
 
 procedure TSQLServerDialectTest.Run;
 begin
-  Log('🏢 Testing SQL Server Dialect');
+  Log('ðŸ¢ Testing SQL Server Dialect');
   Log('-----------------------------');
 
   // 1. Identifiers

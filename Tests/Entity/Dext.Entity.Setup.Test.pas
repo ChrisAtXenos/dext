@@ -1,4 +1,4 @@
-unit Dext.Entity.Setup.Test;
+﻿unit Dext.Entity.Setup.Test;
 
 interface
 
@@ -27,7 +27,7 @@ var
   Conn: IDbConnection;
   FDConn: TFDConnection;
 begin
-  WriteLn('🧪 Running Setup & ConnectionString Tests...');
+  WriteLn('ðŸ§ª Running Setup & ConnectionString Tests...');
 
   Options := TDbContextOptions.Create;
   try
@@ -40,23 +40,23 @@ begin
       
       // FireDAC's ConnectionString property should be set correctly
       if FDConn.ConnectionString = Options.ConnectionString then
-        WriteLn('   ✅ ConnectionString propagated correctly.')
+        WriteLn('   âœ… ConnectionString propagated correctly.')
       else
-        WriteLn('   ❌ ConnectionString NOT propagated.');
+        WriteLn('   âŒ ConnectionString NOT propagated.');
 
       // Check if FireDAC parsed the password (even if not connected)
       if FDConn.Params.Password = '123456' then
-        WriteLn('   ✅ Password correctly parsed by FireDAC.')
+        WriteLn('   âœ… Password correctly parsed by FireDAC.')
       else
-        WriteLn('   ❌ Password NOT parsed: ' + FDConn.Params.Password);
+        WriteLn('   âŒ Password NOT parsed: ' + FDConn.Params.Password);
         
       if FDConn.Params.UserName = 'postgres' then
-        WriteLn('   ✅ UserName correctly parsed.')
+        WriteLn('   âœ… UserName correctly parsed.')
       else
-        WriteLn('   ❌ UserName NOT parsed: ' + FDConn.Params.UserName);
+        WriteLn('   âŒ UserName NOT parsed: ' + FDConn.Params.UserName);
     end
     else
-      WriteLn('   ❌ Connection is not a TFireDACConnection.');
+      WriteLn('   âŒ Connection is not a TFireDACConnection.');
   finally
     Options.Free;
   end;

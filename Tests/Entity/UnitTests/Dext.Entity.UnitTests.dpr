@@ -1,4 +1,4 @@
-program Dext.Entity.UnitTests;
+﻿program Dext.Entity.UnitTests;
 
 {$IFNDEF TESTINSIGHT}
   {$APPTYPE CONSOLE}
@@ -39,7 +39,7 @@ begin
   SetConsoleCharSet();
   try
     SafeWriteLn;
-    SafeWriteLn('🧪 Dext Entity Unit Tests');
+    SafeWriteLn('ðŸ§ª Dext Entity Unit Tests');
     SafeWriteLn('=========================');
     SafeWriteLn;
 

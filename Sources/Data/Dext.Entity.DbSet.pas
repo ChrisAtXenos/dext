@@ -777,11 +777,15 @@ begin
         Result := TEntityProxyFactory.CreateInstance<T>(FContext);
   end
   else
+  begin
     Result := TEntityProxyFactory.CreateInstance<T>(FContext);
+  end;
 
   try
     if Tracking and (PKVal <> '') then
+    begin
       FIdentityMap.Add(PKVal, Result);
+    end;
     
     HydrateTarget(Reader, Result);
   except
@@ -1841,7 +1845,6 @@ begin
     except
       on E: Exception do
       begin
-        SafeWriteLn('ERROR in TDbSet.ToList during fetch: ' + E.Message);
         raise;
       end;
     end;

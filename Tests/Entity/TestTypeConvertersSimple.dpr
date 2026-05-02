@@ -3,202 +3,112 @@ program TestTypeConvertersSimple;
 {$APPTYPE CONSOLE}
 
 uses
-  Dext.MM,
   System.SysUtils,
   System.Rtti,
-  FireDAC.Comp.Client,
-  FireDAC.Stan.Param,
-  Dext.Entity.Drivers.FireDAC.Links,
-  Dext.Utils,
-  Dext.Entity.Drivers.FireDAC,
   Dext.Entity.TypeConverters,
-  Dext.Entity.Dialects;
+  Dext.Entity.Dialects,
+  Dext.Utils;
 
 type
   TUserRole = (urGuest, urUser, urAdmin, urSuperAdmin);
 
 procedure TestGuidConverter;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
   Converter: TGuidConverter;
-  TestGuid, LoadedGuid: TGUID;
-  Value, DbValue, Result: TValue;
-  GuidStr: string;
+  Guid: TGUID;
+  Value, DbValue, Restored: TValue;
 begin
-  WriteLn('► Testing GUID Converter with PostgreSQL...');
-  
-  Conn := TFDConnection.Create(nil);
+  WriteLn('► Testing GUID Converter...');
+  Converter := TGuidConverter.Create;
   try
-    Conn.DriverName := 'PG';
-    Conn.Params.Values['Server'] := 'localhost';
-    Conn.Params.Values['Port'] := '5432';
-    Conn.Params.Values['Database'] := 'dext_test';
-    Conn.Params.Values['User_Name'] := 'postgres';
-    Conn.Params.Values['Password'] := 'root';
-    Conn.Connected := True;
+    CreateGUID(Guid);
+    Value := TValue.From<TGUID>(Guid);
     
-    WriteLn('  ✓ Connected to PostgreSQL');
+    // To Database (PostgreSQL expects string UUID)
+    DbValue := Converter.ToDatabase(Value, ddPostgreSQL);
+    WriteLn('  Original: ', GUIDToString(Guid));
+    WriteLn('  To DB:    ', DbValue.AsString);
     
-    // Create table
-    Conn.ExecSQL('DROP TABLE IF EXISTS test_guid');
-    Conn.ExecSQL('CREATE TABLE test_guid (id UUID PRIMARY KEY, name VARCHAR(100))');
-    WriteLn('  ✓ Table created');
-    
-    // Test converter
-    Converter := TGuidConverter.Create(True); // PG requires endian swap
-    try
-      CreateGUID(TestGuid);
-      TValue.Make(@TestGuid, TypeInfo(TGUID), Value);
+    // From Database
+    Restored := Converter.FromDatabase(DbValue, TypeInfo(TGUID));
+    if not IsEqualGUID(Guid, Restored.AsType<TGUID>) then
+      raise Exception.Create('GUID Round-trip failed');
       
-      DbValue := Converter.ToDatabase(Value, ddPostgreSQL);
-      WriteLn('  Original GUID: ', GUIDToString(TestGuid));
-      WriteLn('  DB format:     ', DbValue.AsString);
-      
-      // Insert
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := Conn;
-        Query.SQL.Text := 'INSERT INTO test_guid (id, name) VALUES (:id::uuid, :name)';
-        Query.ParamByName('id').AsString := DbValue.AsString;
-        Query.ParamByName('name').AsString := 'Test Record';
-        Query.ExecSQL;
-        WriteLn('  ✓ Record inserted');
-        
-        // Select
-        Query.SQL.Text := 'SELECT id FROM test_guid LIMIT 1';
-        Query.Open;
-        if not Query.Eof then
-        begin
-          GuidStr := Query.Fields[0].AsString;
-          WriteLn('  Read from DB:  ', GuidStr);
-          
-          Result := Converter.FromDatabase(TValue.From<string>(GuidStr), TypeInfo(TGUID));
-          LoadedGuid := Result.AsType<TGUID>;
-          
-          if IsEqualGUID(TestGuid, LoadedGuid) then
-            WriteLn('  ✓ GUID round-trip successful!')
-          else
-            raise Exception.Create('GUID mismatch');
-        end;
-        Query.Close;
-      finally
-        Query.Free;
-      end;
-    finally
-      Converter.Free;
-    end;
-    
-    // Cleanup
-    Conn.ExecSQL('DROP TABLE test_guid');
-    WriteLn('✓ GUID Converter test passed');
-    WriteLn('');
+    WriteLn('  ✓ GUID Success');
   finally
-    Conn.Free;
+    Converter.Free;
   end;
 end;
 
 procedure TestEnumConverter;
 var
-  Conn: TFDConnection;
-  Query: TFDQuery;
   Converter: TEnumConverter;
-  TestRole, LoadedRole: TUserRole;
-  Value, DbValue, Result: TValue;
-  RoleStr: string;
+  Role: TUserRole;
+  Value, DbValue, Restored: TValue;
 begin
-  WriteLn('► Testing Enum Converter with PostgreSQL (String mode)...');
+  WriteLn('► Testing Enum Converter...');
   
-  Conn := TFDConnection.Create(nil);
+  // Test String Mode
+  Converter := TEnumConverter.Create(True);
   try
-    Conn.DriverName := 'PG';
-    Conn.Params.Values['Server'] := 'localhost';
-    Conn.Params.Values['Port'] := '5432';
-    Conn.Params.Values['Database'] := 'dext_test';
-    Conn.Params.Values['User_Name'] := 'postgres';
-    Conn.Params.Values['Password'] := 'root';
-    Conn.Connected := True;
+    Role := urSuperAdmin;
+    Value := TValue.From<TUserRole>(Role);
     
-    // Create table
-    Conn.ExecSQL('DROP TABLE IF EXISTS test_enum');
-    Conn.ExecSQL('CREATE TABLE test_enum (id SERIAL PRIMARY KEY, role VARCHAR(50))');
-    WriteLn('  ✓ Table created');
+    DbValue := Converter.ToDatabase(Value, ddPostgreSQL);
+    WriteLn('  Enum:  urSuperAdmin');
+    WriteLn('  To DB: ', DbValue.AsString);
     
-    // Test converter
-    Converter := TEnumConverter.Create(True); // String mode
-    try
-      TestRole := urSuperAdmin;
-      TValue.Make(@TestRole, TypeInfo(TUserRole), Value);
+    Restored := Converter.FromDatabase(DbValue, TypeInfo(TUserRole));
+    if Restored.AsType<TUserRole> <> Role then
+      raise Exception.Create('Enum String Round-trip failed');
       
-      DbValue := Converter.ToDatabase(Value, ddPostgreSQL);
-      WriteLn('  Enum value: urSuperAdmin');
-      WriteLn('  DB format:  ', DbValue.AsString);
-      
-      // Insert
-      Query := TFDQuery.Create(nil);
-      try
-        Query.Connection := Conn;
-        Query.SQL.Text := 'INSERT INTO test_enum (role) VALUES (:role)';
-        Query.ParamByName('role').AsString := DbValue.AsString;
-        Query.ExecSQL;
-        WriteLn('  ✓ Record inserted');
-        
-        // Select
-        Query.SQL.Text := 'SELECT role FROM test_enum LIMIT 1';
-        Query.Open;
-        if not Query.Eof then
-        begin
-          RoleStr := Query.Fields[0].AsString;
-          WriteLn('  Read from DB: ', RoleStr);
-          
-          Result := Converter.FromDatabase(TValue.From<string>(RoleStr), TypeInfo(TUserRole));
-          LoadedRole := Result.AsType<TUserRole>;
-          
-          if LoadedRole = urSuperAdmin then
-            WriteLn('  ✓ Enum round-trip successful!')
-          else
-            raise Exception.Create('Enum mismatch');
-        end;
-        Query.Close;
-      finally
-        Query.Free;
-      end;
-    finally
-      Converter.Free;
-    end;
-    
-    // Cleanup
-    Conn.ExecSQL('DROP TABLE test_enum');
-    WriteLn('✓ Enum Converter test passed');
-    WriteLn('');
+    WriteLn('  ✓ Enum String Success');
   finally
-    Conn.Free;
+    Converter.Free;
+  end;
+  
+  // Test Integer Mode
+  Converter := TEnumConverter.Create(False);
+  try
+    Role := urAdmin;
+    Value := TValue.From<TUserRole>(Role);
+    
+    DbValue := Converter.ToDatabase(Value, ddPostgreSQL);
+    WriteLn('  Enum:  urAdmin');
+    WriteLn('  To DB: ', DbValue.AsInteger);
+    
+    Restored := Converter.FromDatabase(DbValue, TypeInfo(TUserRole));
+    if Restored.AsType<TUserRole> <> Role then
+      raise Exception.Create('Enum Integer Round-trip failed');
+      
+    WriteLn('  ✓ Enum Integer Success');
+  finally
+    Converter.Free;
   end;
 end;
 
 begin
   SetConsoleCharSet(65001);
   try
-    WriteLn('📊 Dext Type Converters PostgreSQL Integration Test');
-    WriteLn('====================================================');
-    WriteLn('');
+    WriteLn('📊 Dext Type Converters Simple Validation');
+    WriteLn('=========================================');
+    WriteLn;
     
     TestGuidConverter;
+    WriteLn;
     TestEnumConverter;
     
-    WriteLn('');
-    WriteLn('✅ All PostgreSQL integration tests passed!');
-    WriteLn('');
+    WriteLn;
+    WriteLn('✅ All simple validations passed!');
   except
     on E: Exception do
     begin
-      WriteLn('');
-      WriteLn('❌ Test failed: ', E.Message);
-      WriteLn('');
+      WriteLn('❌ FAILED: ' + E.Message);
       ExitCode := 1;
     end;
   end;
   
+  WriteLn;
   WriteLn('Press ENTER to exit...');
   ConsolePause;
 end.

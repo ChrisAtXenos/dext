@@ -5,6 +5,7 @@ program TestMetadataCache;
 uses
   System.SysUtils,
   System.TypInfo,
+  Dext.Utils,
   Dext.Entity.Mapping,
   Dext.Entity.Attributes;
 
@@ -53,6 +54,7 @@ begin
 end;
 
 begin
+  SetConsoleCharSet(65001);
   try
     TestCache;
     WriteLn;
@@ -64,4 +66,5 @@ begin
       ExitCode := 1;
     end;
   end;
+  ConsolePause;
 end.

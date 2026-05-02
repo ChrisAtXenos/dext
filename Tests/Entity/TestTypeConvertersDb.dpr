@@ -1,4 +1,4 @@
-program TestTypeConvertersDb;
+﻿program TestTypeConvertersDb;
 
 {$APPTYPE CONSOLE}
 {$TYPEINFO ON}
@@ -46,6 +46,7 @@ type
     function GetEnumEntities: IDbSet<TEnumEntity>;
     function GetJsonEntities: IDbSet<TJsonEntity>;
     function GetUuidEntities: IDbSet<TUuidEntity>;
+    function GetAutoGuidEntities: IDbSet<TAutoGuidEntity>;
   public
     property GuidEntities: IDbSet<TGuidEntity> read GetGuidEntities;
     property CompositeGuidInt: IDbSet<TCompositeGuidInt> read GetCompositeGuidInt;
@@ -53,6 +54,7 @@ type
     property EnumEntities: IDbSet<TEnumEntity> read GetEnumEntities;
     property JsonEntities: IDbSet<TJsonEntity> read GetJsonEntities;
     property UuidEntities: IDbSet<TUuidEntity> read GetUuidEntities;
+    property AutoGuidEntities: IDbSet<TAutoGuidEntity> read GetAutoGuidEntities;
   end;
 
 function TTestDbContext.GetGuidEntities: IDbSet<TGuidEntity>;
@@ -86,12 +88,10 @@ begin
 end;
 
 // PostgreSQL-specific - uncomment to test auto-generated UUID endianness
-(*
 function TTestDbContext.GetAutoGuidEntities: IDbSet<TAutoGuidEntity>;
 begin
   Result := Entities<TAutoGuidEntity>;
 end;
-*)
 
 procedure EnsureDatabaseExists;
 var
@@ -434,7 +434,6 @@ end;
 // NOTE: This test is PostgreSQL-specific (uses gen_random_uuid())
 // It validates that RETURNING endianness is correct when using a registered TGuidConverter.
 // To run this test, you must register TGuidConverter and have PostgreSQL as the backend.
-(*
 procedure TestAutoGuid(Db: TTestDbContext);
 var
   Entity: TAutoGuidEntity;
@@ -488,7 +487,6 @@ begin
   WriteLn('  ✓ Endianness correct - POST and GET return same ID');
   WriteLn('  ✓ Auto-Generated GUID Test PASSED');
 end;
-*)
 
 var
   Db: TTestDbContext;
@@ -497,6 +495,7 @@ var
   Dialect: ISQLDialect;
   C: IInterface;
 begin
+  SetConsoleCharSet;
   try
     WriteLn('═══════════════════════════════════════════════════════════');
     WriteLn('  Dext ORM - Type Converters & Composite Keys Test Suite');
@@ -575,8 +574,8 @@ begin
       TestUuid(Db);  // TUUID RFC 9562 test
       WriteLn;
       
-      // TestAutoGuid(Db);  // PostgreSQL-specific test - uncomment to run manually
-      // WriteLn;
+      TestAutoGuid(Db);  // PostgreSQL-specific test - uncomment to run manually
+      WriteLn;
       
       WriteLn('─────────────────────────────────────────────────────────');
       WriteLn('🎉 ALL TESTS PASSED!');

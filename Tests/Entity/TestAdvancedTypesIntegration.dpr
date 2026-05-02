@@ -171,6 +171,7 @@ var
   Dialect: ISQLDialect;
   C: IInterface;
 begin
+  SetConsoleCharSet(65001);
   try
     FDConn := TFDConnection.Create(nil);
     FDConn.DriverName := 'PG';

@@ -137,7 +137,9 @@ var
   Map: TEntityMap;
   PropMap: TPropertyMap;
 begin
-  Map := TEntityMap(IDbContext(AContext).GetMapping(AEntity.ClassInfo));
+  if AEntity = nil then Exit;
+  
+  Map := TEntityMap(AContext.GetMapping(AEntity.ClassInfo));
   if Map = nil then Exit;
 
   Typ := TReflection.Context.GetType(AEntity.ClassType);

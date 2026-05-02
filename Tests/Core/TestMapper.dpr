@@ -375,6 +375,7 @@ begin
 end;
 
 begin
+  SetConsoleCharSet(65001);
   try
     WriteLn('Dext AutoMapper Tests');
     WriteLn('=====================');

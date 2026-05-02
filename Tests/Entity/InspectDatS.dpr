@@ -1,4 +1,4 @@
-program InspectDatS;
+﻿program InspectDatS;
 
 {$APPTYPE CONSOLE}
 

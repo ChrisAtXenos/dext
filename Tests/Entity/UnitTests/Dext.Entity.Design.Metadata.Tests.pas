@@ -1,4 +1,4 @@
-unit Dext.Entity.Design.Metadata.Tests;
+﻿unit Dext.Entity.Design.Metadata.Tests;
 
 interface
 

@@ -1,4 +1,4 @@
-program Dext.BasicAuthTest;
+﻿program Dext.BasicAuthTest;
 
 {$APPTYPE CONSOLE}
 
@@ -27,7 +27,7 @@ var
   Pair: TPair<string, string>;
 begin
   MockReq := Mock<IHttpRequest>.Create;
-  
+
   QueryParams := TCollections.CreateStringDictionary;
   EmptyCookies := TCollections.CreateStringDictionary;
   EmptyRoute.Clear;
@@ -43,7 +43,7 @@ begin
   MockReq.Setup.Returns(TValue.From<IStringDictionary>(HeadersDict)).When.GetHeaders;
   MockReq.Setup.Returns(TValue.From<IStringDictionary>(EmptyCookies)).When.GetCookies;
   MockReq.Setup.Returns(TValue.From<TRouteValueDictionary>(EmptyRoute)).When.GetRouteParams;
-  
+
   MockReq.Setup.Returns(TValue.From<string>('GET')).When.GetMethod;
   MockReq.Setup.Returns(TValue.From<string>(APath)).When.GetPath;
   MockReq.Setup.Returns(TValue.From<string>('127.0.0.1')).When.GetRemoteIpAddress;
@@ -70,6 +70,8 @@ var
   App: IWebApplication;
   Pipeline: TRequestDelegate;
   Context: IHttpContext;
+  I: Integer;
+  Meta: TEndpointMetadata;
 begin
   Writeln('🧪 Basic Auth Tests Starting...');
 
@@ -96,20 +98,28 @@ begin
   end);
 
   // 4. Build pipeline
+  Writeln('--- Route Metadata Debug ---');
+  for I := 0 to High(App.Builder.Unwrap.GetRoutes) do
+  begin
+    Meta := App.Builder.Unwrap.GetRoutes[I];
+    Writeln(Format('Route: %s, Security Schemes: %d', [Meta.Path, Length(Meta.Security)]));
+  end;
+  Writeln('---------------------------');
+
   Pipeline := App.Builder.Unwrap.Build;
 
   // --- Scenario 1: Public endpoint, no credentials ---
   Writeln('Scenario 1: Public endpoint, no credentials (expect 200)');
   Context := MakeContextWithPath('/public');
   Pipeline(Context);
-  Should(Context.Response.StatusCode).Be(200);  
+  Should(Context.Response.StatusCode).Be(200);
   Writeln('  PASS');
 
   // --- Scenario 2: Protected endpoint, no credentials ---
   Writeln('Scenario 2: Protected endpoint, no credentials (expect 401)');
   Context := MakeContextWithPath('/protected');
-  Pipeline(Context);  
-  Should(Context.Response.StatusCode).Be(401);  
+  Pipeline(Context);
+  Should(Context.Response.StatusCode).Be(401);
   Writeln('  PASS');
 
   // --- Scenario 3: Protected endpoint, valid credentials ---
