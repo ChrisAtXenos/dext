@@ -92,7 +92,7 @@ type
     constructor Create(const AFormat: string);
     property Format: string read FFormat;
   end;
-  
+
   /// <summary>
   ///   Forces a numeric field to be serialized as a string.
   /// </summary>
@@ -110,7 +110,7 @@ type
 
   /// <summary>Deprecated alias for TCaseStyle.</summary>
   TDextCaseStyle = TCaseStyle deprecated 'Use TCaseStyle instead';
-  
+
   /// <summary>Deprecated alias for TEnumStyle.</summary>
   TDextEnumStyle = TEnumStyle deprecated 'Use TEnumStyle instead';
 
@@ -133,7 +133,7 @@ type
 
   /// <summary>Deprecated alias for TJsonSettings.</summary>
   TDextSettings = TJsonSettings deprecated 'Use TJsonSettings instead';
-  
+
   /// <summary>
   ///   Main entry point for JSON serialization and deserialization in Dext.
   ///   Acts as a high-level facade that uses configurable providers (drivers).
@@ -157,7 +157,7 @@ type
     ///   operations that don't explicitly provide settings.
     /// </summary>
     class procedure SetDefaultSettings(const ASettings: TJsonSettings); static;
-    
+
     /// <summary>
     ///   Gets the current default settings.
     /// </summary>
@@ -167,37 +167,37 @@ type
     ///   Defaults to JsonDataObjects if not set.
     /// </summary>
     class property Provider: IDextJsonProvider read GetProvider write FProvider;
-    
+
     /// <summary>
     ///   Deserializes a JSON string into a value of type T using default settings.
     /// </summary>
     class function Deserialize<T>(const AJson: string): T; overload; static;
-    
+
     /// <summary>
     ///   Deserializes a JSON string into a value of type T using custom settings.
     /// </summary>
     class function Deserialize<T>(const AJson: string; const ASettings: TJsonSettings): T; overload; static;
-    
+
     /// <summary>
     ///   Deserializes a JSON string into a TValue based on the provided type info.
     /// </summary>
     class function Deserialize(AType: PTypeInfo; const AJson: string): TValue; overload; static;
-    
+
     /// <summary>
     ///   Deserializes a JSON string into a TValue based on the provided type info with custom settings.
     /// </summary>
     class function Deserialize(AType: PTypeInfo; const AJson: string; const ASettings: TJsonSettings): TValue; overload; static;
-    
+
     /// <summary>
     ///   Deserializes a JSON string into a record TValue.
     /// </summary>
     class function DeserializeRecord(AType: PTypeInfo; const AJson: string): TValue; static;
-    
+
     /// <summary>
     ///   Serializes a value of type T into a JSON string using default settings.
     /// </summary>
     class function Serialize<T>(const AValue: T): string; overload; static;
-    
+
     /// <summary>
     ///   Serializes a value of type T into a JSON string using custom settings.
     /// </summary>
@@ -230,12 +230,12 @@ type
 
     function JsonToValue(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
     function ValueToJson(const AValue: TValue): IDextJsonObject;
-    
+
     function DeserializeArray(AJson: IDextJsonArray; AType: PTypeInfo): TValue;
     function DeserializeList(AJson: IDextJsonArray; AType: PTypeInfo): TValue;
     function SerializeArray(const AValue: TValue): IDextJsonArray;
     function SerializeList(const AValue: TValue): IDextJsonArray;
-    
+
     function IsListType(AType: PTypeInfo): Boolean;
     function IsArrayType(AType: PTypeInfo): Boolean;
     function IsDictionaryType(AType: PTypeInfo): Boolean;
@@ -277,49 +277,49 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    
+
     /// <summary>Adds a string value to the current object.</summary>
     function Add(const AKey, AValue: string): TJsonBuilder; overload;
-    
+
     /// <summary>Adds an integer value to the current object.</summary>
     function Add(const AKey: string; AValue: Integer): TJsonBuilder; overload;
-    
+
     /// <summary>Adds a 64-bit integer value to the current object.</summary>
     function Add(const AKey: string; AValue: Int64): TJsonBuilder; overload;
-    
+
     /// <summary>Adds a floating-point value to the current object.</summary>
     function Add(const AKey: string; AValue: Double): TJsonBuilder; overload;
-    
+
     /// <summary>Adds a boolean value to the current object.</summary>
     function Add(const AKey: string; AValue: Boolean): TJsonBuilder; overload;
-    
+
     /// <summary>Starts a nested object with the given key.</summary>
     function AddObject(const AKey: string): TJsonBuilder;
-    
+
     /// <summary>Ends the current nested object and returns to the parent.</summary>
     function EndObject: TJsonBuilder;
-    
+
     /// <summary>Starts a nested array with the given key.</summary>
     function AddArray(const AKey: string): TJsonBuilder;
-    
+
     /// <summary>Ends the current nested array and returns to the parent.</summary>
     function EndArray: TJsonBuilder;
-    
+
     /// <summary>Adds a string value to the current array.</summary>
     function AddValue(const AValue: string): TJsonBuilder; overload;
-    
+
     /// <summary>Adds an integer value to the current array.</summary>
     function AddValue(AValue: Integer): TJsonBuilder; overload;
-    
+
     /// <summary>Adds a boolean value to the current array.</summary>
     function AddValue(AValue: Boolean): TJsonBuilder; overload;
-    
+
     /// <summary>Returns the built JSON as a compact string.</summary>
     function ToString: string; override;
-    
+
     /// <summary>Returns the built JSON as an indented string.</summary>
     function ToIndentedString: string;
-    
+
     /// <summary>Creates a new JSON builder instance.</summary>
     class function NewBuilder: TJsonBuilder;
   end;
@@ -396,12 +396,12 @@ end;
 
 class function TJsonUtils.ToSnakeCase(const S: string): string;
 var
-  SB: TStringBuilder;
   C: Char;
   i: Integer;
+  SB: TStringBuilder;
 begin
   if S.IsEmpty then Exit('');
-  
+
   SB := TStringBuilder.Create;
   try
     for i := 0 to S.Length - 1 do
@@ -515,13 +515,13 @@ end;
 
 class function TDextJson.Deserialize(AType: PTypeInfo; const AJson: string; const ASettings: TJsonSettings): TValue;
 var
-  Serializer: TDextSerializer;
   JsonNode: IDextJsonNode;
+  Serializer: TDextSerializer;
 begin
   Serializer := TDextSerializer.Create(ASettings);
   try
     JsonNode := TDextJson.Provider.Parse(AJson);
-    
+
     if JsonNode.GetNodeType = jntObject then
     begin
       if AType.Kind = tkRecord then
@@ -549,8 +549,8 @@ end;
 
 class function TDextJson.DeserializeRecord(AType: PTypeInfo; const AJson: string): TValue;
 var
-  Serializer: TDextSerializer;
   JsonNode: IDextJsonNode;
+  Serializer: TDextSerializer;
 begin
   Serializer := TDextSerializer.Create(GetDefaultSettings);
   try
@@ -643,7 +643,7 @@ begin
     end
     else
       raise EDextJsonException.Create('JSON root must be Object or Array');
-      
+
     Result := Value.AsType<T>;
   finally
     // Interface reference counting handles destruction
@@ -652,18 +652,18 @@ end;
 
 function TDextSerializer.DeserializeObject(AJson: IDextJsonObject; AType: PTypeInfo; AInstance: TObject): TValue;
 var
-  RttiType: TRttiType;
-  Prop: TRttiProperty;
-  PropName: string;
   ActualPropName: string;
-  Found: Boolean;
-  Instance: TObject;
   Attr: TCustomAttribute;
+  Found: Boolean;
+  Handler: IPropertyHandler;
   I: Integer;
+  Instance: TObject;
   Key: string;
   LowerProp: string;
   Node: IDextJsonNode;
-  Handler: IPropertyHandler;
+  Prop: TRttiProperty;
+  PropName: string;
+  RttiType: TRttiType;
   Val: TValue;
 begin
   if AJson = nil then
@@ -694,7 +694,7 @@ begin
         Continue;
 
       PropName := ApplyCaseStyle(Prop.Name);
-      
+
       // Check JsonName
       for Attr in Prop.GetAttributes do
         if Attr is JsonNameAttribute then
@@ -709,20 +709,21 @@ begin
       if (not Found) and FSettings.FCaseInsensitive then
       begin
          // Simple scan
-         LowerProp := LowerCase(PropName);
-         for I := 0 to AJson.GetCount - 1 do
-         begin
-            Key := AJson.GetName(I);
-            if LowerCase(Key) = LowerProp then
-            begin
-               ActualPropName := Key;
-               Found := True;
-               Break;
-            end;
-         end;
+        LowerProp := LowerCase(PropName);
+        for I := 0 to AJson.GetCount - 1 do
+        begin
+          Key := AJson.GetName(I);
+          if LowerCase(Key) = LowerProp then
+          begin
+            ActualPropName := Key;
+            Found := True;
+            Break;
+          end;
+        end;
       end;
 
-      if not Found then Continue;
+      if not Found then
+        Continue;
 
       Node := AJson.GetNode(ActualPropName);
       if Node <> nil then
@@ -730,13 +731,16 @@ begin
         Handler := TReflection.GetHandler(AType, Prop.Name);
         Val := TValue.Empty;
         case Node.GetNodeType of
-          jntString: Val := TValue.From<string>(Node.AsString);
+          jntString:
+            Val := TValue.From<string>(Node.AsString);
           jntNumber:
             begin
               case Prop.PropertyType.TypeKind of
-                tkInteger: Val := TValue.FromOrdinal(Prop.PropertyType.Handle, Node.AsInt64);
-                tkInt64: Val := Node.AsInt64;
-                tkFloat: 
+                tkInteger:
+                  Val := TValue.FromOrdinal(Prop.PropertyType.Handle, Node.AsInt64);
+                tkInt64:
+                  Val := Node.AsInt64;
+                tkFloat:
                   if Prop.PropertyType.Handle = TypeInfo(TDateTime) then
                     Val := ISO8601ToDate(Node.AsString)
                   else
@@ -750,8 +754,9 @@ begin
                 Val := TValue.Empty;
               end;
             end;
-          jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
-          jntObject: 
+          jntBoolean:
+            Val := TValue.From<Boolean>(Node.AsBoolean);
+          jntObject:
             begin
               if (Prop.PropertyType.TypeKind = tkClass) or (Prop.PropertyType.TypeKind = tkInterface) then
                 Val := DeserializeObject(Node as IDextJsonObject, Prop.PropertyType.Handle)
@@ -762,7 +767,7 @@ begin
               else
                 Val := TValue.Empty;
             end;
-          jntArray: 
+          jntArray:
             begin
               if IsArrayType(Prop.PropertyType.Handle) then
                 Val := DeserializeArray(Node as IDextJsonArray, Prop.PropertyType.Handle)
@@ -771,9 +776,10 @@ begin
               else
                 Val := TValue.Empty;
             end;
-          else Val := TValue.Empty;
+        else
+          Val := TValue.Empty;
         end;
-        
+
         if not Val.IsEmpty then
           Handler.SetValue(Instance, Val);
       end;
@@ -787,15 +793,15 @@ end;
 
 function TDextSerializer.DeserializeRecord(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
 var
-  RttiType: TRttiType;
+  ActualFieldName: string;
   Field: TRttiField;
   FieldName: string;
-  ActualFieldName: string;
   FieldValue: TValue;
   Found: Boolean;
-  LowerFieldName, UpperFieldName, CamelCaseName: string;
   GuidStr: string;
+  LowerFieldName, UpperFieldName, CamelCaseName: string;
   Node: IDextJsonNode;
+  RttiType: TRttiType;
   Val: TValue;
 begin
   if AType = TypeInfo(TGUID) then
@@ -819,7 +825,7 @@ begin
     begin
       LowerFieldName := LowerCase(FieldName);
       UpperFieldName := UpperCase(FieldName);
-      
+
       if AJson.Contains(LowerFieldName) then
       begin
         ActualFieldName := LowerFieldName;
@@ -884,7 +890,7 @@ begin
               Val := TValue.From<Double>(Node.AsDouble);
           end;
         jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
-        jntObject: 
+        jntObject:
            begin
              if (Field.FieldType.TypeKind = tkClass) then
                Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
@@ -893,7 +899,7 @@ begin
              else
                Val := TValue.Empty;
            end;
-        jntArray: 
+        jntArray:
            begin
              if IsArrayType(Field.FieldType.Handle) then
                Val := DeserializeArray(Node as IDextJsonArray, Field.FieldType.Handle)
@@ -996,8 +1002,8 @@ begin
 
       tkFloat:
         begin
-          if (AType = TypeInfo(TDateTime)) or 
-             (AType = TypeInfo(TDate)) or 
+          if (AType = TypeInfo(TDateTime)) or
+             (AType = TypeInfo(TDate)) or
              (AType = TypeInfo(TTime)) then
           begin
             DtStr := AJson.GetString(ValueField);
@@ -1040,7 +1046,7 @@ begin
     JsonNode := SerializeList(TValue.From<T>(AValue))
   else
     JsonNode := ValueToJson(TValue.From<T>(AValue));
-    
+
   if FSettings.Formatting = TJsonFormatting.Indented then
     Result := JsonNode.ToJson(True)
   else
@@ -1058,7 +1064,7 @@ begin
     JsonNode := SerializeList(AValue)
   else
     JsonNode := ValueToJson(AValue);
-    
+
   if FSettings.Formatting = TJsonFormatting.Indented then
     Result := JsonNode.ToJson(True)
   else
@@ -1067,18 +1073,18 @@ end;
 
 function TDextSerializer.SerializeRecord(const AValue: TValue): IDextJsonObject;
 var
+  Attr: TCustomAttribute;
+  CustomFormat: string;
   Field: TRttiField;
   FieldName: string;
   FieldValue: TValue;
-  RttiType: TRttiType;
-  HasCustomFormat: Boolean;
-  CustomFormat: string;
-  Unwrapped: TValue;
-  Attr: TCustomAttribute;
-  ForceString: Boolean;
   ForceNumber: Boolean;
-  NumValue: Double;
+  ForceString: Boolean;
+  HasCustomFormat: Boolean;
   NestedRecord: IDextJsonObject;
+  NumValue: Double;
+  RttiType: TRttiType;
+  Unwrapped: TValue;
 begin
   if AValue.TypeInfo = TypeInfo(TGUID) then
   begin
@@ -1174,8 +1180,8 @@ begin
 
       tkFloat:
         begin
-        if (FieldValue.TypeInfo = TypeInfo(TDateTime)) or 
-           (FieldValue.TypeInfo = TypeInfo(TDate)) or 
+        if (FieldValue.TypeInfo = TypeInfo(TDateTime)) or
+           (FieldValue.TypeInfo = TypeInfo(TDate)) or
            (FieldValue.TypeInfo = TypeInfo(TTime)) then
           begin
             if HasCustomFormat then
@@ -1251,18 +1257,18 @@ end;
 
 function TDextSerializer.SerializeObject(const AValue: TValue): IDextJsonObject;
 var
+  Attr: TCustomAttribute;
+  Handler: IPropertyHandler;
+  LTypeInfo: PTypeInfo;
+  LTypeKind: TTypeKind;
+  NestedRecord: IDextJsonObject;
+  Obj: TObject;
   Prop: TRttiProperty;
   PropName: string;
   PropValue: TValue;
   RttiType: TRttiType;
-  Obj: TObject;
   ShouldSkip: Boolean;
-  Attr: TCustomAttribute;
-  Handler: IPropertyHandler;
   Unwrapped: TValue;
-  NestedRecord: IDextJsonObject;
-  LTypeKind: TTypeKind;
-  LTypeInfo: PTypeInfo;
 begin
   Result := TDextJson.Provider.CreateObject;
 
@@ -1298,12 +1304,12 @@ begin
         Break;
       end;
     end;
-    
+
     if ShouldSkip then
       Continue;
 
     PropName := ApplyCaseStyle(Prop.Name);
-    
+
     // Check for JsonName attribute
     for Attr in Prop.GetAttributes do
       if Attr is JsonNameAttribute then
@@ -1345,8 +1351,8 @@ begin
 
       tkFloat:
         begin
-          if (LTypeInfo = TypeInfo(TDateTime)) or 
-             (LTypeInfo = TypeInfo(TDate)) or 
+          if (LTypeInfo = TypeInfo(TDateTime)) or
+             (LTypeInfo = TypeInfo(TDate)) or
              (LTypeInfo = TypeInfo(TTime)) then
             Result.SetString(PropName, FormatDateTime(FSettings.DateFormat, PropValue.AsExtended))
           else
@@ -1536,7 +1542,7 @@ class function TDextJson.GetInterfaceMappings: IDictionary<string, string>;
 begin
   if not Assigned(FInterfaceMappings) then
     FInterfaceMappings := TCollections.CreateDictionary<string, string>;
-  
+
   Result := FInterfaceMappings;
 end;
 
@@ -1592,13 +1598,13 @@ end;
 
 function TDextSerializer.DeserializeArray(AJson: IDextJsonArray; AType: PTypeInfo): TValue;
 var
-  ElementType: PTypeInfo;
-  DynArray: Pointer;
-  I: Integer;
-  ElementValue: TValue;
-  P: PByte;
   Count: NativeInt;
+  DynArray: Pointer;
+  ElementType: PTypeInfo;
+  ElementValue: TValue;
+  I: Integer;
   Node: IDextJsonNode;
+  P: PByte;
 begin
   ElementType := GetArrayElementType(AType);
   DynArray := nil;
@@ -1678,21 +1684,21 @@ end;
 
 function TDextSerializer.DeserializeList(AJson: IDextJsonArray; AType: PTypeInfo): TValue;
 var
-  ElementType: PTypeInfo;
-  I: Integer;
-  ElementValue: TValue;
-  AddMethod: TRttiMethod;
-  RttiType: TRttiType;
-  Collection: ICollection;
-  OwnsProp: TRttiProperty;
-  InstObj: TObject;
   ActualRttiType: TRttiType;
-  Method: TRttiMethod;
+  AddMethod: TRttiMethod;
+  Collection: ICollection;
+  ElementType: PTypeInfo;
+  ElementValue: TValue;
+  I: Integer;
+  InstObj: TObject;
   Intf: TRttiInterfaceType;
+  Obj: TObject;
+  Method: TRttiMethod;
   Node: IDextJsonNode;
-  TargetInst: TValue;
+  OwnsProp: TRttiProperty;
+  RttiType: TRttiType;
   StrictValue: TValue;
-  LObj: TObject;
+  TargetInst: TValue;
 begin
   // TODO : Refactory and optimize
   try
@@ -1704,7 +1710,7 @@ begin
     Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
 
     RttiType := TReflection.GetMetadata(AType).RttiType;
-    
+
     // Ensure the list owns its objects if they are classes
     if (ElementType.Kind = tkClass) then
     begin
@@ -1734,7 +1740,7 @@ begin
       ActualRttiType := RttiType;
 
     AddMethod := nil;
-    
+
     // First try concrete instance type
     if ActualRttiType is TRttiInstanceType then
     begin
@@ -1818,14 +1824,14 @@ begin
             TargetInst := InstObj
           else
             TargetInst := Result;
-            
+
           StrictValue := ElementValue;
           if (ElementType.Kind = tkClass) and (StrictValue.AsObject <> nil) then
           begin
-            LObj := StrictValue.AsObject;
-            TValue.Make(@LObj, ElementType, StrictValue);
+            Obj := StrictValue.AsObject;
+            TValue.Make(@Obj, ElementType, StrictValue);
           end;
-            
+
           AddMethod.Invoke(TargetInst, [StrictValue]);
         end;
       end;
@@ -1839,31 +1845,31 @@ end;
 
 function TDextSerializer.DeserializeDictionary(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
 var
-  KeyType, ValueType: PTypeInfo;
-  I: Integer;
-  AddMethod: TRttiMethod;
-  KeyVal, ValVal: TValue;
-  KeyName: string;
-  RttiType: TRttiType;
-  InstObj: TObject;
   ActualRttiType: TRttiType;
-  Method: TRttiMethod;
+  AddMethod: TRttiMethod;
+  I: Integer;
+  InstObj: TObject;
   Intf: TRttiInterfaceType;
+  KeyName: string;
+  KeyType, ValueType: PTypeInfo;
+  KeyVal, ValVal: TValue;
+  Method: TRttiMethod;
   Node: IDextJsonNode;
+  RttiType: TRttiType;
   TargetInst: TValue;
 begin
   try
     KeyType := GetDictionaryKeyType(AType);
     ValueType := GetDictionaryValueType(AType);
-    
+
     if (KeyType = nil) or (ValueType = nil) then
       raise EDextJsonException.CreateFmt('Could not determine dictionary types for %s', [string(AType^.Name)]);
 
     // Instantiate via Activator
     Result := TActivator.CreateInstance(FSettings.FServiceProvider, AType);
-    
+
     RttiType := TReflection.GetMetadata(AType).RttiType;
-    
+
     InstObj := nil;
     if Result.Kind = tkInterface then
       InstObj := Result.AsInterface as TObject
@@ -1876,7 +1882,7 @@ begin
       ActualRttiType := RttiType;
 
     AddMethod := nil;
-    
+
     // First try concrete instance type
     if ActualRttiType is TRttiInstanceType then
     begin
@@ -1907,14 +1913,14 @@ begin
           Intf := nil;
       end;
     end;
-       
+
     if not Assigned(AddMethod) then
       raise EDextJsonException.CreateFmt('Could not find Add method for dictionary type %s', [string(AType^.Name)]);
 
     for I := 0 to AJson.GetCount - 1 do
     begin
       KeyName := AJson.GetName(I);
-      
+
       // Key conversion
       case KeyType.Kind of
         tkUString, tkString, tkWString, tkLString: KeyVal := TValue.From<string>(KeyName);
@@ -1929,9 +1935,9 @@ begin
       Node := AJson.GetNode(KeyName);
       if (Node <> nil) and (Node.GetNodeType = jntObject) then
       begin
-        if (ValueType.Kind = tkClass) or (ValueType.Kind = tkInterface) then 
+        if (ValueType.Kind = tkClass) or (ValueType.Kind = tkInterface) then
           ValVal := DeserializeObject(Node as IDextJsonObject, ValueType)
-        else if ValueType.Kind = tkRecord then 
+        else if ValueType.Kind = tkRecord then
           ValVal := DeserializeRecord(Node as IDextJsonObject, ValueType)
         else ValVal := TValue.Empty;
       end
@@ -1961,7 +1967,7 @@ begin
           TargetInst := InstObj
         else
           TargetInst := Result;
-          
+
         AddMethod.Invoke(TargetInst, [KeyVal, ValVal]);
       end;
     end;
@@ -2026,39 +2032,39 @@ end;
 function TDextSerializer.SerializeList(const AValue: TValue): IDextJsonArray;
 var
   Count: Integer;
-  I: Integer;
-  ElementValue: TValue;
-  RttiType: TRttiType;
-  IntfValue: IInterface;
   CountMethod, GetItemMethod: TRttiMethod;
   CountProp: TRttiProperty;
+  ElementValue: TValue;
+  I: Integer;
   Instance: TObject;
+  IntfValue: IInterface;
+  RttiType: TRttiType;
 begin
   Result := TDextJson.Provider.CreateArray;
   if AValue.IsEmpty then Exit;
 
   RttiType := TActivator.GetRttiContext.GetType(AValue.TypeInfo);
-  
+
   // For interfaces, we need to get the interface value
   if AValue.Kind = tkInterface then
   begin
     IntfValue := AValue.AsInterface;
     if IntfValue = nil then Exit;
-    
+
     // Try to get Count via GetCount method instead of property
     CountMethod := RttiType.GetMethod('GetCount');
     if not Assigned(CountMethod) then Exit;
-    
+
     Count := CountMethod.Invoke(AValue, []).AsInteger;
-    
+
     // Get the GetItem method
     GetItemMethod := RttiType.GetMethod('GetItem');
     if not Assigned(GetItemMethod) then Exit;
-    
+
     for I := 0 to Count - 1 do
     begin
       ElementValue := GetItemMethod.Invoke(AValue, [I]);
-      
+
       if ElementValue.IsEmpty then
       begin
         Result.AddNull;
@@ -2103,16 +2109,16 @@ begin
     // For classes, use the original RTTI approach
     Instance := AValue.AsObject;
     if Instance = nil then Exit;
-    
+
     CountProp := RttiType.GetProperty('Count');
     if not Assigned(CountProp) then Exit;
-    
+
     Count := CountProp.GetValue(Instance).AsInteger;
-    
+
     GetItemMethod := RttiType.GetMethod('GetItem');
     if not Assigned(GetItemMethod) then
       GetItemMethod := RttiType.GetMethod('Items');
-    
+
     if Assigned(GetItemMethod) then
     begin
       for I := 0 to Count - 1 do
@@ -2166,12 +2172,12 @@ constructor TJsonBuilder.Create;
 begin
   inherited Create;
   FNodeStack := TCollections.CreateList<TBuilderNode>;
-  
+
   FRoot := TBuilderNode.Create;
   FRoot.NodeType := ntObject;
   FRoot.JsonObj := TDextJson.Provider.CreateObject;
   FRoot.Parent := nil;
-  
+
   FCurrent := FRoot;
   FNodeStack.Add(FRoot);
 end;
@@ -2238,13 +2244,13 @@ var
 begin
   NewObj := TDextJson.Provider.CreateObject;
   GetCurrentObject.SetObject(AKey, NewObj);
-  
+
   NewNode := TBuilderNode.Create;
   NewNode.NodeType := ntObject;
   NewNode.JsonObj := NewObj;
   NewNode.Parent := FCurrent;
   NewNode.Key := AKey;
-  
+
   FNodeStack.Add(NewNode);
   FCurrent := NewNode;
   Result := Self;
@@ -2254,7 +2260,7 @@ function TJsonBuilder.EndObject: TJsonBuilder;
 begin
   if FCurrent.Parent = nil then
     raise EDextJsonException.Create('Cannot end root object');
-    
+
   FCurrent := FCurrent.Parent;
   Result := Self;
 end;
@@ -2266,13 +2272,13 @@ var
 begin
   NewArr := TDextJson.Provider.CreateArray;
   GetCurrentObject.SetArray(AKey, NewArr);
-  
+
   NewNode := TBuilderNode.Create;
   NewNode.NodeType := ntArray;
   NewNode.JsonArr := NewArr;
   NewNode.Parent := FCurrent;
   NewNode.Key := AKey;
-  
+
   FNodeStack.Add(NewNode);
   FCurrent := NewNode;
   Result := Self;
@@ -2282,7 +2288,7 @@ function TJsonBuilder.EndArray: TJsonBuilder;
 begin
   if FCurrent.Parent = nil then
     raise EDextJsonException.Create('Cannot end root array');
-    
+
   FCurrent := FCurrent.Parent;
   Result := Self;
 end;
@@ -2326,3 +2332,4 @@ finalization
   TDextJson.FInterfaceMappings := nil;
 
 end.
+

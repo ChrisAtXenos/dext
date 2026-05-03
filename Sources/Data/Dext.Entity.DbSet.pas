@@ -307,11 +307,11 @@ end;
 
 function TValueToVariant(const AValue: TValue): Variant;
 var
+  G: TGUID;
+  TypeName: string;
+  U: TUUID;
   Unwrapped: TValue;
   VTypeName: string;
-  TypeName: string;
-  G: TGUID;
-  U: TUUID;
 begin
   if AValue.TypeInfo <> nil then VTypeName := string(AValue.TypeInfo.Name) else VTypeName := 'nil';
   
@@ -377,6 +377,7 @@ var
   Cmd: IDbCommand;
   SW: TStopwatch;
 begin
+  Result := False;
   if not FInitialized then
   begin
     SW := TStopwatch.StartNew;
@@ -397,9 +398,7 @@ begin
   begin
     FCurrent := FDbSet.Hydrate(FReader, False); // Default to NoTracking for raw SQL for now
     Result := True;
-  end
-  else
-    Result := False;
+  end;
 end;
 
 { TStreamingViewIterator<T> }
@@ -424,11 +423,11 @@ end;
 
 function TStreamingViewIterator<T>.MoveNextCore: Boolean;
 var
-  Gen: TSqlGenerator<T>;
   Cmd: IDbCommand;
-  SQL: string;
+  Gen: TSqlGenerator<T>;
   LParamPair: TPair<string, TValue>;
   ParamType: TFieldType;
+  SQL: string;
 begin
   if not FInitialized then
   begin
@@ -1150,8 +1149,6 @@ begin
         end;
       end;
       RawPKVal := RetVal;
-      // We no longer call RetVal.AsVariant because calling AsVariant on a TGUID Record TValue 
-      // throws an EInvalidCast ('Invalid class typecast') natively in Delphi.
     end
     else
     begin
@@ -1760,8 +1757,7 @@ begin
     raise Exception.Create('ToListAsync requires a pooled connection to ensure thread safety.');
 
   Result := TAsyncTask.Run<IList<T>>(
-    TFunc<IList<T>>(
-      function: IList<T>
+    TFunc<IList<T>>(function: IList<T>
       begin
         Result := Self.ToList;
       end));
@@ -1868,12 +1864,11 @@ begin
     LParams[i] := AParams[i];
 
   Result := TFluentQuery<T>.Create(
-    TFunc<TQueryIterator<T>>(
-      function: TQueryIterator<T>
+    TFunc<TQueryIterator<T>>(function: TQueryIterator<T>
       begin
         Result := TSqlQueryIterator<T>.Create(Self, ASql, LParams);
-      end
-    ), FContext.Connection);
+      end),
+      FContext.Connection);
 end;
 
 function TDbSet<T>.FromSql(const ASql: string): TFluentQuery<T>;
@@ -2636,44 +2631,44 @@ end;
 
 function TDbSet<T>.Query(const ASpec: ISpecification<T>): TFluentQuery<T>;
 var
-  LFactory: TFunc<TQueryIterator<T>>;
-  LSelf: IDbSet<T>;
-  LSpec: ISpecification<T>;
+  Factory: TFunc<TQueryIterator<T>>;
+  SelfDbSet: IDbSet<T>;
+  Spec: ISpecification<T>;
 begin
-  LSpec := ASpec;
-  LSelf := Self; 
-  LFactory := function: TQueryIterator<T>
+  Spec := ASpec;
+  SelfDbSet := Self; 
+  Factory := function: TQueryIterator<T>
     begin
       Result := TSpecificationQueryIterator<T>.Create(
         function: IList<T>
         begin
-          Result := LSelf.ToList(LSpec);
+          Result := SelfDbSet.ToList(Spec);
         end);
     end;
 
   Result := TFluentQuery<T>.Create(
-    LFactory,
-    LSpec as ISpecification,
+    Factory,
+    Spec as ISpecification,
     TFunc<ISpecification, Integer>(
       function(S: ISpecification): Integer
       begin
-        Result := LSelf.Count(S as ISpecification<T>);
+        Result := SelfDbSet.Count(S as ISpecification<T>);
       end),
     TFunc<ISpecification, Boolean>(
       function(S: ISpecification): Boolean
       begin
-        Result := LSelf.Any(S as ISpecification<T>);
+        Result := SelfDbSet.Any(S as ISpecification<T>);
       end),
     TFunc<ISpecification, T>(
       function(S: ISpecification): T
       begin
-        Result := LSelf.FirstOrDefault(S as ISpecification<T>);
+        Result := SelfDbSet.FirstOrDefault(S as ISpecification<T>);
       end),
     FContext.Connection,
     TFunc<IEnumerator<T>>(
       function: IEnumerator<T>
       begin
-        Result := LSelf.RequestStreamingIterator(LSpec);
+        Result := SelfDbSet.RequestStreamingIterator(Spec);
       end));
 end;
 

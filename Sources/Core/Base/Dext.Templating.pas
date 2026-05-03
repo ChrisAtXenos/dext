@@ -1,4 +1,4 @@
-// ***************************************************************************
+﻿// ***************************************************************************
 //
 //           Dext Framework
 //
@@ -65,8 +65,8 @@ type
   end;
 
   TSourcePos = record
-    Line: Integer;
     Col: Integer;
+    Line: Integer;
     Filename: string;
     constructor Create(ALine, ACol: Integer; const AFilename: string = '');
     function ToString: string;
@@ -89,14 +89,16 @@ type
 
   ITemplateEngine = interface
     ['{2B3C4D5E-6F7A-8B9C-0D1E-2F3A4B5C6D7E}']
+    function GetIsHtmlMode: Boolean;
+    function GetTemplateLoader: ITemplateLoader;
     function Render(const ATemplate: string; const AContext: ITemplateContext): string;
     function RenderTemplate(const ATemplateName: string; const AContext: ITemplateContext): string;
-    procedure SetTemplateLoader(const ALoader: ITemplateLoader);
-    function GetTemplateLoader: ITemplateLoader;
-    function GetIsHtmlMode: Boolean;
+
     procedure SetIsHtmlMode(AValue: Boolean);
-    property TemplateLoader: ITemplateLoader read GetTemplateLoader write SetTemplateLoader;
+    procedure SetTemplateLoader(const ALoader: ITemplateLoader);
+
     property IsHtmlMode: Boolean read GetIsHtmlMode write SetIsHtmlMode;
+    property TemplateLoader: ITemplateLoader read GetTemplateLoader write SetTemplateLoader;
   end;
 
   ITemplateFilterRegistry = interface
@@ -107,10 +109,10 @@ type
 
   TTemplateContext = class(TInterfacedObject, ITemplateContext)
   private
-    FValues: IDictionary<string, string>;
-    FObjects: IDictionary<string, TObject>;
     FLists: IDictionary<string, TArray<TObject>>;
+    FObjects: IDictionary<string, TObject>;
     FParent: ITemplateContext;
+    FValues: IDictionary<string, string>;
   public
     constructor Create; overload;
     constructor Create(const AParent: ITemplateContext); overload;
@@ -176,17 +178,18 @@ type
 
   TLoopNode = class(TTemplateNode)
   private
+    FElseNodes: IList<TTemplateNode>;
     FItemName: string;
     FListExpr: string;
     FNodes: IList<TTemplateNode>;
-    FElseNodes: IList<TTemplateNode>;
   public
     constructor Create(AEngine: TDextTemplateEngine; const AItemName, AListExpr: string); reintroduce;
     constructor CreateAt(AEngine: TDextTemplateEngine; const APos: TSourcePos; const AItemName, AListExpr: string); reintroduce;
     destructor Destroy; override;
     function Render(const AContext: ITemplateContext): string; override;
-    property Nodes: IList<TTemplateNode> read FNodes;
+
     property ElseNodes: IList<TTemplateNode> read FElseNodes;
+    property Nodes: IList<TTemplateNode> read FNodes;
   end;
 
   TTemplateNodeList = IList<TTemplateNode>;
@@ -220,44 +223,44 @@ type
   TDextTemplateEngine = class(TInterfacedObject, ITemplateEngine, ITemplateFilterRegistry)
   private type
     TTemplateArgument = record
-      Name: string;
       Expression: string;
+      Name: string;
     end;
 
     TInlineTemplateDefinition = class
     public
+      Content: string;
       Name: string;
       Parameters: TArray<string>;
-      Content: string;
     end;
 
     TTemplateDocument = class
     public
-      LayoutName: string;
       BodyText: string;
-      Sections: IDictionary<string, TStringBuilder>;
       Definitions: IDictionary<string, TInlineTemplateDefinition>;
+      LayoutName: string;
+      Sections: IDictionary<string, TStringBuilder>;
       constructor Create;
       destructor Destroy; override;
     end;
 
     TRenderState = class
     public
-      TemplateName: string;
       BodyContent: string;
-      Sections: IDictionary<string, string>;
       Definitions: IDictionary<string, TInlineTemplateDefinition>;
+      Sections: IDictionary<string, string>;
+      TemplateName: string;
       constructor Create;
       destructor Destroy; override;
     end;
   private
-    FFilters: IDictionary<string, System.SysUtils.TFunc<string, string>>;
     FAdvancedFilters: IDictionary<string, TTemplateFilterFunc>;
+    FCurrentState: TRenderState;
+    FFilters: IDictionary<string, System.SysUtils.TFunc<string, string>>;
     FIsHtmlMode: Boolean;
+    FTemplateAstCache: IDictionary<string, TTemplateNodeList>;
     FTemplateLoader: ITemplateLoader;
     FTemplateRoot: string;
-    FCurrentState: TRenderState;
-    FTemplateAstCache: IDictionary<string, TTemplateNodeList>;
 
     function GetTemplateLoader: ITemplateLoader;
     procedure SetTemplateLoader(const ALoader: ITemplateLoader);
@@ -472,34 +475,34 @@ end;
 
 procedure TTemplateContext.SetObject(const AKey: string; AObject: TObject);
 var
-  LContext: TTemplateContext;
+  Context: TTemplateContext;
 begin
-  LContext := Self;
-  while Assigned(LContext) do
+  Context := Self;
+  while Assigned(Context) do
   begin
-    if LContext.FObjects.ContainsKey(AKey) then
+    if Context.FObjects.ContainsKey(AKey) then
     begin
-      LContext.FObjects.AddOrSetValue(AKey, AObject);
+      Context.FObjects.AddOrSetValue(AKey, AObject);
       Exit;
     end;
-    LContext := TTemplateContext(LContext.FParent);
+    Context := TTemplateContext(Context.FParent);
   end;
   FObjects.AddOrSetValue(AKey, AObject);
 end;
 
 procedure TTemplateContext.SetValue(const AKey, AValue: string);
 var
-  LContext: TTemplateContext;
+  Context: TTemplateContext;
 begin
-  LContext := Self;
-  while Assigned(LContext) do
+  Context := Self;
+  while Assigned(Context) do
   begin
-    if LContext.FValues.ContainsKey(AKey) then
+    if Context.FValues.ContainsKey(AKey) then
     begin
-      LContext.FValues.AddOrSetValue(AKey, AValue);
+      Context.FValues.AddOrSetValue(AKey, AValue);
       Exit;
     end;
-    LContext := TTemplateContext(LContext.FParent);
+    Context := TTemplateContext(Context.FParent);
   end;
   FValues.AddOrSetValue(AKey, AValue);
 end;
@@ -554,7 +557,6 @@ begin
   FPos := APos;
 end;
 
-
 { TTextNode }
 
 constructor TTextNode.Create(AEngine: TDextTemplateEngine; const AText: string);
@@ -592,14 +594,14 @@ end;
 
 function TExpressionNode.Render(const AContext: ITemplateContext): string;
 var
-  LIsRaw, LIsEncoded: Boolean;
-  LValue: TValue;
+  IsRaw, IsEncoded: Boolean;
+  Value: TValue;
 begin
-  LIsRaw := False;
-  LIsEncoded := False;
-  LValue := FEngine.ResolveValue(FExpression, AContext, LIsRaw, LIsEncoded);
-  Result := FEngine.ValueToString(LValue);
-  if (FEngine.IsHtmlMode and (not LIsRaw) and (not FIsRaw)) or LIsEncoded then
+  IsRaw := False;
+  IsEncoded := False;
+  Value := FEngine.ResolveValue(FExpression, AContext, IsRaw, IsEncoded);
+  Result := FEngine.ValueToString(Value);
+  if (FEngine.IsHtmlMode and (not IsRaw) and (not FIsRaw)) or IsEncoded then
     Result := TDextEscaping.Html(Result);
 end;
 
@@ -628,12 +630,12 @@ end;
 
 function TConditionalNode.Render(const AContext: ITemplateContext): string;
 var
-  LIsRaw: Boolean;
-  LIsEncoded: Boolean;
+  IsRaw: Boolean;
+  IsEncoded: Boolean;
 begin
-  LIsRaw := False;
-  LIsEncoded := False;
-  if FEngine.ValueToBoolean(FEngine.ResolveValue(FCondition, AContext, LIsRaw, LIsEncoded)) then
+  IsRaw := False;
+  IsEncoded := False;
+  if FEngine.ValueToBoolean(FEngine.ResolveValue(FCondition, AContext, IsRaw, IsEncoded)) then
     Result := FEngine.RenderNodes(FTrueNodes, AContext)
   else
     Result := FEngine.RenderNodes(FFalseNodes, AContext);
@@ -666,182 +668,185 @@ end;
 
 function TLoopNode.Render(const AContext: ITemplateContext): string;
 var
-  LSource: TValue;
+  Args: TArray<TValue>;
+  Builder: TStringBuilder;
+  Count: Integer;
+  CountProp: TRttiProperty;
+  DataSet: TDataSet;
   I: Integer;
-  LIsRaw, LIsEncoded: Boolean;
-  LObject: TObject;
-  LDataSet: TDataSet;
-  LObjectList: IObjectList;
-  LBuilder: TStringBuilder;
-  LTotalCount: Integer;
-  LMeta: TTypeMetadata;
-  LRtti: TRttiType;
-  LCountProp: TRttiProperty;
-  LIndexedProp: TRttiIndexedProperty;
-  LItemsList: TArray<TRttiIndexedProperty>;
+  IndexedProp: TRttiIndexedProperty;
+  IsRaw, IsEncoded: Boolean;
+  ItemsList: TArray<TRttiIndexedProperty>;
+  ItemValue: TValue;
+  Meta: TTypeMetadata;
+  Obj: TObject;
+  ObjectList: IObjectList;
   P: TRttiIndexedProperty;
-  LCount: Integer;
-  LItemValue: TValue;
-  LArgs: TArray<TValue>;
+  RttiType: TRttiType;
+  Source: TValue;
+  TotalCount: Integer;
 
   procedure RenderItem(AValue: TValue; AIndex: Integer; AFirst, ALast: Boolean);
   var
-    LItemChild: ITemplateContext;
+    ItemChild: ITemplateContext;
   begin
     try
-      LItemChild := AContext.CreateChildScope;
+      ItemChild := AContext.CreateChildScope;
       if AValue.IsObject then
-        LItemChild.SetObject(FItemName, AValue.AsObject)
+        ItemChild.SetObject(FItemName, AValue.AsObject)
       else
-        LItemChild.SetValue(FItemName, FEngine.ValueToString(AValue));
+        ItemChild.SetValue(FItemName, FEngine.ValueToString(AValue));
 
-      LItemChild.SetValue('index', AIndex.ToString);
-      LItemChild.SetValue('@@index', AIndex.ToString);
-      LItemChild.SetValue('count', AIndex.ToString);
-      LItemChild.SetValue('first', System.StrUtils.IfThen(AFirst, 'true', 'false'));
-      LItemChild.SetValue('last', System.StrUtils.IfThen(ALast, 'true', 'false'));
-      LItemChild.SetValue('odd', System.StrUtils.IfThen(AIndex mod 2 <> 0, 'true', 'false'));
-      LItemChild.SetValue('even', System.StrUtils.IfThen(AIndex mod 2 = 0, 'true', 'false'));
-      
+      ItemChild.SetValue('index', AIndex.ToString);
+      ItemChild.SetValue('@@index', AIndex.ToString);
+      ItemChild.SetValue('count', AIndex.ToString);
+      ItemChild.SetValue('first', System.StrUtils.IfThen(AFirst, 'true', 'false'));
+      ItemChild.SetValue('last', System.StrUtils.IfThen(ALast, 'true', 'false'));
+      ItemChild.SetValue('odd', System.StrUtils.IfThen(AIndex mod 2 <> 0, 'true', 'false'));
+      ItemChild.SetValue('even', System.StrUtils.IfThen(AIndex mod 2 = 0, 'true', 'false'));
+
       // Built-in style with @
-      LItemChild.SetValue('@index', (AIndex - 1).ToString);
-      LItemChild.SetValue('@first', System.SysUtils.BoolToStr(AFirst, True));
-      LItemChild.SetValue('@last', System.SysUtils.BoolToStr(ALast, True));
+      ItemChild.SetValue('@index', (AIndex - 1).ToString);
+      ItemChild.SetValue('@first', System.SysUtils.BoolToStr(AFirst, True));
+      ItemChild.SetValue('@last', System.SysUtils.BoolToStr(ALast, True));
 
-      LBuilder.Append(FEngine.RenderNodes(FNodes, LItemChild));
+      Builder.Append(FEngine.RenderNodes(FNodes, ItemChild));
     except
-      on ETemplateLoopContinue do ;
+      on ETemplateLoopContinue do;
     end;
   end;
 
 begin
-  LIsRaw := False;
-  LIsEncoded := False;
-  LBuilder := TStringBuilder.Create;
+  IsRaw := False;
+  IsEncoded := False;
+  Builder := TStringBuilder.Create;
   try
     try
-      LSource := FEngine.ResolveValue(FListExpr, AContext, LIsRaw, LIsEncoded);
-      if LSource.IsEmpty then
+      Source := FEngine.ResolveValue(FListExpr, AContext, IsRaw, IsEncoded);
+      if Source.IsEmpty then
       begin
-        LBuilder.Append(FEngine.RenderNodes(FElseNodes, AContext));
-        Exit(LBuilder.ToString);
+        Builder.Append(FEngine.RenderNodes(FElseNodes, AContext));
+        Exit(Builder.ToString);
       end;
 
-      if LSource.IsObject or (LSource.Kind = tkInterface) then
+      if Source.IsObject or (Source.Kind = tkInterface) then
       begin
-        LObject := nil;
-        if LSource.IsObject then LObject := LSource.AsObject;
-        
-        if Assigned(LObject) and (LObject is TDataSet) then
+        Obj := nil;
+        if Source.IsObject then
+          Obj := Source.AsObject;
+
+        if Assigned(Obj) and (Obj is TDataSet) then
         begin
-          LDataSet := TDataSet(LObject);
-          if LDataSet.IsEmpty then
-            LBuilder.Append(FEngine.RenderNodes(FElseNodes, AContext))
+          DataSet := TDataSet(Obj);
+          if DataSet.IsEmpty then
+            Builder.Append(FEngine.RenderNodes(FElseNodes, AContext))
           else
           begin
-            LDataSet.DisableControls;
+            DataSet.DisableControls;
             try
-              LTotalCount := LDataSet.RecordCount;
-              LDataSet.First;
+              TotalCount := DataSet.RecordCount;
+              DataSet.First;
               I := 1;
-              while not LDataSet.Eof do
+              while not DataSet.Eof do
               begin
-                RenderItem(TValue.From<TDataSet>(LDataSet), I, I = 1, I = LTotalCount);
-                LDataSet.Next;
+                RenderItem(TValue.From<TDataSet>(DataSet), I, I = 1, I = TotalCount);
+                DataSet.Next;
                 Inc(I);
               end;
             finally
-              LDataSet.EnableControls;
+              DataSet.EnableControls;
             end;
           end;
         end
         else
         begin
-          LObjectList := nil;
-          if Assigned(LObject) then
-            Supports(LObject, IObjectList, LObjectList)
-          else if LSource.Kind = tkInterface then
-            Supports(LSource.AsInterface, IObjectList, LObjectList);
+          ObjectList := nil;
+          if Assigned(Obj) then
+            Supports(Obj, IObjectList, ObjectList)
+          else if Source.Kind = tkInterface then
+            Supports(Source.AsInterface, IObjectList, ObjectList);
 
-          if Assigned(LObjectList) then
+          if Assigned(ObjectList) then
           begin
-            if LObjectList.Count = 0 then
-              LBuilder.Append(FEngine.RenderNodes(FElseNodes, AContext))
+            if ObjectList.Count = 0 then
+              Builder.Append(FEngine.RenderNodes(FElseNodes, AContext))
             else
             begin
-              for I := 0 to LObjectList.Count - 1 do
-                RenderItem(LObjectList.Items[I], I + 1, I = 0, I = LObjectList.Count - 1);
+              for I := 0 to ObjectList.Count - 1 do
+                RenderItem(ObjectList.Items[I], I + 1, I = 0, I = ObjectList.Count - 1);
             end;
           end
-          else if TReflection.IsListType(LSource.TypeInfo) then
+          else if TReflection.IsListType(Source.TypeInfo) then
           begin
-            LMeta := TReflection.GetMetadata(LSource.TypeInfo);
-            LRtti := LMeta.RttiType;
-            LCountProp := LRtti.GetProperty('Count');
-            if LCountProp = nil then LCountProp := LRtti.GetProperty('GetCount');
-            
-            LIndexedProp := nil;
-            LItemsList := LRtti.GetIndexedProperties;
-            for P in LItemsList do
+            Meta := TReflection.GetMetadata(Source.TypeInfo);
+            RttiType := Meta.RttiType;
+            CountProp := RttiType.GetProperty('Count');
+            if CountProp = nil then
+              CountProp := RttiType.GetProperty('GetCount');
+
+            IndexedProp := nil;
+            ItemsList := RttiType.GetIndexedProperties;
+            for P in ItemsList do
               if SameText(P.Name, 'Items') then
               begin
-                LIndexedProp := P;
+                IndexedProp := P;
                 Break;
               end;
-              
-            if (LIndexedProp = nil) and (Length(LItemsList) > 0) then
-              LIndexedProp := LItemsList[0];
 
-            if Assigned(LCountProp) and Assigned(LIndexedProp) then
+            if (IndexedProp = nil) and (Length(ItemsList) > 0) then
+              IndexedProp := ItemsList[0];
+
+            if Assigned(CountProp) and Assigned(IndexedProp) then
             begin
-              if LSource.Kind = tkInterface then
-                LCount := LCountProp.GetValue(LSource.AsInterface).AsInteger
+              if Source.Kind = tkInterface then
+                Count := CountProp.GetValue(Source.AsInterface).AsInteger
               else
-                LCount := LCountProp.GetValue(LObject).AsInteger;
+                Count := CountProp.GetValue(Obj).AsInteger;
 
-              if LCount = 0 then
-                LBuilder.Append(FEngine.RenderNodes(FElseNodes, AContext))
+              if Count = 0 then
+                Builder.Append(FEngine.RenderNodes(FElseNodes, AContext))
               else
               begin
-                for I := 0 to LCount - 1 do
+                for I := 0 to Count - 1 do
                 begin
-                  SetLength(LArgs, 1);
-                  LArgs[0] := TValue.From(I);
-                  
-                  if LSource.Kind = tkInterface then
-                    LItemValue := LIndexedProp.GetValue(Pointer(LSource.AsInterface), LArgs)
+                  SetLength(Args, 1);
+                  Args[0] := TValue.From(I);
+
+                  if Source.Kind = tkInterface then
+                    ItemValue := IndexedProp.GetValue(Pointer(Source.AsInterface), Args)
                   else
-                    LItemValue := LIndexedProp.GetValue(LObject, LArgs);
-                  RenderItem(LItemValue, I + 1, I = 0, I = LCount - 1);
+                    ItemValue := IndexedProp.GetValue(Obj, Args);
+                  RenderItem(ItemValue, I + 1, I = 0, I = Count - 1);
                 end;
               end;
             end
             else
-              RenderItem(LSource, 1, True, True);
+              RenderItem(Source, 1, True, True);
           end
           else
-            RenderItem(LSource, 1, True, True);
+            RenderItem(Source, 1, True, True);
         end;
       end
-      else if LSource.IsArray then
+      else if Source.IsArray then
       begin
-        if LSource.GetArrayLength = 0 then
-          LBuilder.Append(FEngine.RenderNodes(FElseNodes, AContext))
+        if Source.GetArrayLength = 0 then
+          Builder.Append(FEngine.RenderNodes(FElseNodes, AContext))
         else
         begin
-          for I := 0 to LSource.GetArrayLength - 1 do
-            RenderItem(LSource.GetArrayElement(I), I + 1, I = 0, I = LSource.GetArrayLength - 1);
+          for I := 0 to Source.GetArrayLength - 1 do
+            RenderItem(Source.GetArrayElement(I), I + 1, I = 0, I = Source.GetArrayLength - 1);
         end;
       end
       else
-        RenderItem(LSource, 1, True, True);
+        RenderItem(Source, 1, True, True);
 
-      Result := LBuilder.ToString;
+      Result := Builder.ToString;
     except
-      on ETemplateLoopBreak do Result := LBuilder.ToString;
+      on ETemplateLoopBreak do
+        Result := Builder.ToString;
     end;
   finally
-    LBuilder.Free;
+    Builder.Free;
   end;
 end;
 
@@ -885,20 +890,20 @@ end;
 
 function TSwitchNode.Render(const AContext: ITemplateContext): string;
 var
-  LIsRaw, LIsEncoded: Boolean;
-  LSwitchValue: TValue;
-  LCaseValue: TValue;
-  LCase: TSwitchCase;
+  CaseValue: TValue;
+  IsRaw, IsEncoded: Boolean;
+  SwitchCase: TSwitchCase;
+  SwitchValue: TValue;
 begin
-  LIsRaw := False;
-  LIsEncoded := False;
-  LSwitchValue := FEngine.ResolveValue(FExpression, AContext, LIsRaw, LIsEncoded);
-  for LCase in FCases do
+  IsRaw := False;
+  IsEncoded := False;
+  SwitchValue := FEngine.ResolveValue(FExpression, AContext, IsRaw, IsEncoded);
+  for SwitchCase in FCases do
   begin
-    LIsEncoded := False;
-    LCaseValue := FEngine.ResolveValue(LCase.Expression, AContext, LIsRaw, LIsEncoded);
-    if SameText(FEngine.ValueToString(LSwitchValue), FEngine.ValueToString(LCaseValue)) then
-      Exit(FEngine.RenderNodes(LCase.Nodes, AContext));
+    IsEncoded := False;
+    CaseValue := FEngine.ResolveValue(SwitchCase.Expression, AContext, IsRaw, IsEncoded);
+    if SameText(FEngine.ValueToString(SwitchValue), FEngine.ValueToString(CaseValue)) then
+      Exit(FEngine.RenderNodes(SwitchCase.Nodes, AContext));
   end;
   Result := FEngine.RenderNodes(FDefaultNodes, AContext);
 end;
@@ -913,20 +918,20 @@ end;
 
 function TFileSystemTemplateLoader.Load(const ATemplateName: string): string;
 var
-  LFileName: string;
+  FileName: string;
 begin
-  LFileName := ATemplateName;
-  if not TPath.IsPathRooted(LFileName) then
-    LFileName := TPath.Combine(FRoot, LFileName);
+  FileName := ATemplateName;
+  if not TPath.IsPathRooted(FileName) then
+    FileName := TPath.Combine(FRoot, FileName);
 
-  if TFile.Exists(LFileName) then
-    Exit(TFile.ReadAllText(LFileName, TEncoding.UTF8));
+  if TFile.Exists(FileName) then
+    Exit(TFile.ReadAllText(FileName, TEncoding.UTF8));
 
-  if TFile.Exists(LFileName + '.html') then
-    Exit(TFile.ReadAllText(LFileName + '.html', TEncoding.UTF8));
+  if TFile.Exists(FileName + '.html') then
+    Exit(TFile.ReadAllText(FileName + '.html', TEncoding.UTF8));
 
-  if TFile.Exists(LFileName + '.template') then
-    Exit(TFile.ReadAllText(LFileName + '.template', TEncoding.UTF8));
+  if TFile.Exists(FileName + '.template') then
+    Exit(TFile.ReadAllText(FileName + '.template', TEncoding.UTF8));
 
   raise EFileNotFoundException.CreateFmt('Template not found: %s', [ATemplateName]);
 end;
@@ -998,16 +1003,16 @@ begin
   RegisterFilter('ToPascalCase',
     function(S: string): string
     var
-      LParts: TArray<string>;
-      I: Integer;
+      i: Integer;
+      Parts: TArray<string>;
     begin
       Result := S.DeQuotedString;
-      LParts := Result.Split(['_', ' ', '-'], TStringSplitOptions.ExcludeEmpty);
-      if Length(LParts) > 1 then
+      Parts := Result.Split(['_', ' ', '-'], TStringSplitOptions.ExcludeEmpty);
+      if Length(Parts) > 1 then
       begin
         Result := '';
-        for I := 0 to High(LParts) do
-          Result := Result + UpperCase(Copy(LParts[I], 1, 1)) + LowerCase(Copy(LParts[I], 2, MaxInt));
+        for i := 0 to High(Parts) do
+          Result := Result + UpperCase(Copy(Parts[i], 1, 1)) + LowerCase(Copy(Parts[i], 2, MaxInt));
       end
       else if Result <> '' then
         Result := UpperCase(Copy(Result, 1, 1)) + Copy(Result, 2, MaxInt);
@@ -1016,26 +1021,26 @@ begin
   RegisterFilter('ToCamelCase',
     function(S: string): string
     var
-      LPascal: string;
+      PascalCase: string;
     begin
-      LPascal := ApplyFilter('ToPascalCase', S);
-      if LPascal = '' then
+      PascalCase := ApplyFilter('ToPascalCase', S);
+      if PascalCase = '' then
         Result := ''
       else
-        Result := LowerCase(Copy(LPascal, 1, 1)) + Copy(LPascal, 2, MaxInt);
+        Result := LowerCase(Copy(PascalCase, 1, 1)) + Copy(PascalCase, 2, MaxInt);
     end);
 
   RegisterFilter('ToSnakeCase',
     function(S: string): string
     var
-      I: Integer;
+      i: Integer;
     begin
       Result := '';
-      for I := 1 to Length(S) do
+      for i := 1 to Length(S) do
       begin
-        if (I > 1) and S[I].IsUpper then
+        if (i > 1) and S[i].IsUpper then
           Result := Result + '_';
-        Result := Result + S[I].ToLower;
+        Result := Result + S[i].ToLower;
       end;
     end);
 
@@ -1045,8 +1050,7 @@ begin
       Result := S;
       if S = '' then
         Exit;
-      if S.EndsWith('y', True) and not S.EndsWith('ay', True) and not S.EndsWith('ey', True) and
-         not S.EndsWith('iy', True) and not S.EndsWith('oy', True) and not S.EndsWith('uy', True) then
+      if S.EndsWith('y', True) and not S.EndsWith('ay', True) and not S.EndsWith('ey', True) and not S.EndsWith('iy', True) and not S.EndsWith('oy', True) and not S.EndsWith('uy', True) then
         Result := S.Substring(0, S.Length - 1) + 'ies'
       else if S.EndsWith('s', True) or S.EndsWith('x', True) or S.EndsWith('ch', True) or S.EndsWith('sh', True) then
         Result := S + 'es'
@@ -1068,59 +1072,99 @@ begin
         Result := S.Substring(0, S.Length - 1);
     end);
 
-  RegisterAdvancedFilter('uppercase', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := UpperCase(ValueToString(AValue)); end);
-  RegisterAdvancedFilter('lowercase', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := LowerCase(ValueToString(AValue)); end);
-  RegisterAdvancedFilter('capitalize', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var S: string;
+  RegisterAdvancedFilter('uppercase',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      Result := UpperCase(ValueToString(AValue));
+    end);
+  RegisterAdvancedFilter('lowercase',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      Result := LowerCase(ValueToString(AValue));
+    end);
+  RegisterAdvancedFilter('capitalize',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      S: string;
     begin
       S := ValueToString(AValue);
-      if S = '' then Result := '' else Result := UpperCase(Copy(S, 1, 1)) + LowerCase(Copy(S, 2, MaxInt));
+      if S = '' then
+        Result := ''
+      else
+        Result := UpperCase(Copy(S, 1, 1)) + LowerCase(Copy(S, 2, MaxInt));
     end);
-  RegisterAdvancedFilter('trim', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := System.SysUtils.Trim(ValueToString(AValue)); end);
-  RegisterAdvancedFilter('truncate', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var S, Suffix: string; N: Integer;
+  RegisterAdvancedFilter('trim',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      Result := System.SysUtils.Trim(ValueToString(AValue));
+    end);
+  RegisterAdvancedFilter('truncate',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      S, Suffix: string;
+      N: Integer;
     begin
       S := ValueToString(AValue);
       N := 0;
-      if Length(AArgs) > 0 then N := StrToIntDef(ValueToString(AArgs[0]), 0);
-      if Length(AArgs) > 1 then Suffix := ValueToString(AArgs[1]) else Suffix := '...';
+      if Length(AArgs) > 0 then
+        N := StrToIntDef(ValueToString(AArgs[0]), 0);
+      if Length(AArgs) > 1 then
+        Suffix := ValueToString(AArgs[1])
+      else
+        Suffix := '...';
       if (N > 0) and (Length(S) > N) then
         Result := Copy(S, 1, N) + Suffix
       else
         Result := S;
     end);
-  RegisterAdvancedFilter('lpad', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var S, Pad: string; N: Integer;
+  RegisterAdvancedFilter('lpad',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      S, Pad: string;
+      N: Integer;
     begin
       S := ValueToString(AValue);
       N := StrToIntDef(ValueToString(AArgs[0]), Length(S));
-      if Length(AArgs) > 1 then Pad := ValueToString(AArgs[1]) else Pad := ' ';
-      if Pad = '' then Pad := ' ';
-      while Length(S) < N do S := Pad[1] + S;
+      if Length(AArgs) > 1 then
+        Pad := ValueToString(AArgs[1])
+      else
+        Pad := ' ';
+      if Pad = '' then
+        Pad := ' ';
+      while Length(S) < N do
+        S := Pad[1] + S;
       Result := S;
     end);
-  RegisterAdvancedFilter('rpad', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var S, Pad: string; N: Integer;
+  RegisterAdvancedFilter('rpad',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      S, Pad: string;
+      N: Integer;
     begin
       S := ValueToString(AValue);
       N := StrToIntDef(ValueToString(AArgs[0]), Length(S));
-      if Length(AArgs) > 1 then Pad := ValueToString(AArgs[1]) else Pad := ' ';
-      if Pad = '' then Pad := ' ';
-      while Length(S) < N do S := S + Pad[1];
+      if Length(AArgs) > 1 then
+        Pad := ValueToString(AArgs[1])
+      else
+        Pad := ' ';
+      if Pad = '' then
+        Pad := ' ';
+      while Length(S) < N do
+        S := S + Pad[1];
       Result := S;
     end);
-  RegisterAdvancedFilter('replace', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+  RegisterAdvancedFilter('replace',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
     begin
       if Length(AArgs) >= 2 then
         Result := ValueToString(AValue).Replace(ValueToString(AArgs[0]), ValueToString(AArgs[1]))
       else
         Result := ValueToString(AValue);
     end);
-  RegisterAdvancedFilter('default', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var S: string;
+  RegisterAdvancedFilter('default',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      S: string;
     begin
       S := ValueToString(AValue);
       if (S = '') and (Length(AArgs) > 0) then
@@ -1128,111 +1172,165 @@ begin
       else
         Result := AValue;
     end);
-  RegisterAdvancedFilter('htmlencode', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := TDextEscaping.Html(ValueToString(AValue)); end);
-  RegisterAdvancedFilter('urlencode', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := TNetEncoding.URL.Encode(ValueToString(AValue)); end);
-  RegisterAdvancedFilter('json', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := TDextJson.Serialize(AValue); end);
-  RegisterAdvancedFilter('raw', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    begin Result := AValue; end);
-  RegisterAdvancedFilter('datetostr', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var Fmt: string; Dt: TDateTime;
+  RegisterAdvancedFilter('htmlencode',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
     begin
-      if AValue.IsEmpty then Exit('');
+      Result := TDextEscaping.Html(ValueToString(AValue));
+    end);
+  RegisterAdvancedFilter('urlencode',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      Result := TNetEncoding.URL.Encode(ValueToString(AValue));
+    end);
+  RegisterAdvancedFilter('json',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      Result := TDextJson.Serialize(AValue);
+    end);
+  RegisterAdvancedFilter('raw',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      Result := AValue;
+    end);
+  RegisterAdvancedFilter('datetostr',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      Fmt: string;
+      Dt: TDateTime;
+    begin
+      if AValue.IsEmpty then
+        Exit('');
       if AValue.TryAsType<TDateTime>(Dt) then
       begin
-        if Length(AArgs) > 0 then Fmt := ValueToString(AArgs[0]) else Fmt := 'dd/mm/yyyy';
+        if Length(AArgs) > 0 then
+          Fmt := ValueToString(AArgs[0])
+        else
+          Fmt := 'dd/mm/yyyy';
         Result := FormatDateTime(Fmt, Dt);
       end
       else
         Result := ValueToString(AValue);
     end);
-  RegisterAdvancedFilter('datetimetostr', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var Fmt: string; Dt: TDateTime;
+  RegisterAdvancedFilter('datetimetostr',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      Fmt: string;
+      Dt: TDateTime;
     begin
-      if AValue.IsEmpty then Exit('');
+      if AValue.IsEmpty then
+        Exit('');
       if AValue.TryAsType<TDateTime>(Dt) then
       begin
-        if Length(AArgs) > 0 then Fmt := ValueToString(AArgs[0]) else Fmt := 'dd/mm/yyyy hh:nn:ss';
+        if Length(AArgs) > 0 then
+          Fmt := ValueToString(AArgs[0])
+        else
+          Fmt := 'dd/mm/yyyy hh:nn:ss';
         Result := FormatDateTime(Fmt, Dt);
       end
       else
         Result := ValueToString(AValue);
     end);
-  RegisterAdvancedFilter('formatfloat', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var N: Extended; Fmt: string;
+  RegisterAdvancedFilter('formatfloat',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      N: Extended;
+      Fmt: string;
     begin
       Fmt := '0.00';
-      if Length(AArgs) > 0 then Fmt := ValueToString(AArgs[0]);
+      if Length(AArgs) > 0 then
+        Fmt := ValueToString(AArgs[0]);
       if AValue.TryAsType<Extended>(N) then
         Result := System.SysUtils.FormatFloat(Fmt, N)
       else
         Result := ValueToString(AValue);
     end);
-  RegisterAdvancedFilter('formatint', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var I64: Int64;
+  RegisterAdvancedFilter('formatint',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      I64: Int64;
     begin
       if AValue.TryAsType<Int64>(I64) then
         Result := Format('%d', [I64])
       else
         Result := ValueToString(AValue);
     end);
-  RegisterAdvancedFilter('round', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-    var N: Extended; Digits: Integer;
+  RegisterAdvancedFilter('round',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    var
+      N: Extended;
+      Digits: Integer;
     begin
       Digits := 0;
-      if Length(AArgs) > 0 then Digits := StrToIntDef(ValueToString(AArgs[0]), 0);
+      if Length(AArgs) > 0 then
+        Digits := StrToIntDef(ValueToString(AArgs[0]), 0);
       if AValue.TryAsType<Extended>(N) then
         Result := System.Math.SimpleRoundTo(N, -Digits)
       else
         Result := ValueToString(AValue);
     end);
-   RegisterAdvancedFilter('eq', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := SameText(ValueToString(AValue), ValueToString(AArgs[0])); 
-     end);
-   RegisterAdvancedFilter('ne', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(True);
-       Result := not SameText(ValueToString(AValue), ValueToString(AArgs[0])); 
-     end);
-   RegisterAdvancedFilter('gt', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := ValueToString(AValue) > ValueToString(AArgs[0]); 
-     end);
-   RegisterAdvancedFilter('ge', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := ValueToString(AValue) >= ValueToString(AArgs[0]); 
-     end);
-   RegisterAdvancedFilter('lt', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := ValueToString(AValue) < ValueToString(AArgs[0]); 
-     end);
-   RegisterAdvancedFilter('le', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := ValueToString(AValue) <= ValueToString(AArgs[0]); 
-     end);
-   RegisterAdvancedFilter('contains', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := ContainsText(ValueToString(AValue), ValueToString(AArgs[0])); 
-     end);
-   RegisterAdvancedFilter('startswith', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := StartsText(ValueToString(AArgs[0]), ValueToString(AValue)); 
-     end);
-   RegisterAdvancedFilter('endswith', function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
-     begin 
-       if Length(AArgs) = 0 then Exit(False);
-       Result := EndsText(ValueToString(AArgs[0]), ValueToString(AValue)); 
-     end);
+  RegisterAdvancedFilter('eq',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := SameText(ValueToString(AValue), ValueToString(AArgs[0]));
+    end);
+  RegisterAdvancedFilter('ne',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(True);
+      Result := not SameText(ValueToString(AValue), ValueToString(AArgs[0]));
+    end);
+  RegisterAdvancedFilter('gt',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := ValueToString(AValue) > ValueToString(AArgs[0]);
+    end);
+  RegisterAdvancedFilter('ge',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := ValueToString(AValue) >= ValueToString(AArgs[0]);
+    end);
+  RegisterAdvancedFilter('lt',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := ValueToString(AValue) < ValueToString(AArgs[0]);
+    end);
+  RegisterAdvancedFilter('le',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := ValueToString(AValue) <= ValueToString(AArgs[0]);
+    end);
+  RegisterAdvancedFilter('contains',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := ContainsText(ValueToString(AValue), ValueToString(AArgs[0]));
+    end);
+  RegisterAdvancedFilter('startswith',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := StartsText(ValueToString(AArgs[0]), ValueToString(AValue));
+    end);
+  RegisterAdvancedFilter('endswith',
+    function(const AValue: TValue; const AArgs: TArray<TValue>): TValue
+    begin
+      if Length(AArgs) = 0 then
+        Exit(False);
+      Result := EndsText(ValueToString(AArgs[0]), ValueToString(AValue));
+    end);
 end;
 
 destructor TDextTemplateEngine.Destroy;

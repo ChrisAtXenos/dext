@@ -35,12 +35,12 @@ type
 
   TMockFactory = class
   public
-    class function CreateHttpContextWithHeaders(const AQueryString: string; const AHeaders: IStringDictionary): IHttpContext; overload;
-    class function CreateHttpContextWithHeaders(const AQueryString: string; const AHeaders: IDictionary<string, string>): IHttpContext; overload;
-    class function CreateHttpContextWithServices(const AQueryString: string; const AServices: IServiceProvider): IHttpContext; static;
     class function CreateHttpContext(const AQueryString: string): IHttpContext; static;
-    class function CreateHttpContextWithRoute(const AQueryString: string; const ARouteParams: IDictionary<string, string>): IHttpContext; static;
     class function CreateHttpContextWithBody(const AQueryString: string; ABody: TStream): IHttpContext; static;
+    class function CreateHttpContextWithHeaders(const AQueryString: string; const AHeaders: IDictionary<string, string>): IHttpContext; overload;
+    class function CreateHttpContextWithHeaders(const AQueryString: string; const AHeaders: IStringDictionary): IHttpContext; overload;
+    class function CreateHttpContextWithRoute(const AQueryString: string; const ARouteParams: IDictionary<string, string>): IHttpContext; static;
+    class function CreateHttpContextWithServices(const AQueryString: string; const AServices: IServiceProvider): IHttpContext; static;
   end;
 
 var
@@ -56,23 +56,26 @@ type
     FHeaders: IStringDictionary;
   public
     constructor Create;
-    function GetStatusCode: Integer;
+
     function GetContentType: string;
+    function GetStatusCode: Integer;
     function Status(AValue: Integer): IHttpResponse;
-    procedure SetStatusCode(AValue: Integer);
-    procedure SetContentType(const AValue: string);
-    procedure SetContentLength(const AValue: Int64);
-    procedure Write(const AContent: string); overload;
-    procedure Write(const ABuffer: TBytes); overload;
-    procedure Write(const AStream: TStream); overload;
+
+    procedure AddHeader(const AName, AValue: string);
+    procedure AppendCookie(const AName, AValue: string); overload;
+    procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
+    procedure DeleteCookie(const AName: string);
     procedure Json(const AJson: string); overload;
     procedure Json(const AValue: TValue); overload;
-    procedure AddHeader(const AName, AValue: string);
-    procedure AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions); overload;
-    procedure AppendCookie(const AName, AValue: string); overload;
-    procedure DeleteCookie(const AName: string);
-    property StatusCode: Integer read GetStatusCode write SetStatusCode;
+    procedure SetContentLength(const AValue: Int64);
+    procedure SetContentType(const AValue: string);
+    procedure SetStatusCode(AValue: Integer);
+    procedure Write(const ABuffer: TBytes); overload;
+    procedure Write(const AContent: string); overload;
+    procedure Write(const AStream: TStream); overload;
+
     property ContentType: string read GetContentType write SetContentType;
+    property StatusCode: Integer read GetStatusCode write SetStatusCode;
   end;
 
   TStatefulMockHttpContext = class(TInterfacedObject, IHttpContext)
@@ -84,19 +87,22 @@ type
     FItems: IDictionary<string, TValue>;
   public
     constructor Create(ARequest: IHttpRequest; AResponse: IHttpResponse; AServices: IServiceProvider);
+
+    function GetItems: IDictionary<string, TValue>;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
-    procedure SetResponse(const AValue: IHttpResponse);
     function GetServices: IServiceProvider;
-    procedure SetServices(const AValue: IServiceProvider);
     function GetUser: IClaimsPrincipal;
+
+    procedure SetResponse(const AValue: IHttpResponse);
+    procedure SetServices(const AValue: IServiceProvider);
     procedure SetUser(const AValue: IClaimsPrincipal);
-    function GetItems: IDictionary<string, TValue>;
+    property Items: IDictionary<string, TValue> read GetItems;
+
     property Request: IHttpRequest read GetRequest;
     property Response: IHttpResponse read GetResponse write SetResponse;
     property Services: IServiceProvider read GetServices write SetServices;
     property User: IClaimsPrincipal read GetUser write SetUser;
-    property Items: IDictionary<string, TValue> read GetItems;
   end;
 
 { Helper }
@@ -104,8 +110,8 @@ type
 procedure ParseQueryStringInto(const AQueryString: string; out ADict: IStringDictionary);
 var
   I, PosEqual: Integer;
-  ParamList: TStringList;
   Key, Value, QueryPart: string;
+  ParamList: TStringList;
   PosQuery: Integer;
 begin
   ADict := TCollections.CreateStringDictionary(True); // Case-insensitive
@@ -142,12 +148,12 @@ end;
 
 class function TMockHttpRequest.CreateInternal(const AQueryString: string; ABody: TStream): IHttpRequest;
 var
+  BodyToUse: TStream;
+  EmptyCookies: IStringDictionary;
+  EmptyHeaders: IStringDictionary;
+  EmptyRoute: TRouteValueDictionary;
   MockReq: Mock<IHttpRequest>;
   QueryParams: IStringDictionary;
-  EmptyHeaders: IStringDictionary;
-  EmptyCookies: IStringDictionary;
-  EmptyRoute: TRouteValueDictionary;
-  BodyToUse: TStream;
 begin
   MockReq := Mock<IHttpRequest>.Create;
   
@@ -341,10 +347,10 @@ end;
 class function TMockFactory.CreateHttpContextWithHeaders(const AQueryString: string;
   const AHeaders: IStringDictionary): IHttpContext;
 var
-  MockReq: Mock<IHttpRequest>;
-  QueryParams: IStringDictionary;
   EmptyCookies: IStringDictionary;
   EmptyRoute: TRouteValueDictionary;
+  MockReq: Mock<IHttpRequest>;
+  QueryParams: IStringDictionary;
 begin
   MockReq := Mock<IHttpRequest>.Create;
   
@@ -380,12 +386,12 @@ end;
 class function TMockFactory.CreateHttpContextWithRoute(const AQueryString: string;
   const ARouteParams: IDictionary<string, string>): IHttpContext;
 var
-  MockReq: Mock<IHttpRequest>;
-  QueryParams: IStringDictionary;
-  EmptyHeaders: IStringDictionary;
   EmptyCookies: IStringDictionary;
-  RouteValDict: TRouteValueDictionary;
+  EmptyHeaders: IStringDictionary;
+  MockReq: Mock<IHttpRequest>;
   Pair: TPair<string, string>;
+  QueryParams: IStringDictionary;
+  RouteValDict: TRouteValueDictionary;
 begin
   MockReq := Mock<IHttpRequest>.Create;
   
