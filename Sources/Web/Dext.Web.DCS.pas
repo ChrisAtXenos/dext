@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -54,6 +54,7 @@ uses
   Dext.Collections.Dict,
   Dext.Web.Interfaces,
   Dext.DI.Interfaces,
+  Dext.Configuration.Interfaces,
   Dext.Auth.Identity,
   Dext.Json;
 {$ENDIF DEXT_ENABLE_DCS}
@@ -96,11 +97,11 @@ type
   TDextDCSRequest = class(TInterfacedObject, IHttpRequest)
   private
     FRequest: ICrossHttpRequest;
-    FQuery: TStrings;
+    FQuery: IStringDictionary;
     FBody: TStream;
-    FHeaders: IDictionary<string, string>;
-    FCookies: IDictionary<string, string>;
-    FRouteParams: IDictionary<string, string>;
+    FHeaders: IStringDictionary;
+    FCookies: IStringDictionary;
+    FRouteParams: TRouteValueDictionary;
     FFiles: IFormFileCollection;
     procedure BuildFiles;
   public
@@ -109,22 +110,22 @@ type
 
     function GetMethod: string;
     function GetPath: string;
-    function GetQuery: TStrings;
+    function GetQuery: IStringDictionary;
     function GetBody: TStream;
-    function GetRouteParams: IDictionary<string, string>;
-    function GetHeaders: IDictionary<string, string>;
+    function GetRouteParams: TRouteValueDictionary;
+    function GetHeaders: IStringDictionary;
     function GetRemoteIpAddress: string;
     function GetHeader(const AName: string): string;
     function GetQueryParam(const AName: string): string;
-    function GetCookies: IDictionary<string, string>;
+    function GetCookies: IStringDictionary;
     function GetFiles: IFormFileCollection;
     property Method: string read GetMethod;
     property Path: string read GetPath;
-    property Query: TStrings read GetQuery;
+    property Query: IStringDictionary read GetQuery;
     property Body: TStream read GetBody;
-    property RouteParams: IDictionary<string, string> read GetRouteParams;
-    property Headers: IDictionary<string, string> read GetHeaders;
-    property Cookies: IDictionary<string, string> read GetCookies;
+    property RouteParams: TRouteValueDictionary read GetRouteParams;
+    property Headers: IStringDictionary read GetHeaders;
+    property Cookies: IStringDictionary read GetCookies;
     property Files: IFormFileCollection read GetFiles;
     property RemoteIpAddress: string read GetRemoteIpAddress;
   end;
@@ -226,11 +227,12 @@ type
     FPipeline: TRequestDelegate;
     FServices: IServiceProvider;
     FPort: Integer;
+    FUseSsl: Boolean;
     FRunning: Boolean;
-    function GetPort: Integer;
-
     procedure HandleDCSRequest(ARequest: ICrossHttpRequest;
       AResponse: ICrossHttpResponse; var AHandled: Boolean);
+    procedure HandleDCSRoute(const ARequest: ICrossHttpRequest;
+      const AResponse: ICrossHttpResponse; var AHandled: Boolean);
   public
     constructor Create(APort: Integer; APipeline: TRequestDelegate;
       const AServices: IServiceProvider);
@@ -309,15 +311,14 @@ constructor TDextDCSRequest.Create(ARequest: ICrossHttpRequest);
 begin
   inherited Create;
   FRequest := ARequest;
-  FRouteParams := TCollections.CreateDictionary<string, string>;
+  FRouteParams.Clear;
   FFiles := TFormFileCollection.Create(TCollections.CreateList<IFormFile>);
 end;
 
 destructor TDextDCSRequest.Destroy;
 begin
-  FQuery.Free;
   FBody.Free;
-  FRouteParams := nil;
+  FRouteParams.Clear;
   FHeaders := nil;
   FCookies := nil;
   FFiles := nil;
@@ -354,29 +355,28 @@ begin
     Result := '/';
 end;
 
-function TDextDCSRequest.GetQuery: TStrings;
+function TDextDCSRequest.GetQuery: IStringDictionary;
 var
   I: Integer;
   Item: TNameValue;
-  SL: TStringList;
 begin
   if FQuery = nil then
   begin
-    SL := TStringList.Create;
-    SL.NameValueSeparator := '=';
+    FQuery := TCollections.CreateStringDictionary(True);
     for I := 0 to FRequest.Query.Count - 1 do
     begin
       Item := FRequest.Query.Items[I];
-      SL.Add(Item.Name + '=' + Item.Value);
+      if Item.Name <> '' then
+        FQuery.AddOrSetValue(Item.Name, Item.Value);
     end;
-    FQuery := SL;
   end;
   Result := FQuery;
 end;
 
 function TDextDCSRequest.GetQueryParam(const AName: string): string;
 begin
-  FRequest.Query.GetParamValue(AName, Result);
+  if not GetQuery.TryGetValue(AName, Result) then
+    Result := '';
 end;
 
 function TDextDCSRequest.GetBody: TStream;
@@ -418,19 +418,19 @@ begin
   Result := FBody;
 end;
 
-function TDextDCSRequest.GetRouteParams: IDictionary<string, string>;
+function TDextDCSRequest.GetRouteParams: TRouteValueDictionary;
 begin
   Result := FRouteParams;
 end;
 
-function TDextDCSRequest.GetHeaders: IDictionary<string, string>;
+function TDextDCSRequest.GetHeaders: IStringDictionary;
 var
   I: Integer;
   Item: TNameValue;
 begin
   if FHeaders = nil then
   begin
-    FHeaders := TCollections.CreateDictionary<string, string>;
+    FHeaders := TCollections.CreateStringDictionary(True);
     for I := 0 to FRequest.Header.Count - 1 do
     begin
       Item := FRequest.Header.Items[I];
@@ -451,14 +451,14 @@ begin
   Result := FRequest.Connection.PeerAddr;
 end;
 
-function TDextDCSRequest.GetCookies: IDictionary<string, string>;
+function TDextDCSRequest.GetCookies: IStringDictionary;
 var
   I: Integer;
   Item: TNameValue;
 begin
   if FCookies = nil then
   begin
-    FCookies := TCollections.CreateDictionary<string, string>;
+    FCookies := TCollections.CreateStringDictionary(True);
     for I := 0 to FRequest.Cookies.Count - 1 do
     begin
       Item := FRequest.Cookies.Items[I];
@@ -712,14 +712,33 @@ end;
 
 constructor TDextDCSServer.Create(APort: Integer; APipeline: TRequestDelegate;
   const AServices: IServiceProvider);
+var
+  ConfigIntf: IInterface;
+  Config: IConfiguration;
+  ServerSection: IConfigurationSection;
 begin
   inherited Create;
   FPort := APort;
   FPipeline := APipeline;
   FServices := AServices;
   FRunning := False;
+  FUseSsl := False;
+
+  if FServices <> nil then
+  begin
+    ConfigIntf := FServices.GetServiceAsInterface(
+      TServiceType.FromInterface(TypeInfo(IConfiguration)));
+    if ConfigIntf <> nil then
+    begin
+      Config := ConfigIntf as IConfiguration;
+      ServerSection := Config.GetSection('Server');
+      if ServerSection <> nil then
+        FUseSsl := SameText(ServerSection['UseHttps'], 'true');
+    end;
+  end;
+
   // 0 = let DCS choose the optimal number of I/O threads (CPU count)
-  FHttpServer := TCrossHttpServer.Create(0);
+  FHttpServer := TCrossHttpServer.Create(0, FUseSsl);
 end;
 
 destructor TDextDCSServer.Destroy;
@@ -755,6 +774,12 @@ begin
   Ctx := nil; // Release scope and scoped services
 end;
 
+procedure TDextDCSServer.HandleDCSRoute(const ARequest: ICrossHttpRequest;
+  const AResponse: ICrossHttpResponse; var AHandled: Boolean);
+begin
+  HandleDCSRequest(ARequest, AResponse, AHandled);
+end;
+
 function TDextDCSServer.GetPort: Integer;
 begin
   Result := FPort;
@@ -768,13 +793,7 @@ begin
   FHttpServer.Port := FPort;
   FHttpServer.Compressible := True;
 
-  FHttpServer.All('*',
-    procedure(ARequest: ICrossHttpRequest; AResponse: ICrossHttpResponse;
-      var AHandled: Boolean)
-    begin
-      HandleDCSRequest(ARequest, AResponse, AHandled);
-    end
-  );
+  FHttpServer.All('*', HandleDCSRoute);
 
   FHttpServer.Start;
   FRunning := True;
@@ -783,7 +802,10 @@ begin
   if (FPort = 0) then
     FPort := FHttpServer.Port;
 
-  SafeWriteLn(Format('Dext/DCS server running on http://localhost:%d', [FPort]));
+  if FUseSsl then
+    SafeWriteLn(Format('Dext/DCS server running on https://localhost:%d', [FPort]))
+  else
+    SafeWriteLn(Format('Dext/DCS server running on http://localhost:%d', [FPort]));
 end;
 
 procedure TDextDCSServer.Run;
@@ -804,7 +826,7 @@ begin
   // Resolve application lifetime for graceful shutdown support
   Lifetime := nil;
   LifetimeIntf := FServices.GetServiceAsInterface(
-    TServiceType.FromInterface(IHostApplicationLifetime));
+    TServiceType.FromInterface(TypeInfo(IHostApplicationLifetime)));
   if LifetimeIntf <> nil then
     Lifetime := LifetimeIntf as IHostApplicationLifetime;
 

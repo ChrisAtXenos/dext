@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -49,37 +49,37 @@ type
   TDextWebBrokerRequest = class(TInterfacedObject, IHttpRequest)
   private
     FWebRequest: TWebRequest;
-    FQuery: TStrings;
+    FQuery: IStringDictionary;
     FBody: TStream;
-    FHeaders: IDictionary<string, string>;
-    FCookies: IDictionary<string, string>;
-    FRouteParams: IDictionary<string, string>;
+    FHeaders: IStringDictionary;
+    FCookies: IStringDictionary;
+    FRouteParams: TRouteValueDictionary;
     FFiles: IFormFileCollection;
-    function ParseQueryString(const AQuery: string): TStrings;
-    function BuildHeaders: IDictionary<string, string>;
-    function BuildCookies: IDictionary<string, string>;
+    function ParseQueryString(const AQuery: string): IStringDictionary;
+    function BuildHeaders: IStringDictionary;
+    function BuildCookies: IStringDictionary;
   public
     constructor Create(AWebRequest: TWebRequest);
     destructor Destroy; override;
 
     function GetMethod: string;
     function GetPath: string;
-    function GetQuery: TStrings;
+    function GetQuery: IStringDictionary;
     function GetBody: TStream;
-    function GetRouteParams: IDictionary<string, string>;
-    function GetHeaders: IDictionary<string, string>;
+    function GetRouteParams: TRouteValueDictionary;
+    function GetHeaders: IStringDictionary;
     function GetRemoteIpAddress: string;
     function GetHeader(const AName: string): string;
     function GetQueryParam(const AName: string): string;
-    function GetCookies: IDictionary<string, string>;
+    function GetCookies: IStringDictionary;
     function GetFiles: IFormFileCollection;
     property Method: string read GetMethod;
     property Path: string read GetPath;
-    property Query: TStrings read GetQuery;
+    property Query: IStringDictionary read GetQuery;
     property Body: TStream read GetBody;
-    property RouteParams: IDictionary<string, string> read GetRouteParams;
-    property Headers: IDictionary<string, string> read GetHeaders;
-    property Cookies: IDictionary<string, string> read GetCookies;
+    property RouteParams: TRouteValueDictionary read GetRouteParams;
+    property Headers: IStringDictionary read GetHeaders;
+    property Cookies: IStringDictionary read GetCookies;
     property Files: IFormFileCollection read GetFiles;
     property RemoteIpAddress: string read GetRemoteIpAddress;
   end;
@@ -248,46 +248,50 @@ constructor TDextWebBrokerRequest.Create(AWebRequest: TWebRequest);
 begin
   inherited Create;
   FWebRequest := AWebRequest;
-  FRouteParams := TCollections.CreateDictionaryIgnoreCase<string, string>;
+  FRouteParams.Clear;
   FFiles := TFormFileCollection.Create(TCollections.CreateList<IFormFile>);
 end;
 
 destructor TDextWebBrokerRequest.Destroy;
 begin
-  FQuery.Free;
   FBody.Free;
-  FRouteParams := nil;
+  FRouteParams.Clear;
   FHeaders := nil;
   FCookies := nil;
   FFiles := nil;
   inherited;
 end;
 
-function TDextWebBrokerRequest.ParseQueryString(const AQuery: string): TStrings;
+function TDextWebBrokerRequest.ParseQueryString(const AQuery: string): IStringDictionary;
 var
-  Params: TStringList;
-  I: Integer;
+  Params: TArray<string>;
+  Param: string;
+  Parts: TArray<string>;
 begin
-  Params := TStringList.Create;
-  try
-    Params.Delimiter := '&';
-    Params.StrictDelimiter := True;
-    Params.DelimitedText := AQuery;
-    for I := 0 to Params.Count - 1 do
-      Params[I] := TNetEncoding.URL.Decode(Params[I]);
-    Result := Params;
-  except
-    Params.Free;
-    raise;
+  Result := TCollections.CreateStringDictionary(True);
+  if AQuery = '' then
+    Exit;
+
+  Params := AQuery.Split(['&']);
+  for Param in Params do
+  begin
+    if Param = '' then
+      Continue;
+
+    Parts := Param.Split(['='], 2);
+    if Length(Parts) = 2 then
+      Result.AddOrSetValue(TNetEncoding.URL.Decode(Parts[0]), TNetEncoding.URL.Decode(Parts[1]))
+    else
+      Result.AddOrSetValue(TNetEncoding.URL.Decode(Parts[0]), '');
   end;
 end;
 
-function TDextWebBrokerRequest.BuildHeaders: IDictionary<string, string>;
+function TDextWebBrokerRequest.BuildHeaders: IStringDictionary;
 var
   HeaderName: string;
   HeaderValue: string;
 begin
-  Result := TCollections.CreateDictionaryIgnoreCase<string, string>;
+  Result := TCollections.CreateStringDictionary(True);
   for HeaderName in KnownHeaders do
   begin
     HeaderValue := FWebRequest.GetFieldByName(HeaderName);
@@ -296,14 +300,14 @@ begin
   end;
 end;
 
-function TDextWebBrokerRequest.BuildCookies: IDictionary<string, string>;
+function TDextWebBrokerRequest.BuildCookies: IStringDictionary;
 var
   CookieStr: string;
   Pairs: TArray<string>;
   Pair: string;
   Parts: TArray<string>;
 begin
-  Result := TCollections.CreateDictionaryIgnoreCase<string, string>;
+  Result := TCollections.CreateStringDictionary(True);
   CookieStr := FWebRequest.GetFieldByName('Cookie');
   if CookieStr = '' then Exit;
   Pairs := CookieStr.Split([';']);
@@ -329,7 +333,7 @@ begin
     Result := '/';
 end;
 
-function TDextWebBrokerRequest.GetQuery: TStrings;
+function TDextWebBrokerRequest.GetQuery: IStringDictionary;
 begin
   if FQuery = nil then
     FQuery := ParseQueryString(FWebRequest.Query);
@@ -338,7 +342,8 @@ end;
 
 function TDextWebBrokerRequest.GetQueryParam(const AName: string): string;
 begin
-  Result := GetQuery.Values[AName];
+  if not GetQuery.TryGetValue(AName, Result) then
+    Result := '';
 end;
 
 function TDextWebBrokerRequest.GetBody: TStream;
@@ -354,12 +359,12 @@ begin
   Result := FBody;
 end;
 
-function TDextWebBrokerRequest.GetRouteParams: IDictionary<string, string>;
+function TDextWebBrokerRequest.GetRouteParams: TRouteValueDictionary;
 begin
   Result := FRouteParams;
 end;
 
-function TDextWebBrokerRequest.GetHeaders: IDictionary<string, string>;
+function TDextWebBrokerRequest.GetHeaders: IStringDictionary;
 begin
   if FHeaders = nil then
     FHeaders := BuildHeaders;
@@ -376,7 +381,7 @@ begin
   Result := FWebRequest.RemoteIP;
 end;
 
-function TDextWebBrokerRequest.GetCookies: IDictionary<string, string>;
+function TDextWebBrokerRequest.GetCookies: IStringDictionary;
 begin
   if FCookies = nil then
     FCookies := BuildCookies;
@@ -721,6 +726,8 @@ begin
   TDextWebBrokerApp.HandleRequest(Request, Response);
   Handled := True;
 end;
+
+initialization
 
 finalization
   TDextWebBrokerApp.Shutdown;
