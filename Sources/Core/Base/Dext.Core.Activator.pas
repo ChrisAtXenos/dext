@@ -731,7 +731,7 @@ begin
       RttiType := Context.GetType(AType);
       
       // 1. Try explicit mapping
-      if FInterfaceDefaultImpl.TryGetValue(AType, RegisteredImpl) then
+      if (RttiType <> nil) and FInterfaceDefaultImpl.TryGetValue(AType, RegisteredImpl) then
       begin
         InstanceObj := CreateInstance(AProvider, RegisteredImpl);
         if InstanceObj.GetInterface(TRttiInterfaceType(RttiType).GUID, Intf) then
@@ -742,7 +742,7 @@ begin
       end;
 
       // 2. Try to resolve via DI
-      if AProvider <> nil then
+      if (AProvider <> nil) and (RttiType <> nil) then
       begin
         Guid := TRttiInterfaceType(RttiType).GUID;
         if Guid <> TGUID.Empty then
@@ -757,7 +757,7 @@ begin
         end;
       end;
 
-      // 2. Fallback for Collections (IList/IEnumerable)
+      // 3. Fallback for Collections (IList/IEnumerable)
       if IsListType(AType) then
       begin
         ElementType := GetListElementType(AType);

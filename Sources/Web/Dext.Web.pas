@@ -79,6 +79,7 @@ uses
   Dext.Web.Pipeline,
   Dext.Web.Results,
   Dext.Web.View,
+  Dext.Web.View.Native,
   {$IFDEF DEXT_ENABLE_WEB_STENCILS}
   Dext.Web.View.WebStencils,
   {$ENDIF}
@@ -651,6 +652,14 @@ type
     ///   Enables content negotiation and registers default formatters.
     /// </summary>
     function AddContentNegotiation: TDextServices;
+
+    /// <summary>
+    ///   Enables the native Dext Templating engine for server-side rendering (SSR).
+    /// </summary>
+    function AddDextTemplating: TDextServices; overload;
+    function AddDextTemplating(AConfig: TProc<TViewOptions>): TDextServices; overload;
+    function AddDextTemplating(const AOptions: TViewOptions): TDextServices; overload;
+    function AddDextTemplating(const ABuilder: TViewOptionsBuilder): TDextServices; overload;
 
     /// <summary>
     ///  Enables Web Stencils view engine using default conventions (CoC):
@@ -1699,6 +1708,44 @@ end;
 function TWebServicesHelper.AddWebStencils(const ABuilder: TViewOptionsBuilder): TDextServices;
 begin
   Result := AddWebStencils(TViewOptions(ABuilder));
+end;
+
+function TWebServicesHelper.AddDextTemplating: TDextServices;
+var
+  Options: TViewOptions;
+begin
+  Options := TViewOptions.Create;
+  Result := AddDextTemplating(Options);
+end;
+
+function TWebServicesHelper.AddDextTemplating(AConfig: TProc<TViewOptions>): TDextServices;
+var
+  Options: TViewOptions;
+begin
+  Options := TViewOptions.Create;
+  if Assigned(AConfig) then
+    AConfig(Options);
+    
+  Result := AddDextTemplating(Options);
+end;
+
+function TWebServicesHelper.AddDextTemplating(const AOptions: TViewOptions): TDextServices;
+var
+  Options: TViewOptions;
+  Factory: TFunc<IServiceProvider, TObject>;
+begin
+  Options := AOptions;
+  Factory := function(Provider: IServiceProvider): TObject
+    begin
+      Result := TDextNativeViewEngine.Create(Options);
+    end;
+  
+  Result := Self.AddSingleton<IViewEngine, TDextNativeViewEngine>(Factory);
+end;
+
+function TWebServicesHelper.AddDextTemplating(const ABuilder: TViewOptionsBuilder): TDextServices;
+begin
+  Result := AddDextTemplating(TViewOptions(ABuilder));
 end;
 
 function THttpAppBuilderHelper.UseViewEngine: AppBuilder;

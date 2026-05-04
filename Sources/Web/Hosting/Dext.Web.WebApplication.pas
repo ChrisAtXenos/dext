@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -31,6 +31,7 @@ interface
 uses
   Dext.Configuration.Interfaces,
   Dext.DI.Interfaces,
+  Dext.Json,
   Dext.Logging,
   Dext.Web.ControllerScanner,
   Dext.Web.Interfaces;
@@ -58,6 +59,7 @@ type
     procedure LogWarn(const AMsg: string);
     procedure LogError(const AMsg: string);
     function ResolveLogger: ILogger;
+    function GetServiceProvider: IServiceProvider;
   public
     constructor Create;
     destructor Destroy; override;
@@ -246,6 +248,13 @@ begin
   Result := TAppBuilder.Create(GetApplicationBuilder);
 end;
 
+function TWebApplication.GetServiceProvider: IServiceProvider;
+begin
+  if FServiceProvider = nil then
+    BuildServices;
+  Result := FServiceProvider;
+end;
+
 function TWebApplication.BuildServices: IServiceProvider;
 begin
   // ? REBUILD ServiceProvider to include all services registered after Create()
@@ -336,13 +345,17 @@ var
 begin
   FDefaultPort := Port;
   
-  // Build ServiceProvider now - this is the correct place to do it,
-  // AFTER all services have been registered (including HealthChecks, etc.)
-  FServiceProvider := FServices.BuildServiceProvider;
+  // Build ServiceProvider now if not already built via BuildServices()
+  // This is the correct place to do it, AFTER all services have been registered
+  if FServiceProvider = nil then
+    FServiceProvider := FServices.BuildServiceProvider;
   ResolveLogger; // Force telemetry subscription early
   
   // Update ApplicationBuilder with the final ServiceProvider
   GetApplicationBuilder.SetServiceProvider(FServiceProvider);
+  
+  // Bridge ServiceProvider to JSON global settings for automated DI-driven deserialization
+  TDextJson.SetDefaultSettings(TDextJson.GetDefaultSettings.ServiceProvider(FServiceProvider));
   
   // Get Lifetime & State Service
   LifetimeIntf := FServiceProvider.GetServiceAsInterface(TypeInfo(IHostApplicationLifetime));

@@ -110,6 +110,7 @@ contains
   Dext.Web.View in 'Web\Dext.Web.View.pas',
   Dext.Web.View.WebStencils in 'Web\Dext.Web.View.WebStencils.pas',
   Dext.Web.WebBroker in 'Web\Dext.Web.WebBroker.pas',
-  Dext.WebHost in 'Web\Dext.WebHost.pas';
+  Dext.WebHost in 'Web\Dext.WebHost.pas',
+	Dext.Web.View.Native.pas in 'Web\Dext.Web.View.Native.pas';
 
 end.

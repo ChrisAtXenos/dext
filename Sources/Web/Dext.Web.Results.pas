@@ -189,6 +189,13 @@ type
     /// <summary>Returns 500 Internal Server Error from a captured exception.</summary>
     class function InternalServerError(const E: Exception): IResult; overload;
     
+    /// <summary>
+    ///   Returns a standardized error response (RFC 7807).
+    /// </summary>
+    /// <param name="ADetail">Detailed error message.</param>
+    /// <param name="AStatusCode">HTTP status code (default 500).</param>
+    class function Problem(const ADetail: string; AStatusCode: Integer = 500): IResult; overload;
+    
     /// <summary>Alias for InternalServerError.</summary>
     class function InternalError(const E: Exception): IResult; overload;
     class function InternalError(const AMessage: string): IResult; overload;
@@ -506,6 +513,14 @@ end;
 class function Results.InternalError(const AMessage: string): IResult;
 begin
   Result := InternalServerError(AMessage);
+end;
+
+class function Results.Problem(const ADetail: string; AStatusCode: Integer): IResult;
+begin
+  Result := TJsonResult.Create(TJsonBuilder.NewBuilder
+    .Add('detail', ADetail)
+    .Add('status', AStatusCode)
+    .ToString, AStatusCode);
 end;
 
 class function Results.Json(const AJson: string; AStatusCode: Integer): IResult;

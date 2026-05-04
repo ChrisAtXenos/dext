@@ -349,14 +349,17 @@ type
     function MapControllers: IWebApplication;
     function GetApplicationBuilder: IApplicationBuilder;
     function GetConfiguration: IConfiguration;
+    function GetServiceProvider: IServiceProvider;
     function BuildServices: IServiceProvider; // ? Automation
     procedure UseServerFactory(const AFactory: TServerFactory);
+    procedure Run; overload;
     procedure Run(Port: Integer); overload;
-    procedure Start(Port: Integer); overload;
     procedure Start; overload;
+    procedure Start(Port: Integer); overload;
     procedure SetDefaultPort(Port: Integer);
 
     property Services: TDextServices read GetServices;
+    property ServiceProvider: IServiceProvider read GetServiceProvider;
     property Builder: TAppBuilder read GetBuilder;
     property Configuration: IConfiguration read GetConfiguration;
     property Port: Integer read GetPort;

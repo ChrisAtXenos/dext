@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -373,13 +373,11 @@ begin
   try
     try
       Arg1 := ResolveArgument<T>;
-
       // Skip validation for TGUID/TUUID (no validation attributes, and TValue.From fails)
       if (TypeInfo(T) <> TypeInfo(TGUID)) and (TypeInfo(T) <> TypeInfo(TUUID)) then
       begin
         if not Validate(TValue.From<T>(Arg1)) then Exit(False);
       end;
-
       Res := AHandler(Arg1);
       if TValue.From<TResult>(Res).TryAsType<IResult>(ResIntf) then
         ResIntf.Execute(FContext);
