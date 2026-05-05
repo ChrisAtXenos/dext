@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{3B9964C9-D84A-445C-90F2-18E806DBA8FA}</ProjectGuid>
         <MainSource>Web.StreamingDemo.dpr</MainSource>
@@ -176,4 +176,9 @@
     </ProjectExtensions>
     <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
     <Import Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj" Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')"/>
+    <PropertyGroup>
+        <PostBuildEvent>
+            <![CDATA[call "$(PROJECTDIR)\copy_wwwroot.bat" "$(OUTPUTDIR)"]]>
+        </PostBuildEvent>
+    </PropertyGroup>
 </Project>

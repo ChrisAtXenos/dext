@@ -152,4 +152,9 @@
     </ProjectExtensions>
     <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
     <Import Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj" Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')"/>
+    <PropertyGroup>
+        <PostBuildEvent>
+            <![CDATA[call "$(PROJECTDIR)\copy_wwwroot.bat" "$(OUTPUTDIR)"]]>
+        </PostBuildEvent>
+    </PropertyGroup>
 </Project>

@@ -42,6 +42,7 @@ type
     FOptions: TViewOptions;
   public
     constructor Create(const AOptions: TViewOptions);
+    destructor Destroy; override;
     function Render(AContext: IHttpContext; const AViewName: string; AViewData: IViewData): string;
   end;
 
@@ -55,13 +56,19 @@ begin
   FOptions := AOptions;
 end;
 
+destructor TDextNativeViewEngine.Destroy;
+begin
+  FOptions.Free;
+  inherited;
+end;
+
 function TDextNativeViewEngine.Render(AContext: IHttpContext; const AViewName: string; AViewData: IViewData): string;
 var
-  Engine: ITemplateEngine;
   Context: ITemplateContext;
-  Pair: TPair<string, TValue>;
-  ObjPair: TPair<string, TObject>;
+  Engine: ITemplateEngine;
   LViewPath: string;
+  ObjPair: TPair<string, TObject>;
+  Pair: TPair<string, TValue>;
 begin
   Engine := TTemplating.CreateEngine;
   Engine.IsHtmlMode := True;

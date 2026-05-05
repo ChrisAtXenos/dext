@@ -1627,85 +1627,113 @@ end;
 {$ENDIF}
 
 function TWebServicesHelper.AddWebStencils: TDextServices;
-var
-  Options: TViewOptions;
 begin
-  Options := TViewOptions.Create;
-  Result := AddWebStencils(Options);
+  Result := AddWebStencils(TProc<TViewOptions>(nil));
 end;
 
 function TWebServicesHelper.AddWebStencils(AConfig: TProc<TViewOptions>): TDextServices;
+{$IFDEF DEXT_ENABLE_WEB_STENCILS}
 var
-  Options: TViewOptions;
+  LConfig: TProc<TViewOptions>;
+{$ENDIF}
 begin
-  Options := TViewOptions.Create;
-  if Assigned(AConfig) then
-    AConfig(Options);
-    
-  Result := AddWebStencils(Options);
+  Result := Self;
+  {$IFDEF DEXT_ENABLE_WEB_STENCILS}
+  LConfig := AConfig;
+  TWebStencilsViewEngine.RegisterWebStencilsFunctions;
+  Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(
+    function(Provider: IServiceProvider): TObject
+    var
+      Options: TViewOptions;
+    begin
+      Options := TViewOptions.Create;
+      if Assigned(LConfig) then
+        LConfig(Options);
+      Result := TWebStencilsViewEngine.Create(Options);
+    end);
+  {$ENDIF}
 end;
 
 function TWebServicesHelper.AddWebStencils(const AOptions: TViewOptions): TDextServices;
 {$IFDEF DEXT_ENABLE_WEB_STENCILS}
 var
   Options: TViewOptions;
-  Factory: TFunc<IServiceProvider, TObject>;
 {$ENDIF}
 begin
   Result := Self;
   {$IFDEF DEXT_ENABLE_WEB_STENCILS}
   Options := AOptions;
   TWebStencilsViewEngine.RegisterWebStencilsFunctions;
-  Factory := function(Provider: IServiceProvider): TObject
+  Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(
+    function(Provider: IServiceProvider): TObject
     begin
       Result := TWebStencilsViewEngine.Create(Options);
-    end;
-  
-  Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(Factory);
+    end);
   {$ENDIF}
 end;
 
 function TWebServicesHelper.AddWebStencils(const ABuilder: TViewOptionsBuilder): TDextServices;
+{$IFDEF DEXT_ENABLE_WEB_STENCILS}
+var
+  OptionsBuilder: TViewOptionsBuilder;
+{$ENDIF}
 begin
-  Result := AddWebStencils(TViewOptions(ABuilder));
+  Result := Self;
+  {$IFDEF DEXT_ENABLE_WEB_STENCILS}
+  OptionsBuilder := ABuilder;
+  TWebStencilsViewEngine.RegisterWebStencilsFunctions;
+  Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(
+    function(Provider: IServiceProvider): TObject
+    begin
+      Result := TWebStencilsViewEngine.Create(TViewOptions(OptionsBuilder));
+    end);
+  {$ENDIF}
 end;
 
 function TWebServicesHelper.AddDextTemplating: TDextServices;
-var
-  Options: TViewOptions;
 begin
-  Options := TViewOptions.Create;
-  Result := AddDextTemplating(Options);
+  Result := AddDextTemplating(TProc<TViewOptions>(nil));
 end;
 
 function TWebServicesHelper.AddDextTemplating(AConfig: TProc<TViewOptions>): TDextServices;
 var
-  Options: TViewOptions;
+  LConfig: TProc<TViewOptions>;
 begin
-  Options := TViewOptions.Create;
-  if Assigned(AConfig) then
-    AConfig(Options);
-    
-  Result := AddDextTemplating(Options);
+  LConfig := AConfig;
+  Result := Self.AddSingleton<IViewEngine, TDextNativeViewEngine>(
+    function(Provider: IServiceProvider): TObject
+    var
+      Options: TViewOptions;
+    begin
+      Options := TViewOptions.Create;
+      if Assigned(LConfig) then
+        LConfig(Options);
+      Result := TDextNativeViewEngine.Create(Options);
+    end);
 end;
 
 function TWebServicesHelper.AddDextTemplating(const AOptions: TViewOptions): TDextServices;
 var
   Options: TViewOptions;
-  Factory: TFunc<IServiceProvider, TObject>;
 begin
   Options := AOptions;
-  Factory := function(Provider: IServiceProvider): TObject
+  Result := Self.AddSingleton<IViewEngine, TDextNativeViewEngine>(
+    function(Provider: IServiceProvider): TObject
     begin
       Result := TDextNativeViewEngine.Create(Options);
-    end;
-  
-  Result := Self.AddSingleton<IViewEngine, TDextNativeViewEngine>(Factory);
+    end);
 end;
 
 function TWebServicesHelper.AddDextTemplating(const ABuilder: TViewOptionsBuilder): TDextServices;
+var
+  OptionsBuilder: TViewOptionsBuilder;
 begin
-  Result := AddDextTemplating(TViewOptions(ABuilder));
+  OptionsBuilder := ABuilder;
+  Result := Self.AddSingleton<IViewEngine, TDextNativeViewEngine>(
+    function(Provider: IServiceProvider): TObject
+    begin
+      Result := TDextNativeViewEngine.Create(TViewOptions(OptionsBuilder));
+    end);
 end;
 
 function THttpAppBuilderHelper.UseViewEngine: AppBuilder;

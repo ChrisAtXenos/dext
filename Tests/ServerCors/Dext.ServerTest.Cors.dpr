@@ -1,4 +1,4 @@
-program Dext.ServerTest.Cors;
+﻿program Dext.ServerTest.Cors;
 
 uses
   Dext.MM,

@@ -599,13 +599,19 @@ begin
 end;
 
 class function Results.Problem(const ADetail: string; AStatusCode: Integer): IResult;
+var
+  Builder: TJsonBuilder;
 begin
-  Result := TJsonResult.Create(TJsonBuilder.NewBuilder
+  Builder := TJsonBuilder.NewBuilder
     .Add('type', 'https://tools.ietf.org/html/rfc7231#section-6.6.1')
     .Add('title', HttpStatus.GetReasonPhrase(AStatusCode))
     .Add('status', AStatusCode)
-    .Add('detail', ADetail)
-    .ToString, AStatusCode);
+    .Add('detail', ADetail);
+  try
+    Result := TJsonResult.Create(Builder.ToString, AStatusCode);
+  finally
+    Builder.Free;
+  end;
 end;
 
 class function Results.ValidationProblem(const AValidation: TValidationResult): IResult;
@@ -880,13 +886,16 @@ begin
     .Add('type', 'https://tools.ietf.org/html/rfc7231#section-6.5.1')
     .Add('title', 'One or more validation errors occurred.')
     .Add('status', HttpStatus.BadRequest);
-    
+
   Builder.AddObject('errors');
   for Err in FValidation.Errors do
     Builder.Add(Err.FieldName, Err.ErrorMessage);
   Builder.EndObject;
-
-  AContext.Response.Json(Builder.ToString);
+  try
+    AContext.Response.Json(Builder.ToString);
+  finally
+    Builder.Free;
+  end;
 end;
 
 { TChallengeResult }

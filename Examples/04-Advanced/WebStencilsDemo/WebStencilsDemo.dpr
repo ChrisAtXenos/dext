@@ -1,4 +1,4 @@
-program WebStencilsDemo;
+﻿program WebStencilsDemo;
 
 {$APPTYPE CONSOLE}
 

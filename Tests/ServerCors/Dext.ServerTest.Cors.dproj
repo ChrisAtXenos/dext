@@ -165,7 +165,6 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
-        <DCC_RunTimeTypeInfo>true</DCC_RunTimeTypeInfo>
         <DCC_LargeAddressAware>true</DCC_LargeAddressAware>
         <DCC_MapFile>3</DCC_MapFile>
     </PropertyGroup>

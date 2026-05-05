@@ -74,6 +74,12 @@ type
     procedure Write(const AContent: string); overload;
     procedure Write(const AStream: TStream); overload;
 
+    procedure Redirect(const AUrl: string; APermanent: Boolean = False);
+    procedure Unauthorized(const AMessage: string = '');
+    procedure Forbidden(const AMessage: string = '');
+    procedure BadRequest(const AMessage: string = '');
+    procedure NotFound(const AMessage: string = '');
+
     property ContentType: string read GetContentType write SetContentType;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
   end;
@@ -269,6 +275,35 @@ end;
 
 procedure TStatefulMockResponse.DeleteCookie(const AName: string);
 begin
+end;
+
+procedure TStatefulMockResponse.Redirect(const AUrl: string; APermanent: Boolean);
+begin
+  if APermanent then
+    FStatusCode := 301
+  else
+    FStatusCode := 302;
+  FHeaders.AddOrSetValue('Location', AUrl);
+end;
+
+procedure TStatefulMockResponse.Unauthorized(const AMessage: string);
+begin
+  FStatusCode := 401;
+end;
+
+procedure TStatefulMockResponse.Forbidden(const AMessage: string);
+begin
+  FStatusCode := 403;
+end;
+
+procedure TStatefulMockResponse.BadRequest(const AMessage: string);
+begin
+  FStatusCode := 400;
+end;
+
+procedure TStatefulMockResponse.NotFound(const AMessage: string);
+begin
+  FStatusCode := 404;
 end;
 
 { TMockHttpContext }
