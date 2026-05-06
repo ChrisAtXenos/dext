@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -46,6 +46,7 @@ type
     FValue: T;
     FHasValue: Boolean;
     function GetValue: T;
+    function GetIsNull: Boolean;
     procedure SetValue(const Value: T);
   public
     constructor Create(const Value: T); overload;
@@ -55,6 +56,7 @@ type
     
     property Value: T read GetValue write SetValue;
     property HasValue: Boolean read FHasValue;
+    property IsNull: Boolean read GetIsNull;
     
     function GetValueOrDefault: T; overload;
     function GetValueOrDefault(const ADefault: T): T; overload;
@@ -185,6 +187,11 @@ begin
   if not FHasValue then
     raise EInvalidOpException.Create('Nullable type has no value');
   Result := FValue;
+end;
+
+function Nullable<T>.GetIsNull: Boolean;
+begin
+  Result := not FHasValue;
 end;
 
 procedure Nullable<T>.SetValue(const Value: T);
