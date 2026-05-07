@@ -90,6 +90,7 @@ type
     procedure SetBoolean(const Name: string; Value: Boolean);
     procedure SetObject(const Name: string; Value: IDextJsonObject);
     procedure SetArray(const Name: string; Value: IDextJsonArray);
+    procedure SetNode(const Name: string; Value: IDextJsonNode);
     procedure SetNull(const Name: string);
   end;
 
@@ -473,6 +474,23 @@ begin
     NestedAdapter := Value as TJsonDataArrayAdapter;
     FObj.A[Name] := NestedAdapter.FArr;
     NestedAdapter.FOwnsObject := False;
+  end;
+end;
+
+procedure TJsonDataObjectAdapter.SetNode(const Name: string; Value: IDextJsonNode);
+begin
+  if Value = nil then
+    SetNull(Name)
+  else
+  begin
+    case Value.GetNodeType of
+      jntString: SetString(Name, Value.AsString);
+      jntNumber: SetDouble(Name, Value.AsDouble);
+      jntBoolean: SetBoolean(Name, Value.AsBoolean);
+      jntObject: SetObject(Name, Value as IDextJsonObject);
+      jntArray: SetArray(Name, Value as IDextJsonArray);
+      jntNull: SetNull(Name);
+    end;
   end;
 end;
 

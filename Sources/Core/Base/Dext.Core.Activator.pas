@@ -884,20 +884,23 @@ begin
         if ImplRtti = nil then
           ImplRtti := Context.FindType('Dext.Collections.' + ImplName);
 
-        // Strategy B: Scan all types for ANY TList<ElementType> or TSmartList<ElementType>
+        // Strategy B: TList<T>.Add is `inline`, so GetMethod('Add') returns nil.
+        // Delphi stores generic specialization names with fully-qualified element types
+        // e.g. 'TList<Dext.Collections.TFoo>', so use EndsWith on the element name.
         if ImplRtti = nil then
         begin
+          var ElemSuffix := ElementTypeName + '>';
           for TmpType in Context.GetTypes do
           begin
-            if TmpType.IsInstance and (TmpType.Name.StartsWith('TList<') or TmpType.Name.StartsWith('TSmartList<')) then
+            if TmpType.IsInstance then
             begin
-               AddM := TmpType.GetMethod('Add');
-               if Assigned(AddM) and (Length(AddM.GetParameters) = 1) then
-                 if AddM.GetParameters[0].ParamType.Handle = ElementType then
-                 begin
-                   ImplRtti := TmpType;
-                   Break;
-                 end;
+              var N := TmpType.Name;
+              if (N.StartsWith('TList<') or N.StartsWith('TSmartList<')) and
+                 N.EndsWith(ElemSuffix) then
+              begin
+                ImplRtti := TmpType;
+                Break;
+              end;
             end;
           end;
         end;
@@ -932,10 +935,22 @@ begin
                  
               if AType.Kind = tkInterface then
               begin
-                if InstanceVal.AsObject.GetInterface(TRttiInterfaceType(RttiType).GUID, Intf) then
+                // GetInterface with GUID works for concrete interfaces.
+                // For generic specializations (e.g. IList<TFoo>), the GUID in RTTI
+                // is TGUID.Empty, so GetInterface always returns False.
+                // Use Supports as primary strategy (works via GUID or interface slot),
+                // then fall back to a direct IInterface assignment.
+                Intf := nil;
+                if not TRttiInterfaceType(RttiType).GUID.IsEmpty then
+                  InstanceVal.AsObject.GetInterface(TRttiInterfaceType(RttiType).GUID, Intf);
+
+                if Intf = nil then
+                  Supports(InstanceVal.AsObject, IInterface, IInterface(Intf));
+
+                if Intf <> nil then
                   TValue.Make(@Intf, AType, Result)
-                else 
-                  Result := InstanceVal;
+                else
+                  Result := InstanceVal; // last resort: return as class
               end
               else 
                 Result := InstanceVal;

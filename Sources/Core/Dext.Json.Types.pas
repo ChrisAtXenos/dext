@@ -1,4 +1,4 @@
-﻿unit Dext.Json.Types;
+unit Dext.Json.Types;
 
 interface
 
@@ -81,10 +81,8 @@ type
     function GetBoolean(const Name: string): Boolean;
     function GetObject(const Name: string): IDextJsonObject;
     function GetArray(const Name: string): IDextJsonArray;
-    
     function GetCount: Integer;
     function GetName(Index: Integer): string;
-
     procedure SetString(const Name, Value: string);
     procedure SetInteger(const Name: string; Value: Integer);
     procedure SetInt64(const Name: string; Value: Int64);
@@ -92,8 +90,8 @@ type
     procedure SetBoolean(const Name: string; Value: Boolean);
     procedure SetObject(const Name: string; Value: IDextJsonObject);
     procedure SetArray(const Name: string; Value: IDextJsonArray);
+    procedure SetNode(const Name: string; Value: IDextJsonNode);
     procedure SetNull(const Name: string);
-
     property Count: Integer read GetCount;
   end;
 
@@ -108,7 +106,6 @@ type
     function GetBoolean(Index: Integer): Boolean;
     function GetObject(Index: Integer): IDextJsonObject;
     function GetArray(Index: Integer): IDextJsonArray;
-
     procedure Add(const Value: string); overload;
     procedure Add(Value: Integer); overload;
     procedure Add(Value: Int64); overload;
@@ -117,7 +114,6 @@ type
     procedure Add(Value: IDextJsonObject); overload;
     procedure Add(Value: IDextJsonArray); overload;
     procedure AddNull;
-
     property Count: NativeInt read GetCount;
   end;
 
@@ -129,7 +125,7 @@ type
     FCaseInsensitive: Boolean;
     FIgnoreNullValues: Boolean;
     FServiceProvider: IServiceProvider;
-    
+    FSmartRecordMapping: Boolean;
     Formatting: TJsonFormatting;
     IgnoreDefaultValues: Boolean;
     DateFormat: string;
@@ -140,14 +136,15 @@ type
     class function Default: TJsonSettings; static;
     class function Indented: TJsonSettings; static;
 
-    // Fluent API
     function CamelCase: TJsonSettings;
     function PascalCase: TJsonSettings;
     function SnakeCase: TJsonSettings;
+    function UnchangedCase: TJsonSettings;
     function EnumAsString: TJsonSettings;
     function EnumAsNumber: TJsonSettings;
     function IgnoreNullValues: TJsonSettings;
     function CaseInsensitive: TJsonSettings;
+    function SmartRecordMapping(AValue: Boolean = True): TJsonSettings;
     function ISODateFormat: TJsonSettings;
     function UnixTimestamp: TJsonSettings;
     function CustomDateFormat(const Format: string): TJsonSettings;
@@ -195,6 +192,7 @@ begin
   Result.CaseStyle := TCaseStyle.Unchanged;
   Result.EnumStyle := TEnumStyle.AsNumber;
   Result.FCaseInsensitive := False;
+  Result.FSmartRecordMapping := True; // Default is True
 end;
 
 function TJsonSettings.EnumAsNumber: TJsonSettings;
@@ -240,10 +238,22 @@ begin
   Result.FServiceProvider := AProvider;
 end;
 
+function TJsonSettings.SmartRecordMapping(AValue: Boolean): TJsonSettings;
+begin
+  Result := Self;
+  Result.FSmartRecordMapping := AValue;
+end;
+
 function TJsonSettings.SnakeCase: TJsonSettings;
 begin
   Result := Self;
   Result.CaseStyle := TCaseStyle.SnakeCase;
+end;
+
+function TJsonSettings.UnchangedCase: TJsonSettings;
+begin
+  Result := Self;
+  Result.CaseStyle := TCaseStyle.Unchanged;
 end;
 
 function TJsonSettings.UnixTimestamp: TJsonSettings;

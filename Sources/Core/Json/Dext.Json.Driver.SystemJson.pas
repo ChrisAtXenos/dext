@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -85,6 +85,7 @@ type
     procedure SetBoolean(const Name: string; Value: Boolean);
     procedure SetObject(const Name: string; Value: IDextJsonObject);
     procedure SetArray(const Name: string; Value: IDextJsonArray);
+    procedure SetNode(const Name: string; Value: IDextJsonNode);
     procedure SetNull(const Name: string);
   end;
 
@@ -434,6 +435,23 @@ begin
   if Value is TSystemJsonArrayAdapter then
   begin
     FObj.AddPair(Name, (Value as TSystemJsonArrayAdapter).FArr.Clone as TJSONArray);
+  end;
+end;
+
+procedure TSystemJsonObjectAdapter.SetNode(const Name: string; Value: IDextJsonNode);
+begin
+  if Value = nil then
+    SetNull(Name)
+  else
+  begin
+    case Value.GetNodeType of
+      jntString: SetString(Name, Value.AsString);
+      jntNumber: SetDouble(Name, Value.AsDouble);
+      jntBoolean: SetBoolean(Name, Value.AsBoolean);
+      jntObject: SetObject(Name, Value as IDextJsonObject);
+      jntArray: SetArray(Name, Value as IDextJsonArray);
+      jntNull: SetNull(Name);
+    end;
   end;
 end;
 

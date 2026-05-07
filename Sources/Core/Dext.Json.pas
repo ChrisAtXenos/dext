@@ -825,13 +825,9 @@ end;
 
 function TDextSerializer.DeserializeRecord(AJson: IDextJsonObject; AType: PTypeInfo): TValue;
 var
-  ActualFieldName: string;
   Field: TRttiField;
   FieldName: string;
-  FieldValue: TValue;
-  Found: Boolean;
-  GuidStr: string;
-  LowerFieldName, UpperFieldName, CamelCaseName: string;
+  I: Integer;
   Node: IDextJsonNode;
   RttiType: TRttiType;
   Val: TValue;
@@ -850,100 +846,71 @@ begin
       Continue;
 
     FieldName := GetFieldName(Field);
-    ActualFieldName := FieldName;
-    Found := AJson.Contains(FieldName);
+    Node := AJson.GetNode(FieldName);
 
-    if (not Found) and FSettings.FCaseInsensitive then
+    // Case-insensitive fallback for records:
+    if (Node = nil) and (FSettings.FCaseInsensitive or FSettings.FSmartRecordMapping) then
     begin
-      LowerFieldName := LowerCase(FieldName);
-      UpperFieldName := UpperCase(FieldName);
-
-      if AJson.Contains(LowerFieldName) then
+      for I := 0 to AJson.GetCount - 1 do
       begin
-        ActualFieldName := LowerFieldName;
-        Found := True;
-      end
-      else if AJson.Contains(UpperFieldName) then
-      begin
-        ActualFieldName := UpperFieldName;
-        Found := True;
-      end
-      else if Length(FieldName) > 0 then
-      begin
-        CamelCaseName := LowerCase(FieldName[1]) + Copy(FieldName, 2, Length(FieldName) - 1);
-        if AJson.Contains(CamelCaseName) then
+        if SameText(AJson.GetName(I), FieldName) then
         begin
-          ActualFieldName := CamelCaseName;
-          Found := True;
+          Node := AJson.GetNode(AJson.GetName(I));
+          Break;
         end;
       end;
     end;
 
-    if not Found then
+    if Node = nil then
       Continue;
 
-    if Field.FieldType.Handle = TypeInfo(TGUID) then
-    begin
-      try
-        GuidStr := AJson.GetString(ActualFieldName).Trim;
-        if (GuidStr <> '') and (not GuidStr.StartsWith('{')) then
-          GuidStr := '{' + GuidStr + '}';
-        FieldValue := TValue.From<TGUID>(StringToGUID(GuidStr));
-      except
-        FieldValue := TValue.From<TGUID>(TGUID.Empty);
-      end;
-      Field.SetValue(Result.GetReferenceToRawData, FieldValue);
-      Continue;
+    Val := TValue.Empty; // Reset for each field
+
+    case Node.GetNodeType of
+      jntString: Val := TValue.From<string>(Node.AsString);
+      jntNumber:
+        begin
+          if (Field.FieldType.Handle = TypeInfo(Integer)) then
+            Val := TValue.From<Integer>(Node.AsInteger)
+          else if (Field.FieldType.Handle = TypeInfo(Int64)) then
+            Val := TValue.From<Int64>(Node.AsInt64)
+          else
+            Val := TValue.From<Double>(Node.AsDouble);
+        end;
+      jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
+      jntNull: Val := TValue.Empty;
+      jntObject:
+        begin
+          if (Field.FieldType.TypeKind = tkClass) then
+            Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
+          else if (Field.FieldType.TypeKind = tkRecord) then
+            Val := DeserializeRecord(Node as IDextJsonObject, Field.FieldType.Handle)
+          else if (Field.FieldType.TypeKind = tkInterface) then
+            Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
+          else
+            Val := TValue.Empty;
+        end;
+      jntArray:
+        begin
+          if IsArrayType(Field.FieldType.Handle) then
+            Val := DeserializeArray(Node as IDextJsonArray, Field.FieldType.Handle)
+          else if IsListType(Field.FieldType.Handle) then
+            Val := DeserializeList(Node as IDextJsonArray, Field.FieldType.Handle)
+          else
+            Val := TValue.Empty;
+        end;
+      else Val := TValue.Empty;
     end;
 
-    if Field.FieldType.Handle = TypeInfo(TUUID) then
+    if not Val.IsEmpty then
     begin
-      try
-        FieldValue := TValue.From<TUUID>(TUUID.FromString(AJson.GetString(ActualFieldName)));
-      except
-        FieldValue := TValue.From<TUUID>(TUUID.Null);
-      end;
-      TReflection.SetValue(Result.GetReferenceToRawData, Field, FieldValue);
-      Continue;
-    end;
-
-    Node := AJson.GetNode(ActualFieldName);
-    if Node <> nil then
-    begin
-      case Node.GetNodeType of
-        jntString: Val := TValue.From<string>(Node.AsString);
-        jntNumber:
-          begin
-            if (Field.FieldType.Handle = TypeInfo(Integer)) then
-              Val := TValue.From<Integer>(Node.AsInteger)
-            else if (Field.FieldType.Handle = TypeInfo(Int64)) then
-              Val := TValue.From<Int64>(Node.AsInt64)
-            else
-              Val := TValue.From<Double>(Node.AsDouble);
-          end;
-        jntBoolean: Val := TValue.From<Boolean>(Node.AsBoolean);
-        jntObject:
-           begin
-             if (Field.FieldType.TypeKind = tkClass) then
-               Val := DeserializeObject(Node as IDextJsonObject, Field.FieldType.Handle)
-             else if (Field.FieldType.TypeKind = tkRecord) then
-               Val := DeserializeRecord(Node as IDextJsonObject, Field.FieldType.Handle)
-             else
-               Val := TValue.Empty;
-           end;
-        jntArray:
-           begin
-             if IsArrayType(Field.FieldType.Handle) then
-               Val := DeserializeArray(Node as IDextJsonArray, Field.FieldType.Handle)
-             else if IsListType(Field.FieldType.Handle) then
-               Val := DeserializeList(Node as IDextJsonArray, Field.FieldType.Handle)
-             else
-               Val := TValue.Empty;
-           end;
-        else Val := TValue.Empty;
-      end;
-
-      if not Val.IsEmpty then
+      if (Field.FieldType <> nil) and (Field.FieldType.TypeKind = tkInterface) then
+      begin
+        var FieldPtr: ^IInterface;
+        FieldPtr := Pointer(PByte(Result.GetReferenceToRawData) + Field.Offset);
+        FieldPtr^ := Val.AsInterface;
+      end
+      else
         TReflection.SetValue(Result.GetReferenceToRawData, Field, Val);
     end;
   end;
@@ -952,14 +919,27 @@ end;
 function TDextSerializer.GetFieldName(AField: TRttiField): string;
 var
   Attribute: TCustomAttribute;
+  RttiType: TRttiType;
 begin
   for Attribute in AField.GetAttributes do
-  begin
     if Attribute is JsonNameAttribute then
       Exit(JsonNameAttribute(Attribute).Name);
-  end;
 
-  Result := ApplyCaseStyle(AField.Name);
+  Result := AField.Name;
+
+  // Standard Dext Convention for Records:
+  // If field starts with 'F' and it is a record, we assume it is a storage field
+  // and strip the 'F' to match the intended property name in JSON.
+  RttiType := AField.Parent;
+  if (RttiType <> nil) and (RttiType.IsRecord) and (FSettings.FSmartRecordMapping) then
+  begin
+    if (Result.Length > 1) and (Result.Chars[0] = 'F') then
+    begin
+      Result := Result.Substring(1);
+    end;
+  end;
+  
+  Result := ApplyCaseStyle(Result);
 end;
 
 function TDextSerializer.GetRecordName(ARttiType: TRttiType): string;
@@ -1283,6 +1263,22 @@ begin
           NestedRecord := SerializeRecord(FieldValue);
           Result.SetObject(FieldName, NestedRecord);
         end;
+
+      tkInterface, tkClass:
+        begin
+          if IsListType(Field.FieldType.Handle) then
+            Result.SetArray(FieldName, SerializeList(FieldValue))
+          else if (Field.FieldType.Handle.Kind = tkClass) then
+            Result.SetObject(FieldName, SerializeObject(FieldValue))
+          else
+            // Fallback for other interfaces or complex types
+            Result.SetObject(FieldName, SerializeObject(FieldValue));
+        end;
+
+      tkDynArray:
+        begin
+          Result.SetArray(FieldName, SerializeArray(FieldValue));
+        end;
     end;
   end;
 end;
@@ -1481,9 +1477,22 @@ begin
     end;
   end;
 
-  Result := (AField.Visibility <> mvPublic) or
-            (AField.FieldType = nil) or
+  Result := (AField.FieldType = nil) or
             (AField.Name.StartsWith('$'));
+
+  // Normal visibility check for classes
+  // For records, we allow private fields starting with 'F' (storage fields)
+  if not Assigned(AField.Parent) or not AField.Parent.IsRecord then
+  begin
+    if (AField.Visibility <> mvPublic) and (AField.Visibility <> mvPublished) then
+      Result := True;
+  end
+  else
+  begin
+    // In records, if it's not public and doesn't start with F, skip it
+    if (AField.Visibility <> mvPublic) and not AField.Name.StartsWith('F') then
+      Result := True;
+  end;
 end;
 
 function TDextSerializer.ValueToJson(const AValue: TValue): IDextJsonObject;
@@ -1589,8 +1598,15 @@ begin
 end;
 
 function TDextSerializer.IsListType(AType: PTypeInfo): Boolean;
+var
+  TypeName: string;
 begin
   Result := TActivator.IsListType(AType);
+  if not Result and (AType <> nil) and (AType.Kind = tkInterface) then
+  begin
+    TypeName := string(AType.Name);
+    Result := TypeName.Contains('IList<') or TypeName.Contains('IReadOnlyList<') or TypeName.Contains('IEnumerable<');
+  end;
 end;
 
 function TDextSerializer.IsDictionaryType(AType: PTypeInfo): Boolean;

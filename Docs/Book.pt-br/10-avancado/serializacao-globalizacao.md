@@ -89,6 +89,75 @@ Esta é uma API de streaming de alta performance encontrada no namespace `Dext.J
 *   **Pontos Fortes**: Processamento **zero-allocation**. Consegue processar volumes massivos de dados com um footprint de memória constante e mínimo, independentemente do tamanho do arquivo.
 *   **Trade-offs**: Como é um streaming parser, ele não indexa o documento. Localizar uma propriedade específica requer uma varredura sequencial desde o início do buffer, o que pode ser mais lento em benchmarks de acesso aleatório, mas é irrelevante para throughput sequencial.
 
+---
+
+## Convenções de Mapeamento JSON (CoC)
+
+O Dext segue uma abordagem de **Convenção sobre Configuração (CoC)** para a serialização JSON, otimizada especificamente para lidar com as particularidades do RTTI do Delphi.
+
+### Serialização de Records
+O RTTI do Delphi possui limitações no tratamento de propriedades em records durante a manipulação dinâmica de memória. Para garantir uma serialização e deserialização confiável, o Dext segue estas regras:
+
+1.  **Campos Públicos**: Sempre utilize campos (`fields`) públicos para os membros de records que deseja serializar.
+
+```pascal
+type
+  TUserDTO = record
+  public
+    id: Integer;
+    name: string;
+    roles: IList<string>;
+  end;
+```
+
+2.  **Mapeamento Explícito**: Utilize o atributo `[JsonName]` para desvincular sua convenção de nomenclatura PascalCase das chaves JSON (geralmente camelCase ou snake_case).
+
+```pascal
+type
+  TUserDTO = record
+  public
+    [JsonName('id')] Id: Integer;
+    [JsonName('full_name')] Name: string;
+    [JsonName('roles')] Roles: IList<string>;
+  end;
+```
+
+> [!IMPORTANT]
+> **Evite propriedades em Records** para fins de serialização. Embora o Delphi as suporte, chamadas `SetValue` via RTTI em records muitas vezes operam em cópias temporárias da estrutura, fazendo com que a instância original não seja populada corretamente. Use campos públicos.
+
+### Tratamento de Coleções Genéricas (IList<T>)
+Quando o Dext encontra um tipo de interface como `IList<T>` ou `IReadOnlyList<T>`, ele precisa de uma estratégia para instanciar a implementação concreta.
+
+#### 1. Registro via TActivator
+Registre o mapeamento entre a interface e sua implementação concreta (geralmente `TList<T>` ou `TSmartList<T>`).
+
+```pascal
+initialization
+  TActivator.RegisterDefault<IList<TUserDTO>, TList<TUserDTO>>;
+```
+
+#### 2. Pré-instanciação (Hidratação)
+Se um campo ou propriedade já contiver uma instância (ex: criada em um construtor ou via factory), o Dext irá **detectar e reutilizar** essa instância em vez de tentar criar uma nova.
+
+```pascal
+constructor TMyClass.Create;
+begin
+  // O Dext irá popular esta lista existente durante a deserialização
+  FItems := TCollections.CreateList<TItem>; 
+end;
+```
+
+### O Atributo `[JsonName]`
+O atributo `[JsonName]` permite manter seu código Delphi limpo e seguindo os padrões da linguagem, enquanto atende a requisitos externos de APIs.
+
+```pascal
+type
+  TConfig = record
+  public
+    [JsonName('max_threads')] MaxThreads: Integer; // Mapeia para "max_threads" no JSON
+  end;
+```
+
 > [!TIP]
 > Use o **Dext DOM** para o desenvolvimento diário de suas APIs. Mude para o **Dext UTF-8** apenas quando o consumo de memória se tornar um gargalo ou quando estiver processando fluxos massivos de dados.
 
