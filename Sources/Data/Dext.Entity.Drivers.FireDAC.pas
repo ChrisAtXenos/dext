@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -210,7 +210,7 @@ begin
         Result := TValue.From<TDate>(DateOf(Field.AsDateTime));
       ftTime:
         Result := TValue.From<TTime>(TimeOf(Field.AsDateTime));
-      ftDateTime, ftTimeStamp, ftOraTimeStamp:
+      ftDateTime, ftTimeStamp, ftOraTimeStamp, ftTimeStampOffset:
         Result := TValue.From<TDateTime>(Field.AsDateTime);
       ftBlob, ftOraBlob, ftGraphic, ftTypedBinary, ftParadoxOle, ftDBaseOle, ftVarBytes, ftBytes:
         try
@@ -450,7 +450,7 @@ begin
       Param.AsDate := V.AsType<TDate>;
     ftTime:
       Param.AsTime := V.AsType<TTime>;
-    ftDateTime, ftTimeStamp:
+    ftDateTime, ftTimeStamp, ftOraTimeStamp, ftTimeStampOffset:
       Param.AsDateTime := V.AsType<TDateTime>;
     ftBoolean:
       Param.AsBoolean := V.AsBoolean;
