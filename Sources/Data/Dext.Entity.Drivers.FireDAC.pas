@@ -393,13 +393,20 @@ var
 begin
   if Length(AValues) = 0 then
     Exit;
-  FQuery.Prepare;
+
+  // ParamCreate=True (constructor) populates Params from SQL.Text immediately,
+  // so we can validate the count BEFORE Prepare. Defer Prepare until AFTER values
+  // are set so SetParamValue can assign Param.DataType from each TValue first.
+  // This avoids PostgreSQL PG-335 "Parameter [X] data type is unknown".
   if FQuery.Params.Count <> Length(AValues) then
     raise Exception.CreateFmt(
       'FromSql parameter count mismatch: SQL has %d parameter(s) but %d value(s) were supplied.',
       [FQuery.Params.Count, Length(AValues)]);
+
   for i := 0 to High(AValues) do
     SetParamValue(FQuery.Params[i], AValues[i]);
+
+  FQuery.Prepare;
 end;
 
 procedure TFireDACCommand.SetParamValueWithType(Param: TFDParam; const AValue: TValue; ADataType: TFieldType);
