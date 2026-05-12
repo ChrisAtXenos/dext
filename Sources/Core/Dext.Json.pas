@@ -831,6 +831,7 @@ var
   Node: IDextJsonNode;
   RttiType: TRttiType;
   Val: TValue;
+  FieldPtr: ^IInterface;
 begin
   if AType = TypeInfo(TGUID) then
     Exit(TValue.From<TGUID>(StringToGUID(AJson.GetString(ValueField))));
@@ -906,7 +907,6 @@ begin
     begin
       if (Field.FieldType <> nil) and (Field.FieldType.TypeKind = tkInterface) then
       begin
-        var FieldPtr: ^IInterface;
         FieldPtr := Pointer(PByte(Result.GetReferenceToRawData) + Field.Offset);
         FieldPtr^ := Val.AsInterface;
       end
