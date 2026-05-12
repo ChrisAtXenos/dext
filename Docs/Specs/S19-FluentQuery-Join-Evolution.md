@@ -47,6 +47,57 @@ The following are **not** to be shipped in RC1:
 - Add explicit aliases (example: `JoinInMemory`) while preserving legacy `Join<TInner,...>`.
 - Add XML docs warning for in-memory materialization behavior.
 
+### Proposed DSL Evolution (Primary Path)
+Current SQL join shape:
+```pascal
+.Join('order_items', 'oi', 'products.id = oi.product_id', jtInner)
+```
+
+Proposed fluent/type-safe shape:
+```pascal
+var p := Prototype.Entity<TProduct>;
+var oi := Prototype.Entity<TOrderItem>; // default alias auto-generated
+
+Context.Entities<TProduct>
+  .AsNoTracking
+  .JoinInner<TOrderItem>(p.Id = oi.ProductId)
+  .Where(TProductType.Price > 10)
+  .OrderBy(TProductType.Name.Asc)
+  .Take(100)
+  .ToList;
+```
+
+Optional alias override:
+```pascal
+Context.Entities<TProduct>
+  .JoinInner<TOrderItem>('oi', p.Id = oi.ProductId);
+```
+
+#### Design intent
+- Prefer expressive DSL over multi-string/multi-parameter signatures.
+- Keep join condition strongly typed through expression tree.
+- Eliminate fragile string parsing from preferred path.
+- Preserve low-level API for compatibility/interoperability.
+
+#### Candidate signatures (additive)
+```pascal
+function JoinInner<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+function JoinLeft<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+function JoinRight<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+
+function JoinInner<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+function JoinLeft<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+function JoinRight<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+```
+
+#### Alias policy
+- Default alias must be deterministic and collision-safe.
+- Suggested default strategy:
+  1. start from type/table short name (`OrderItem` -> `oi`)
+  2. if collision, suffix increment (`oi2`, `oi3`)
+- Explicit alias always wins.
+- Alias allocation must be cached in query build context to avoid repeated work.
+
 ## 2) String Join Condition Helper
 ### Goals
 - Keep ergonomic overload for simple `"left = right"` scenarios.
@@ -60,6 +111,13 @@ The following are **not** to be shipped in RC1:
 - Clear exception messages for invalid formats.
 - Document that complex ON expressions must use `IExpression`.
 
+### Positioning after S19 DSL
+- Keep `Join(table, alias, condition, type)` and `Join(..., condition: string, ...)` as **legacy/low-level path**.
+- Mark strongly-typed `JoinInner/Left/Right` as **preferred path** in docs/examples.
+- Deprecation policy (non-breaking):
+  - Post-Final + 1 cycle: mark legacy path as "advanced/interop"
+  - Post-Final + 2+ cycles: evaluate soft deprecation warnings (no hard removal)
+
 ## 3) SQL Join Projection Ergonomics
 ### Goals
 - Improve practical usability for joined result shapes without compromising performance.
@@ -68,6 +126,15 @@ The following are **not** to be shipped in RC1:
 - Evaluate typed projection helpers for SQL joins.
 - Avoid runtime reflection-heavy projection in hot paths.
 
+### Candidate extension
+Evaluate additive projection patterns that keep SQL-side execution:
+```pascal
+.SelectJoin<TResult>(...)
+```
+Constraints:
+- no per-row reflection in materialization loop
+- generated projector cached by query signature/type tuple
+
 ## 4) Diagnostics and Operability
 ### Goals
 - Improve explainability/debugging of query translation.
@@ -75,6 +142,13 @@ The following are **not** to be shipped in RC1:
 ### Candidate actions
 - Evaluate `ToQueryString()`-style API for generated SQL + params.
 - Query tagging (`TagWith`) for observability/tracing.
+
+### Join-specific diagnostics
+- Include resolved join metadata in debug trace:
+  - join type
+  - table and alias
+  - ON expression SQL
+- Optional strict mode for ambiguity detection before execution when possible.
 
 ---
 
@@ -87,6 +161,11 @@ Any post-Final change must be validated across:
 - Examples (`Orm.EntityDemo`, others)
 - Dext Book EN/PT-BR
 - Unit/integration/performance test suites
+
+### Additional impact surface for DSL join evolution
+- Prototype system (`Dext.Specifications.Types` and related builders)
+- Expression translators that consume prototype-origin expressions
+- Documentation examples currently using raw `Join('table',...)`
 
 ### Compatibility rules
 1. No breaking signature removals in first post-Final iteration.
@@ -110,6 +189,12 @@ All proposed changes must satisfy:
 
 Use existing benchmark infra from S18.
 
+### Additional zero-allocation guardrails for DSL joins
+1. No transient string allocations in join condition hot path when using typed DSL.
+2. Alias resolution should allocate once per query build at most.
+3. Expression normalization for ON clause must use cached translators.
+4. SQL qualification logic for joined base columns must remain O(n columns) with no hidden quadratic behavior.
+
 ---
 
 ## Risk Register
@@ -132,14 +217,30 @@ Mitigation: synchronized update checklist in PR template
 - Documentation and naming clarity
 - Alias APIs (if approved)
 - Non-breaking helper APIs
+- Add typed `JoinInner/Left/Right` overload set (with and without explicit alias)
+- Keep legacy join API fully functional
 
 2. **Phase B (Diagnostics)**
 - Query explain/inspect API
 - Optional tagging support
+- Join-specific debug payloads (resolved aliases/ON SQL)
 
 3. **Phase C (Ergonomic Projection)**
 - Typed SQL join projection patterns
 - Performance validation and hardening
+- Evaluate migration hints/tooling to promote typed DSL adoption
+
+---
+
+## Migration Strategy (No Breaking Changes)
+1. Add typed join DSL as first-class documented approach.
+2. Keep legacy API intact and covered by tests.
+3. Update examples progressively:
+   - RC docs: show both, emphasize behavior differences
+   - Post-Final docs: put typed DSL first, legacy in advanced section
+4. Add analyzer-style docs checklist to PR templates:
+   - if new join example added, include SQL vs in-memory note
+   - include ambiguity-safe SQL assertions where relevant
 
 ---
 
@@ -155,4 +256,3 @@ Mitigation: synchronized update checklist in PR template
 ## Immediate Priority Note
 While this spec defines the post-Final roadmap, the **current active priority in RC1** is:
 - Deliver Issue #117 with focused examples and documentation.
-
