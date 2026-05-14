@@ -34,6 +34,11 @@ type
     class procedure Initialize;
     
     /// <summary>
+    ///   Adds a custom sink to the global logging pipeline.
+    /// </summary>
+    class procedure AddSink(const ASink: ILogSink);
+    
+    /// <summary>
     ///   Access the global logger instance.
     /// </summary>
     class property Logger: ILogger read GetLogger;
@@ -113,6 +118,13 @@ begin
   
   // Let's Create the Logger instance
   FLogger := FFactory.CreateLogger('App');
+end;
+
+class procedure Log.AddSink(const ASink: ILogSink);
+begin
+  if FFactory = nil then
+    Initialize;
+  FFactory.AddSink(ASink);
 end;
 
 class function Log.GetLogger: ILogger;
