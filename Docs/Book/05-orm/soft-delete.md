@@ -29,6 +29,46 @@ TUser = class
 end;
 ```
 
+## Deletion Timestamp (Audit)
+
+If you need to track **when** a record was deleted, use the `[DeletedAt]` attribute. The presence of this attribute on a property automatically enables Soft Delete for the entire entity.
+
+```pascal
+type
+  [Table('orders')]
+  TOrder = class
+  private
+    FDeletedAt: DateTimeType; // Ideal: Smart Property (Dext unit)
+  public
+    [DeletedAt]
+    property DeletedAt: DateTimeType read FDeletedAt write FDeletedAt;
+  end;
+```
+
+> [!TIP]
+> Ideally, use **Smart Properties** (`DateTimeType`), which provide native null support and type safety in queries. If you are not using Smart Properties, you must use `Nullable<TDateTime>` to ensure the field starts as `NULL`.
+
+In this mode:
+*   **Filter**: Dext automatically applies `WHERE DeletedAt IS NULL` for active records.
+*   **Action**: When calling `.Remove()`, the field is automatically populated with the current timestamp (`Now`).
+
+### Hybrid Mode (Performance + Audit)
+
+For high-performance scenarios, you can combine both attributes. Use `[SoftDelete]` at the class level for fast filtering (boolean) and `[DeletedAt]` on a property for auditing:
+
+```pascal
+[SoftDelete('IsDeleted')] 
+TOrder = class
+  property IsDeleted: Boolean read FIsDeleted write FIsDeleted;
+
+  [DeletedAt] 
+  property DeletedAt: DateTimeType read FDeletedAt write FDeletedAt;
+end;
+```
+
+> [!IMPORTANT]
+> In hybrid mode, Dext prioritizes the boolean flag for generating SQL filters for performance reasons, but ensures that both fields are updated during deletion.
+
 ## Operations
 
 ### Deleting

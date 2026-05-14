@@ -270,6 +270,14 @@ type
   end;
 
   /// <summary>
+  ///   Marks a property as the Soft Delete Timestamp.
+  ///   The presence of this attribute enables Soft Delete automatically.
+  ///   The ORM will set this field to the current date/time on Delete.
+  /// </summary>
+  DeletedAtAttribute = class(TCustomAttribute)
+  end;
+
+  /// <summary>
   ///   Defines the cascade action for foreign key constraints.
   /// </summary>
   TCascadeAction = (

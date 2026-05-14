@@ -176,6 +176,7 @@ type
     // Audit Timestamps
     IsCreatedAt: Boolean;
     IsUpdatedAt: Boolean;
+    IsDeletedAt: Boolean; // New: Soft Delete Timestamp
     // Internal engine optimization
     FieldOffset: Integer;      // Offset of Null flag (Boolean) - Used by TEntityDataSet
     MetadataOffset: Integer;   // Offset of FInfo (IPropInfo) - Used by Prototype
@@ -508,8 +509,8 @@ begin
       (AAttr is RequiredAttribute) or (AAttr is MaxLengthAttribute) or (AAttr is MinLengthAttribute) or (AAttr is PrecisionAttribute) or
       (AAttr is TypeConverterAttribute) or (AAttr is HasManyAttribute) or (AAttr is BelongsToAttribute) or
       (AAttr is HasOneAttribute) or (AAttr is InversePropertyAttribute) or (AAttr is DeleteBehaviorAttribute) or
-      (AAttr is ManyToManyAttribute) or (AAttr is VersionAttribute) or (AAttr is CreatedAtAttribute) or
-      (AAttr is UpdatedAtAttribute) or (AAttr is JsonColumnAttribute) or (AAttr is DbTypeAttribute) or
+      (AAttr is ManyToManyAttribute) or (AAttr is VersionAttribute) or (AAttr is CreatedAtAttribute) or (AAttr is UpdatedAtAttribute) or (AAttr is DeletedAtAttribute) or
+      (AAttr is JsonColumnAttribute) or (AAttr is DbTypeAttribute) or
       (AAttr is CaptionAttribute) or (AAttr is DisplayFormatAttribute) or (AAttr is DisplayWidthAttribute) or
       (AAttr is EditMaskAttribute) or (AAttr is AlignmentAttribute) or (AAttr is DefaultValueAttribute) or
       (AAttr is VisibleAttribute) or (AAttr is ReadOnlyAttribute) or
@@ -581,6 +582,18 @@ begin
     // Audit Timestamps
     if AAttr is CreatedAtAttribute then APropMap.IsCreatedAt := True;
     if AAttr is UpdatedAtAttribute then APropMap.IsUpdatedAt := True;
+    if AAttr is DeletedAtAttribute then
+    begin
+      APropMap.IsDeletedAt := True;
+      // Only assume SoftDelete responsibility if not already defined by class attribute
+      if not FIsSoftDelete then
+      begin
+        FIsSoftDelete := True;
+        FSoftDeleteProp := APropMap.PropertyName;
+        FSoftDeleteDeletedValue := Null; 
+        FSoftDeleteNotDeletedValue := Null;
+      end;
+    end;
     
     // JSON Column
     if AAttr is JsonColumnAttribute then

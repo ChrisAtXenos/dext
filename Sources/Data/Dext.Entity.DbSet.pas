@@ -1403,23 +1403,24 @@ procedure TDbSet<T>.PersistRemove(const AEntity: TObject);
 var
   Attr: TCustomAttribute;
   Cmd: IDbCommand;
-  ColumnName: string;
   DeletedVal: Variant;
   Generator: TSqlGenerator<T>;
   IsSoftDelete: Boolean;
   Key: string;
-  P: TRttiProperty;
   Pair: TPair<string, TValue>;
   ParamType: TFieldType;
   Payload: TJSONObject;
   Prop: TRttiProperty;
   PropName: string;
+  PropMap: TPropertyMap;
   RowsAffected: Integer;
   RType: TRttiType;
   SoftDeleteAttr: SoftDeleteAttribute;
   Sql: string;
   SW: TStopwatch;
   ValToSet: TValue;
+  NowVal: TDateTime;
+  HasChanged: Boolean;
 begin
   IsSoftDelete := False;
   PropName := '';
@@ -1451,52 +1452,61 @@ begin
     end;
   end;
   
+  NowVal := Now;
+  HasChanged := False;
+  
+  // Check if any property in Fluent Mapping is marked as DeletedAt
+  if (not IsSoftDelete) and (FMap <> nil) then
+  begin
+    for PropMap in FMap.Properties.Values do
+    begin
+      if PropMap.IsDeletedAt then
+      begin
+        IsSoftDelete := True; // If we have DeletedAt, it IS a soft delete
+        Break;
+      end;
+    end;
+  end;
+  
   if IsSoftDelete then
   begin
     // Soft Delete: UPDATE entity to mark as deleted
     RType := TReflection.Context.GetType(T);
     if RType <> nil then
     begin
-      // Find the soft delete column property
-      Prop := nil;
-      ColumnName := PropName; // Use PropName as search key
-      
-      for P in RType.GetProperties do
+      for Prop in RType.GetProperties do
       begin
-        // Check match by Property Name
-        if SameText(P.Name, ColumnName) then
+        PropMap := nil;
+        if (FMap <> nil) then FMap.Properties.TryGetValue(Prop.Name, PropMap);
+        
+        // Priority 1: Check if it's a [DeletedAt] field (Fluent or Attribute)
+        if (PropMap <> nil) and PropMap.IsDeletedAt then
         begin
-          Prop := P;
-          Break;
+          ValToSet := TValue.From<TDateTime>(NowVal);
+          TReflection.SetValue(Pointer(AEntity), Prop, ValToSet);
+          HasChanged := True;
         end;
 
-        // Check match by Column Name (Only relevant if PropName was actually a Column Name from Attribute)
-        for Attr in P.GetAttributes do
+        // Priority 2: Check if it's the specific SoftDelete filter property
+        if PropName <> '' then
         begin
-          if Attr is ColumnAttribute then
+          if SameText(Prop.Name, PropName) then
           begin
-             if SameText(ColumnAttribute(Attr).Name, ColumnName) then
-             begin
-               Prop := P;
-               Break;
-             end;
+            if Prop.PropertyType.Handle = TypeInfo(Boolean) then
+              ValToSet := TValue.From(Boolean(DeletedVal))
+            else
+              ValToSet := TValue.FromVariant(DeletedVal);
+              
+            TReflection.SetValue(Pointer(AEntity), Prop, ValToSet);
+            HasChanged := True;
           end;
         end;
-        if Prop <> nil then Break;
       end;
       
-      if Prop <> nil then
+      if HasChanged then
       begin
-        // Set the soft delete value
-        if Prop.PropertyType.Handle = TypeInfo(Boolean) then
-          ValToSet := TValue.From(Boolean(DeletedVal))
-        else
-          ValToSet := TValue.FromVariant(DeletedVal);
-            
-        TReflection.SetValue(Pointer(AEntity), Prop, ValToSet);
-          
         // Use PersistUpdate to save the change
-        PersistUpdate(AEntity);
+        PersistUpdate(T(AEntity));
           
         // Remove from identity map (entity is "deleted" from context perspective)
         Key := GetEntityId(T(AEntity));

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -32,6 +32,7 @@ uses
   System.Character,
   System.Classes,
   FireDAC.Comp.Client,
+  FireDAC.Stan.Param,
   Dext.Collections.Base,
   Dext.Collections.Dict,
   Dext.Collections,

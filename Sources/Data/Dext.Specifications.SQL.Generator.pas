@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -150,13 +150,15 @@ type
     FContext: IDbContext;
     FTenantProvider: ITenantProvider;
 
+    procedure Initialize(ADialect: ISQLDialect; AMap: TEntityMap; ATenantProvider: ITenantProvider);
+  protected
     function GetNextParamName: string;
     function GetTableName: string;
     function GetSoftDeleteFilter: string;
     function GetDiscriminatorFilter: string;
     function GetDiscriminatorValueSQL: string;
     function GetQueryFiltersSQL: string;
-
+    
     function GetDialectEnum: TDatabaseDialect;
     function GetJoinTypeSQL(AType: TJoinType): string;
     function GenerateJoins(const AJoins: TArray<IJoin>): string;
@@ -164,7 +166,6 @@ type
     function QuoteColumnOrAlias(const AName: string): string;
     function QualifyBaseColumn(const AColumnName, ABaseTableName: string; AHasJoins: Boolean): string;
     function TryUnwrapSmartValue(var AValue: TValue): Boolean;
-    procedure Initialize(ADialect: ISQLDialect; AMap: TEntityMap; ATenantProvider: ITenantProvider);
   public
     constructor Create(ADialect: ISQLDialect; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil); overload;
     constructor Create(AContext: IDbContext; AMap: TEntityMap = nil; ATenantProvider: ITenantProvider = nil); overload;
@@ -1042,6 +1043,19 @@ begin
 
       ColumnName := PropColumnName;
       TargetPropType := Prop.PropertyType.Handle;
+      
+      // Check if it's a Timestamp-based soft delete
+      if (PropMap <> nil) and PropMap.IsDeletedAt then
+      begin
+        if FIgnoreQueryFilters then Exit('');
+        
+        if FOnlyDeleted then
+          Result := Format('%s IS NOT NULL', [FDialect.QuoteIdentifier(ColumnName)])
+        else
+          Result := Format('%s IS NULL', [FDialect.QuoteIdentifier(ColumnName)]);
+        Exit;
+      end;
+      
       Break;
     end;
   end;

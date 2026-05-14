@@ -30,7 +30,8 @@ uses
   Dext.Entity.Scaffolding.Tests in 'Dext.Entity.Scaffolding.Tests.pas',
   Dext.Entity.Migrations.Tests in 'Dext.Entity.Migrations.Tests.pas',
   Dext.Entity.SnakeCaseFk.Tests in 'Dext.Entity.SnakeCaseFk.Tests.pas',
-  Dext.Entity.FormatSettings.Tests in 'Dext.Entity.FormatSettings.Tests.pas';
+  Dext.Entity.FormatSettings.Tests in 'Dext.Entity.FormatSettings.Tests.pas',
+  Dext.Entity.SoftDelete.Tests in 'Dext.Entity.SoftDelete.Tests.pas';
 
 begin
   {$IFDEF TESTINSIGHT}
@@ -73,7 +74,9 @@ begin
         TEntityArchitectureTests,
         TScaffoldingTests,
         TMigrationTests,
-        TEntityFormatSettingsTests
+        TEntityFormatSettingsTests,
+        TSoftDeleteUnitTests,
+        TSoftDeleteIntegrationTests
       ]));
   except
     on E: Exception do
