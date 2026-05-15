@@ -20,10 +20,10 @@
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
-{    Rich content types for MCP tools, resources, and prompts.             }
+{    Rich content types for MCP tools, resources, and prompts.              }
 {                                                                           }
-{    TMCPToolResult supports multiple content items (text, image, audio,   }
-{    embedded resource) and the isError flag, matching the MCP spec.       }
+{    TMCPToolResult supports multiple content items (text, image, audio,    }
+{    embedded resource) and the isError flag, matching the MCP spec.        }
 {                                                                           }
 {  Usage:                                                                   }
 {    // Simple text result                                                  }
@@ -33,12 +33,12 @@
 {    Result := TMCPToolResult.Error('Item not found');                      }
 {                                                                           }
 {    // Multi-content result                                                }
-{    var R := TMCPToolResult.Text('Here is the chart:');                   }
+{    var R := TMCPToolResult.Text('Here is the chart:');                    }
 {    R.AddContent(TMCPContent.Image(Base64Data, 'image/png'));              }
 {    Result := R;                                                           }
 {                                                                           }
 {***************************************************************************}
-unit Dext.MCP.Types;
+unit Dext.AI.MCP.Types;
 
 interface
 

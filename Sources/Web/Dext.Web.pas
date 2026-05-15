@@ -83,6 +83,7 @@ uses
   Dext.Web.View.WebStencils,
   {$ENDIF}
   Dext.Web.Routing,
+  Dext.Web.Sessions.Streamable,
   Dext.Web.RoutingMiddleware,
   Dext.Web.StaticFiles,
   Dext.Http.StatusCodes,
@@ -104,7 +105,8 @@ uses
   Dext.Web.ModelBinding.Extensions,
 {$WARN UNIT_DEPRECATED ON}
   Dext.Web.ModelBinding,
-  Dext.Web.Routing.Attributes
+  Dext.Web.Routing.Attributes,
+  Dext.Hosting.ApplicationLifetime
   // {END_DEXT_USES}
   ;
 
@@ -680,6 +682,13 @@ type
     ///   Registers the Web Stencils view engine using a fluent builder configuration.
     /// </summary>
     function AddWebStencils(const ABuilder: TViewOptionsBuilder): TDextServices; overload;
+
+    /// <summary>
+    ///   Registers `TInMemoryStreamableSessionManager` as `IStreamableSessionManager` in DI.
+    ///   Call once during service configuration. Use `App.UseStreamableSessions` to also
+    ///   start the background scavenger thread for idle session cleanup.
+    /// </summary>
+    function AddStreamableSessions: TDextServices;
   end;
 
   TDextWebServicesHelper = TWebServicesHelper;
@@ -801,6 +810,14 @@ type
     ///   Enables Server-Side Surface Rendering (SSR) view support.
     /// </summary>
     function UseViewEngine: AppBuilder;
+
+    /// <summary>
+    ///   Starts the Streamable Session Scavenger thread (background GC for idle sessions).
+    ///   Requires `Services.AddStreamableSessions` to be called first.
+    ///   Default: checks every 60s, evicts sessions idle for 30min.
+    /// </summary>
+    function UseStreamableSessions(AIntervalSeconds: Integer = 60;
+      ATimeoutMinutes: Integer = 30): AppBuilder;
 
     // -------------------------------------------------------------------------
     // ?? Middleware
@@ -1739,6 +1756,61 @@ end;
 function THttpAppBuilderHelper.UseViewEngine: AppBuilder;
 begin
   Result := Self;
+end;
+
+function TWebServicesHelper.AddStreamableSessions: TDextServices;
+begin
+  Result := Self.AddSingleton<IStreamableSessionManager, TInMemoryStreamableSessionManager>(
+    function(Provider: IServiceProvider): TObject
+    begin
+      Result := TInMemoryStreamableSessionManager.Create;
+    end);
+end;
+
+function THttpAppBuilderHelper.UseStreamableSessions(AIntervalSeconds,
+  ATimeoutMinutes: Integer): AppBuilder;
+var
+  Interval, Timeout: Integer;
+  Started: Boolean;
+begin
+  Result := Self;
+  Interval := AIntervalSeconds;
+  Timeout  := ATimeoutMinutes;
+  Started  := False;
+
+  // Lazy middleware: Scavenger starts on the first real request,
+  // when Ctx.Services is guaranteed to be fully built.
+  // (During TWebHostBuilder.Configure, GetServiceProvider is still nil.)
+  Self.Unwrap.Use(
+    procedure(Ctx: IHttpContext; Next: TRequestDelegate)
+    var
+      Manager: IStreamableSessionManager;
+      LifetimeIntf: IInterface;
+      StoppingToken: ICancellationToken;
+    begin
+      if not Started then
+      begin
+        Manager := TDextServices.GetService<IStreamableSessionManager>(Ctx.Services);
+        if Assigned(Manager) then
+        begin
+          // Resolve host ApplicationStopping token — Scavenger exits within 500ms
+          // when the host begins shutdown, aligned with the framework's CT pattern.
+          StoppingToken := nil;
+          LifetimeIntf := Ctx.Services.GetServiceAsInterface(
+            TServiceType.FromInterface(IHostApplicationLifetime));
+          if LifetimeIntf <> nil then
+            StoppingToken := (LifetimeIntf as IHostApplicationLifetime).ApplicationStopping;
+
+          Manager.StartScavenger(Interval, Timeout, StoppingToken);
+          Started := True;
+        end
+        else
+          raise Exception.Create(
+            'IStreamableSessionManager not registered. ' +
+            'Call Services.AddStreamableSessions before App.UseStreamableSessions.');
+      end;
+      Next(Ctx);
+    end);
 end;
 
 end.

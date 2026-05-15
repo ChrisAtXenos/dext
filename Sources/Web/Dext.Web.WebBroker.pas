@@ -37,6 +37,8 @@ uses
   Dext.Web.Interfaces,
   Dext.DI.Interfaces,
   Dext.Auth.Identity,
+  Dext.Web.Results,
+  Dext, // Para TDextServices
   Dext.Json;
 
 type
@@ -104,10 +106,15 @@ type
     FContentType: string;
     FCustomHeaders: TStringList;
     FCookies: array of TCookieEntry;
+    FHtmx: IHtmxResponse;
+    FHeaders: IStringDictionary;
     procedure FlushToWebResponse;
   public
     constructor Create(AWebResponse: TWebResponse);
     destructor Destroy; override;
+
+    function GetHtmx: IHtmxResponse;
+    function GetHeaders: IStringDictionary;
 
     function Status(AValue: Integer): IHttpResponse;
     function GetStatusCode: Integer;
@@ -161,6 +168,7 @@ type
     function GetUser: IClaimsPrincipal;
     procedure SetUser(const AValue: IClaimsPrincipal);
     function GetItems: IDictionary<string, TValue>;
+    function GetSession: IStreamableSession;
     property Request: IHttpRequest read GetRequest;
     property Response: IHttpResponse read GetResponse write SetResponse;
     property Services: IServiceProvider read GetServices write SetServices;
@@ -531,9 +539,31 @@ begin
   Json(TDextJson.Serialize(AValue));
 end;
 
+function TDextWebBrokerResponse.GetHtmx: IHtmxResponse;
+begin
+  if FHtmx = nil then
+    FHtmx := THtmxResponse.Create(Self);
+  Result := FHtmx;
+end;
+
+function TDextWebBrokerResponse.GetHeaders: IStringDictionary;
+var
+  i: Integer;
+begin
+  if FHeaders = nil then
+  begin
+    FHeaders := TCollections.CreateStringDictionary(True);
+    for i := 0 to FCustomHeaders.Count - 1 do
+      FHeaders.AddOrSetValue(FCustomHeaders.Names[i], FCustomHeaders.ValueFromIndex[i]);
+  end;
+  Result := FHeaders;
+end;
+
 procedure TDextWebBrokerResponse.AddHeader(const AName, AValue: string);
 begin
   FCustomHeaders.Add(AName + '=' + AValue);
+  if FHeaders <> nil then
+    FHeaders.AddOrSetValue(AName, AValue);
 end;
 
 procedure TDextWebBrokerResponse.AppendCookie(const AName, AValue: string;
@@ -658,6 +688,22 @@ end;
 function TDextWebBrokerContext.GetItems: IDictionary<string, TValue>;
 begin
   Result := FItems;
+end;
+
+function TDextWebBrokerContext.GetSession: IStreamableSession;
+var
+  LManager: IStreamableSessionManager;
+  LId: string;
+begin
+  LId := FRequest.GetHeader('Dext-Session-Id');
+  if LId = '' then
+    Exit(nil);
+    
+  LManager := TDextServices.GetService<IStreamableSessionManager>(FServices);
+  if LManager <> nil then
+    Result := LManager.GetSession(LId)
+  else
+    Result := nil;
 end;
 
 { TDextWebBrokerServer }

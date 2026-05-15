@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -24,7 +24,7 @@
 {                                                                           }
 {***************************************************************************}
 unit Dext.Web.WebApplication;
-{$I ..\..\Dext.inc}
+{$I ..\Dext.inc}
 
 interface
 
@@ -50,7 +50,7 @@ type
     FScanner: IControllerScanner;
     FConfiguration: IConfiguration;
     FDefaultPort: Integer;
-    FActiveHost: IWebHost; // ✅ Track active host
+    FActiveHost: IWebHost; // ? Track active host
     FServerFactory: TServerFactory;
 
     procedure Setup(Port: Integer);
@@ -215,12 +215,12 @@ begin
   
   // Ensure ALL interface fields are niled even if Teardown was skipped or partial.
   // Teardown nils these too, but we must be defensive in the destructor.
-  FActiveHost := nil;     // Releases TDextIndyWebServer → pipeline closures → middlewares
-  FScanner := nil;        // Releases TControllerScanner → FCtx (TRttiContext)
-  FAppBuilder := nil;     // Releases TApplicationBuilder → routes, middleware registrations
-  FServiceProvider := nil; // Releases root DI provider → singletons
-  FServices := nil;       // Releases TDextServiceCollection → descriptors
-  FConfiguration := nil;  // Releases TConfigurationRoot → ALL config providers
+  FActiveHost := nil;     // Releases TDextIndyWebServer ? pipeline closures ? middlewares
+  FScanner := nil;        // Releases TControllerScanner ? FCtx (TRttiContext)
+  FAppBuilder := nil;     // Releases TApplicationBuilder ? routes, middleware registrations
+  FServiceProvider := nil; // Releases root DI provider ? singletons
+  FServices := nil;       // Releases TDextServiceCollection ? descriptors
+  FConfiguration := nil;  // Releases TConfigurationRoot ? ALL config providers
   inherited Destroy;
 end;
 
@@ -321,7 +321,7 @@ begin
   if LLogger <> nil then
     LLogger.LogError(AMsg)
   else
-    SafeWriteLn('❌ ' + AMsg);
+    SafeWriteLn('? ' + AMsg);
 end;
 
 procedure TWebApplication.Setup(Port: Integer);
@@ -375,11 +375,11 @@ begin
     StateControl.SetState(asMigrating);
 
   {$IFDEF DEXT_ENABLE_ENTITY}
-  // 🔄 Run Migrations automatically if configured
+  // ?? Run Migrations automatically if configured
   DbConfig := FConfiguration.GetSection('Database');
   if (DbConfig <> nil) and (SameText(DbConfig['AutoMigrate'], 'true')) then
   begin
-    LogInfo('⚙️ AutoMigrate enabled. Checking database schema...');
+    LogInfo('?? AutoMigrate enabled. Checking database schema...');
     
     // Resolve DbContext
     DbContextIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IDbContext));
@@ -408,7 +408,7 @@ begin
   // Start Hosted Services
   HostedManager := nil;
   try
-    // ⚠️ Resolve as INTERFACE (enables ARC management)
+    // ?? Resolve as INTERFACE (enables ARC management)
     ManagerIntf := FServiceProvider.GetServiceAsInterface(TServiceType.FromInterface(IHostedServiceManager));
     if ManagerIntf <> nil then
     begin
@@ -529,11 +529,11 @@ begin
   FServiceProvider := nil;
 
   {$IFDEF DEXT_ENABLE_ENTITY}
-  // 🏁 Finalize custom FireDAC Manager to drop pools before app shutdown audit
+  // ?? Finalize custom FireDAC Manager to drop pools before app shutdown audit
   TDextFireDACManager.Finalize;
   {$ENDIF}
 
-  // ✅ Break circular references by niling interfaces that might be captured in closures
+  // ? Break circular references by niling interfaces that might be captured in closures
   FServices := nil;
   FConfiguration := nil;
 end;

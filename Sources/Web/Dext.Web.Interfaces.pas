@@ -36,7 +36,8 @@ uses
   Dext.Collections.Dict,
   Dext.DI.Interfaces,
   Dext.Auth.Identity,
-  Dext.Configuration.Interfaces;
+  Dext.Configuration.Interfaces,
+  Dext.Threading.CancellationToken;
 
 {$M+}
 type
@@ -189,6 +190,33 @@ type
   end;
 
   /// <summary>
+  ///   Fluent interface for manipulating HTMX-specific response headers.
+  /// </summary>
+  IHtmxResponse = interface
+    ['{8A2B3C4D-5E6F-7890-1234-56789ABCDEF0}']
+    /// <summary>Triggers a client-side event (HX-Trigger).</summary>
+    function Trigger(const AEvent: string): IHtmxResponse; overload;
+    /// <summary>Triggers a client-side event with a JSON payload.</summary>
+    function Trigger(const AEvent: string; const APayload: string): IHtmxResponse; overload;
+    /// <summary>Overrides the target element (HX-Retarget).</summary>
+    function Retarget(const ASelector: string): IHtmxResponse;
+    /// <summary>Overrides the swap strategy (HX-Reswap).</summary>
+    function Reswap(const ASwap: string): IHtmxResponse;
+    /// <summary>Performs a client-side redirect (HX-Redirect).</summary>
+    function Redirect(const AUrl: string): IHtmxResponse;
+    /// <summary>Forces a full page refresh (HX-Refresh).</summary>
+    function Refresh: IHtmxResponse;
+    /// <summary>Overrides the part of the response that is swapped (HX-Reselect).</summary>
+    function Reselect(const ASelector: string): IHtmxResponse;
+    /// <summary>Pushes a new URL into the history stack (HX-Push-Url).</summary>
+    function PushUrl(const AUrl: string): IHtmxResponse;
+    /// <summary>Replaces the current URL in the history stack (HX-Replace-Url).</summary>
+    function ReplaceUrl(const AUrl: string): IHtmxResponse;
+    /// <summary>Allows you to do a client-side redirect that does not reload the page (HX-Location).</summary>
+    function Location(const AUrl: string): IHtmxResponse;
+  end;
+
+  /// <summary>
   ///   Abstraction of an HTTP response to be sent. Allows setting status codes, 
   ///   headers, cookies, and writing the response body in various formats.
   /// </summary>
@@ -233,10 +261,57 @@ type
     /// <summary>Sets status to 404 Not Found and writes an optional message.</summary>
     procedure NotFound(const AMessage: string = '');
     
+    /// <summary>Access to HTMX-specific response modifiers.</summary>
+    function GetHtmx: IHtmxResponse;
+    
+    /// <summary>Access to the outgoing HTTP headers.</summary>
+    function GetHeaders: IStringDictionary;
+    
     /// <summary>HTTP status code (e.g., 200, 404, 500).</summary>
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
     /// <summary>Response MIME type (e.g., application/json).</summary>
     property ContentType: string read GetContentType write SetContentType;
+    /// <summary>HTMX extensions.</summary>
+    property Htmx: IHtmxResponse read GetHtmx;
+    /// <summary>Dictionary of response headers.</summary>
+    property Headers: IStringDictionary read GetHeaders;
+  end;
+
+  /// <summary>
+  ///   Represents an independent session bound to a client, which can be
+  ///   maintained across stateless POST requests and stream unidirectional Server-Sent Events.
+  /// </summary>
+  IStreamableSession = interface
+    ['{F8A9C1D2-B3E4-4567-8901-23456789ABCD}']
+    function GetId: string;
+    procedure SetState(const AKey: string; const AValue: TValue);
+    function GetState(const AKey: string): TValue;
+    procedure RemoveState(const AKey: string);
+    
+    // Server-Side Event Methods
+    procedure SendSseEvent(const AEventName, AData: string);
+    function HasEvents: Boolean;
+    function TryDequeueEvent(out AEventName, AData: string): Boolean;
+    
+    property Id: string read GetId;
+  end;
+
+  /// <summary>
+  ///   Manages the lifecycle of streamable sessions independently of the HTTP connection.
+  /// </summary>
+  IStreamableSessionManager = interface
+    ['{E7B8D2C3-A4F5-4678-9012-34567890BCDE}']
+    function CreateSession: IStreamableSession;
+    function GetSession(const ASessionId: string): IStreamableSession;
+    procedure DestroySession(const ASessionId: string);
+    /// <summary>
+    ///   Starts the background GC scavenger.
+    ///   AStoppingToken: optional host ApplicationStopping token — when cancelled,
+    ///   the scavenger exits without waiting for the full interval.
+    /// </summary>
+    procedure StartScavenger(AIntervalSeconds: Integer = 60; ATimeoutMinutes: Integer = 30;
+      const AStoppingToken: ICancellationToken = nil);
+    procedure StopScavenger;
   end;
 
   /// <summary>
@@ -254,6 +329,7 @@ type
     function GetUser: IClaimsPrincipal;
     procedure SetUser(const AValue: IClaimsPrincipal);
     function GetItems: IDictionary<string, TValue>;
+    function GetSession: IStreamableSession;
     
     /// <summary>Access to the incoming request data.</summary>
     property Request: IHttpRequest read GetRequest;
@@ -265,6 +341,8 @@ type
     property User: IClaimsPrincipal read GetUser write SetUser;
     /// <summary>Dictionary of useful items to share state between middlewares.</summary>
     property Items: IDictionary<string, TValue> read GetItems;
+    /// <summary>Resolved streamable session (if enabled and matching Dext-Session-Id).</summary>
+    property Session: IStreamableSession read GetSession;
   end;
 
   IMiddleware = interface

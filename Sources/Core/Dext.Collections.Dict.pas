@@ -59,6 +59,7 @@ type
     ['{6AFA9C74-3A4B-4E38-AC36-9DC417C2DD53}']
     function GetItem(const AKey: string): string;
     function TryGetValue(const AKey: string; out AValue: string): Boolean;
+    function GetValue(const AKey: string; const ADefault: string = ''): string;
     function ContainsKey(const AKey: string): Boolean;
     function GetCount: Integer;
     procedure Add(const AKey, AValue: string);
@@ -198,6 +199,7 @@ type
     
     function GetItem(const AKey: string): string;
     function TryGetValue(const AKey: string; out AValue: string): Boolean;
+    function GetValue(const AKey: string; const ADefault: string = ''): string;
     function ContainsKey(const AKey: string): Boolean;
     function GetCount: Integer;
     procedure Add(const AKey, AValue: string);
@@ -233,6 +235,12 @@ end;
 function TDextStringDictionary.TryGetValue(const AKey: string; out AValue: string): Boolean;
 begin
   Result := FData.TryGetValue(AKey, AValue);
+end;
+
+function TDextStringDictionary.GetValue(const AKey: string; const ADefault: string): string;
+begin
+  if not FData.TryGetValue(AKey, Result) then
+    Result := ADefault;
 end;
 
 function TDextStringDictionary.ContainsKey(const AKey: string): Boolean;

@@ -1,5 +1,5 @@
 unit Dext.Web.Indy.SSL.OpenSSL;
-{$I ..\..\Dext.inc}
+{$I ..\Dext.inc}
 
 interface
 

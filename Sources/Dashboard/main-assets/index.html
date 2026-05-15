@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
         rel="stylesheet">
     <link rel="stylesheet" href="main.css">
+    <!-- HTMX: S23 Streamable Sessions + Fragment Rendering -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <style>
         .test-tree-item {
             padding: 6px 12px;
@@ -59,6 +61,29 @@
 
         .st-none {
             color: var(--on-surface-v);
+        }
+
+        /* S23 HTMX Metrics Widget */
+        .s23-widget { margin-top: 16px; }
+        .s23-metrics { display: flex; gap: 16px; flex-wrap: wrap; }
+        .s23-metric {
+            flex: 1; min-width: 180px;
+            background: var(--surface-v);
+            border: 1px solid var(--outline-v);
+            border-radius: 8px;
+            padding: 14px 16px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .s23-metric-label { font-size: 11px; color: var(--on-surface-v); text-transform: uppercase; letter-spacing: .04em; }
+        .s23-metric-value { font-size: 1.5rem; font-weight: 700; color: var(--on-surface); }
+        .s23-metric-sub { font-size: 11px; color: var(--on-surface-v); }
+        .s23-bar-bg { margin-top: 8px; height: 4px; background: var(--outline-v); border-radius: 2px; overflow: hidden; }
+        .s23-bar-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width .5s ease; }
+        .s23-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 10px; font-weight: 600; padding: 2px 8px;
+            border-radius: 12px; background: #2ecc7120; color: #2ecc71;
+            border: 1px solid #2ecc7140;
         }
     </style>
 </head>
@@ -187,6 +212,27 @@
                 <div class="logs" id="logs">
                     <div class="log"><span class="log-t">[--:--:--]</span> <span data-i18n="waiting_logs">Waiting for
                             logs...</span></div>
+                </div>
+            </section>
+            <!-- S23: Live System Metrics (HTMX polling fragment) -->
+            <section class="sec s23-widget">
+                <h2 class="sec-tt">
+                    <span class="ms material-symbols-outlined">monitor_heart</span>
+                    <span>Live Metrics</span>
+                    <span class="s23-badge" style="margin-left:8px">S23 HTMX</span>
+                </h2>
+                <div
+                    id="s23-metrics-container"
+                    hx-get="/sidecar/fragments/metrics"
+                    hx-trigger="every 3s"
+                    hx-swap="innerHTML">
+                    <div class="s23-metrics">
+                        <div class="s23-metric">
+                            <span class="s23-metric-label">Memory Used</span>
+                            <span class="s23-metric-value" style="color:var(--on-surface-v)">...</span>
+                            <span class="s23-metric-sub">Loading...</span>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -409,6 +455,53 @@ Content-Type: application/json
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
     <script src="i18n.js" charset="utf-8"></script>
     <script src="main.js" charset="utf-8"></script>
+    <script>
+    // -----------------------------------------------------------------------
+    // S23 Client-side SSE Mode Abstraction
+    // Switch between 'legacy' (/events via SignalR fallback) and
+    // 's23' (/sidecar/session + /sidecar/events via IStreamableSession)
+    // -----------------------------------------------------------------------
+    const DEXT_SSE_MODE = 's23'; // 'legacy' | 's23'
+
+    const DextSSE = {
+      _source: null,
+      _sessionId: null,
+
+      async connect(onEvent) {
+        if (DEXT_SSE_MODE === 's23') {
+          // S23: Create session first, then open SSE stream
+          const res = await fetch('/sidecar/session', { method: 'POST' });
+          const { sessionId } = await res.json();
+          this._sessionId = sessionId;
+          this._source = new EventSource('/sidecar/events?sessionId=' + sessionId);
+        } else {
+          // Legacy: Connect directly to the old SSE endpoint
+          this._source = new EventSource('/events');
+        }
+        this._source.addEventListener('connected', e => console.log('[DextSSE] connected:', e.data));
+        this._source.onmessage = e => onEvent('message', e.data);
+        this._source.addEventListener('run_start',      e => onEvent('run_start', e.data));
+        this._source.addEventListener('test_start',     e => onEvent('test_start', e.data));
+        this._source.addEventListener('test_complete',  e => onEvent('test_complete', e.data));
+        this._source.addEventListener('run_complete',   e => onEvent('run_complete', e.data));
+        this._source.onerror = () => console.warn('[DextSSE] connection error — will retry');
+      },
+
+      disconnect() {
+        if (this._source) { this._source.close(); this._source = null; }
+        this._sessionId = null;
+      }
+    };
+
+    // Auto-connect on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      DextSSE.connect((eventName, data) => {
+        // Dispatch to the existing main.js handlers if they exist
+        if (typeof window.handleSseEvent === 'function')
+          window.handleSseEvent(eventName, data);
+      });
+    });
+    </script>
 
     <!-- Global Modal -->
     <div id="wk-modal" class="modal-overlay">

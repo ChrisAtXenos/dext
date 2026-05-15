@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -20,46 +20,48 @@
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
-{    MCP Tool registry, fluent builder, and RTTI-based provider support.   }
+{    MCP Tool registry, fluent builder, and RTTI-based provider support.    }
 {                                                                           }
 {  Fluent builder (quick, anonymous):                                       }
 {    Server.Tool('my-tool')                                                 }
 {      .Description('Does something useful')                                }
 {      .Param('query', 'Search term', ptString)                             }
 {      .OnCall(function(Args: TJSONObject): string                          }
-{        begin Result := '{"ok":true}'; end);                               }
+(*        begin Result := '{"ok":true}'; end);                             *)
 {                                                                           }
 {  Rich result builder (preferred for new tools):                           }
 {    Server.Tool('my-tool')                                                 }
 {      .Description('Returns an image')                                     }
 {      .Param('id', 'Item ID', ptString)                                    }
 {      .OnCallResult(function(Args: TJSONObject): TMCPToolResult            }
-{        begin                                                               }
+{        begin                                                              }
 {          Result := TMCPToolResult.Image(GetBase64(Args), 'image/png');    }
-{        end);                                                               }
+{        end);                                                              }
 {                                                                           }
 {  RTTI provider (recommended for class-based organisation):                }
-{    type                                                                    }
-{      TMyTools = class(TMCPToolProvider)                                    }
-{        [MCPTool('search', 'Full-text search')]                             }
-{        [MCPParam('query', 'Search term', ptString)]                        }
-{        function Search(const Args: TJSONObject): TMCPToolResult; virtual;  }
-{      end;                                                                  }
-{    Server.RegisterProvider(TMyTools.Create);                               }
+{    type                                                                   }
+{      TMyTools = class(TMCPToolProvider)                                   }
+{        [MCPTool('search', 'Full-text search')]                            }
+{        [MCPParam('query', 'Search term', ptString)]                       }
+{        function Search(const Args: TJSONObject): TMCPToolResult; virtual; }
+{      end;                                                                 }
+{    Server.RegisterProvider(TMyTools.Create);                              }
 {                                                                           }
 {***************************************************************************}
-unit Dext.MCP.Tools;
+unit Dext.AI.MCP.Tools;
 
 interface
 
 uses
   System.SysUtils,
   System.JSON,
-  System.RTTI,
-  System.Generics.Collections,
-  Dext.MCP.Protocol,
-  Dext.MCP.Types,
-  Dext.MCP.Attributes;
+  System.Rtti,
+  Dext.Collections,
+  Dext.Collections.Dict,
+  Dext.AI.MCP.Types,
+  Dext.AI.MCP.Protocol,
+  Dext.AI.MCP.Attributes,
+  Dext.Core.Reflection;
 
 type
   TMCPToolRegistry = class;
@@ -132,9 +134,10 @@ type
   TMCPToolRegistry = class
   private
     FTools: TDictionary<string, TMCPToolDef>;
-    FProviders: TObjectList<TMCPToolProvider>;
-    FRttiCtx: TRttiContext; // kept alive so TRttiMethod refs remain valid
+    FProviders: TList<TMCPToolProvider>;
+    FCachedTools: TJSONArray;
 
+    procedure InvalidateCache;
     function BuildInputSchema(const Def: TMCPToolDef): TJSONObject;
 
     function MakeProviderCallback(AProvider: TMCPToolProvider;
@@ -229,15 +232,22 @@ end;
 constructor TMCPToolRegistry.Create;
 begin
   inherited Create;
-  FTools     := TDictionary<string, TMCPToolDef>.Create;
-  FProviders := TObjectList<TMCPToolProvider>.Create(True); // owns items
+  FTools       := TDictionary<string, TMCPToolDef>.Create;
+  FProviders   := TList<TMCPToolProvider>.Create(True); // owns items
+  FCachedTools := nil;
 end;
 
 destructor TMCPToolRegistry.Destroy;
 begin
+  InvalidateCache;
   FTools.Free;
   FProviders.Free;
   inherited;
+end;
+
+procedure TMCPToolRegistry.InvalidateCache;
+begin
+  FreeAndNil(FCachedTools);
 end;
 
 function TMCPToolRegistry.Register(const AName: string): IMCPToolBuilder;
@@ -276,20 +286,14 @@ var
   Attr: TCustomAttribute;
   Def: TMCPToolDef;
 begin
+  InvalidateCache;
   FProviders.Add(AProvider); // registry owns it
 
-  RttiType := FRttiCtx.GetType(AProvider.ClassType);
+  RttiType := TReflection.Context.GetType(AProvider.ClassType);
 
   for Method in RttiType.GetMethods do
   begin
-    ToolAttr := nil;
-    for Attr in Method.GetAttributes do
-      if Attr is MCPToolAttribute then
-      begin
-        ToolAttr := MCPToolAttribute(Attr);
-        Break;
-      end;
-
+    ToolAttr := Method.GetAttribute<MCPToolAttribute>;
     if ToolAttr = nil then Continue;
 
     Def := Default(TMCPToolDef);
@@ -313,6 +317,7 @@ end;
 
 procedure TMCPToolRegistry.Commit(const ADef: TMCPToolDef);
 begin
+  InvalidateCache;
   FTools.AddOrSetValue(ADef.Name, ADef);
 end;
 
@@ -363,11 +368,13 @@ end;
 
 function TMCPToolRegistry.BuildToolsArray: TJSONArray;
 var
-  Arr: TJSONArray;
   Def: TMCPToolDef;
   ToolObj: TJSONObject;
 begin
-  Arr := TJSONArray.Create;
+  if FCachedTools <> nil then
+    Exit(FCachedTools.Clone as TJSONArray);
+
+  FCachedTools := TJSONArray.Create;
 
   for Def in FTools.Values do
   begin
@@ -375,10 +382,10 @@ begin
     ToolObj.AddPair('name', Def.Name);
     ToolObj.AddPair('description', Def.Description);
     ToolObj.AddPair('inputSchema', BuildInputSchema(Def));
-    Arr.Add(ToolObj);
+    FCachedTools.Add(ToolObj);
   end;
 
-  Result := Arr;
+  Result := FCachedTools.Clone as TJSONArray;
 end;
 
 end.

@@ -59,6 +59,7 @@ type
     function GetUser: IClaimsPrincipal;
     procedure SetUser(const AValue: IClaimsPrincipal);
     function GetItems: IDictionary<string, TValue>;
+    function GetSession: IStreamableSession;
   end;
 
   { Test Models }
@@ -139,6 +140,7 @@ begin
 end;
 
 function TMockHttpContext.GetItems: IDictionary<string, TValue>; begin Result := nil; end;
+function TMockHttpContext.GetSession: IStreamableSession; begin Result := nil; end;
 function TMockHttpContext.GetRequest: IHttpRequest; begin Result := FRequest; end;
 function TMockHttpContext.GetResponse: IHttpResponse; begin Result := nil; end;
 function TMockHttpContext.GetServices: IServiceProvider; begin Result := nil; end;

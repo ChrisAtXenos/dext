@@ -52,8 +52,10 @@ uses
   Dext.Collections.Dict,
   Dext.Web.Interfaces,
   Dext.DI.Interfaces,
+  Dext, // Para TDextServices
   Dext.Auth.Identity,
   Dext.Web.Indy.Types,
+  Dext.Web.Results,
   Dext.Json;
 
 type
@@ -63,8 +65,12 @@ type
   TDextIndyHttpResponse = class(TInterfacedObject, IHttpResponse)
   private
     FResponseInfo: TIdHTTPResponseInfo;
+    FHtmx: IHtmxResponse;
+    FHeaders: IStringDictionary;
   public
     constructor Create(AResponseInfo: TIdHTTPResponseInfo);
+    function GetHtmx: IHtmxResponse;
+    function GetHeaders: IStringDictionary;
     function Status(AValue: Integer): IHttpResponse;
     function GetStatusCode: Integer;
     function GetContentType: string;
@@ -157,6 +163,7 @@ type
     function GetUser: IClaimsPrincipal;
     procedure SetUser(const AValue: IClaimsPrincipal);
     function GetItems: IDictionary<string, TValue>;
+    function GetSession: IStreamableSession;
     property Request: IHttpRequest read GetRequest;
     property Response: IHttpResponse read GetResponse write SetResponse;
     property Services: IServiceProvider read GetServices write SetServices;
@@ -553,6 +560,21 @@ end;
 procedure TDextIndyHttpResponse.AddHeader(const AName, AValue: string);
 begin
   FResponseInfo.CustomHeaders.AddValue(AName, AValue);
+  if FHeaders <> nil then
+    FHeaders.AddOrSetValue(AName, AValue);
+end;
+
+function TDextIndyHttpResponse.GetHeaders: IStringDictionary;
+var
+  i: Integer;
+begin
+  if FHeaders = nil then
+  begin
+    FHeaders := TCollections.CreateStringDictionary(True);
+    for i := 0 to FResponseInfo.CustomHeaders.Count - 1 do
+      FHeaders.AddOrSetValue(FResponseInfo.CustomHeaders.Names[i], FResponseInfo.CustomHeaders.ValueFromIndex[i]);
+  end;
+  Result := FHeaders;
 end;
 
 procedure TDextIndyHttpResponse.AppendCookie(const AName, AValue: string; const AOptions: TCookieOptions);
@@ -751,6 +773,13 @@ begin
   Json(TDextJson.Serialize(AValue));
 end;
 
+function TDextIndyHttpResponse.GetHtmx: IHtmxResponse;
+begin
+  if FHtmx = nil then
+    FHtmx := THtmxResponse.Create(Self);
+  Result := FHtmx;
+end;
+
 { TDextIndyHttpContext }
 
 constructor TDextIndyHttpContext.Create(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
@@ -797,6 +826,22 @@ end;
 function TDextIndyHttpContext.GetServices: IServiceProvider;
 begin
   Result := FServices;
+end;
+
+function TDextIndyHttpContext.GetSession: IStreamableSession;
+var
+  LManager: IStreamableSessionManager;
+  LId: string;
+begin
+  LId := FRequest.GetHeader('Dext-Session-Id');
+  if LId = '' then
+    Exit(nil);
+    
+  LManager := TDextServices.GetService<IStreamableSessionManager>(FServices);
+  if LManager <> nil then
+    Result := LManager.GetSession(LId)
+  else
+    Result := nil;
 end;
 
 procedure TDextIndyHttpContext.SetServices(const AValue: IServiceProvider);

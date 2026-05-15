@@ -20,24 +20,24 @@
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
-{    Native MCP (Model Context Protocol) server — protocol 2025-03-26.    }
+{    Native MCP (Model Context Protocol) server — protocol 2025-03-26.      }
 {                                                                           }
 {  Transports:                                                              }
-{    mtStreamable — HTTP Streamable (MCP 2025-03-26, recommended)          }
-{      POST /mcp           → synchronous JSON-RPC response                  }
-{      DELETE /mcp         → close session                                  }
-{      GET  /mcp/sse       → SSE notification stream (optional)            }
+{    mtStreamable — HTTP Streamable (MCP 2025-03-26, recommended)           }
+{      POST /mcp           ? synchronous JSON-RPC response                  }
+{      DELETE /mcp         ? close session                                  }
+{      GET  /mcp/sse       ? SSE notification stream (optional)             }
 {      Claude Code config: url = http://host/mcp                            }
 {                                                                           }
-{    mtSSE  — legacy SSE transport (MCP 2024-11-05, backward-compat)       }
-{      GET  /sse           → SSE stream (endpoint event → message events)  }
-{      POST /message       → enqueue message, returns 202                   }
+{    mtSSE  — legacy SSE transport (MCP 2024-11-05, backward-compat)        }
+{      GET  /sse           ? SSE stream (endpoint event ? message events)   }
+{      POST /message       ? enqueue message, returns 202                   }
 {      Claude Desktop config: url = http://host/sse                         }
 {                                                                           }
 {    mtStdio — stdin/stdout (Claude Desktop process integration)            }
 {                                                                           }
 {  Capabilities (MCP 2025-03-26):                                           }
-{    - tools        (list + call)                                            }
+{    - tools        (list + call)                                           }
 {    - resources    (list + read)                  — when resources added   }
 {    - prompts      (list + get)                   — when prompts added     }
 {                                                                           }
@@ -45,14 +45,14 @@
 {    var Server := TMCPServer.Create('my-server');                          }
 {    Server.Tool('hello')                                                   }
 {      .Description('Say hello')                                            }
-{      .Param('name', 'Person name', ptString)                             }
-{      .OnCallResult(function(Args: TJSONObject): TMCPToolResult           }
-{        begin Result := TMCPToolResult.Text('Hello, ' +                   }
-{          Args.GetValue<string>('name', 'World') + '!'); end);            }
+{      .Param('name', 'Person name', ptString)                              }
+{      .OnCallResult(function(Args: TJSONObject): TMCPToolResult            }
+{        begin Result := TMCPToolResult.Text('Hello, ' +                    }
+{          Args.GetValue<string>('name', 'World') + '!'); end);             }
 {    Server.Run(mtStreamable, 'http://localhost:3031');                     }
 {                                                                           }
 {***************************************************************************}
-unit Dext.MCP.Server;
+unit Dext.AI.MCP.Server;
 
 interface
 
@@ -61,14 +61,17 @@ uses
   System.Classes,
   System.JSON,
   System.SyncObjs,
-  System.Generics.Collections,
-  Dext.MCP.Protocol,
-  Dext.MCP.Types,
-  Dext.MCP.Tools,
-  Dext.MCP.Resources,
-  Dext.MCP.Prompts,
+  Dext.Collections, Dext.Collections.Dict,
+  Dext.AI.MCP.Protocol,
+  Dext.AI.MCP.Types,
+  Dext.AI.MCP.Tools,
+  Dext.AI.MCP.Resources,
+  Dext.AI.MCP.Prompts,
   Dext.Web.Interfaces,
-  Dext.WebHost;
+  Dext.Web.Sessions.Streamable,
+  Dext.WebHost,
+  Dext.DI.Interfaces;
+
 
 type
   /// <summary>
@@ -79,50 +82,7 @@ type
   /// </summary>
   TMCPTransport = (mtStreamable, mtSSE, mtStdio);
 
-  // ---------------------------------------------------------------------------
-  // TMCPSession — single client session (used by both SSE and Streamable)
-  // ---------------------------------------------------------------------------
 
-  TMCPSession = class
-  private
-    FId: string;
-    FMessages: TQueue<string>;
-    FLock: TCriticalSection;
-    FClosed: Int64;
-    FCreatedAt: TDateTime;
-  public
-    constructor Create(const AId: string);
-    destructor Destroy; override;
-
-    procedure Enqueue(const AMessage: string);
-    function Dequeue: string;
-    function HasMessages: Boolean;
-    procedure Close;
-    function IsClosed: Boolean;
-
-    property Id: string read FId;
-    property CreatedAt: TDateTime read FCreatedAt;
-  end;
-
-  // ---------------------------------------------------------------------------
-  // TMCPSessionManager
-  // ---------------------------------------------------------------------------
-
-  TMCPSessionManager = class
-  private
-    FSessions: TObjectDictionary<string, TMCPSession>;
-    FLock: TCriticalSection;
-    FShuttingDown: Boolean;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    function CreateSession: TMCPSession;
-    function GetSession(const AId: string): TMCPSession;
-    procedure RemoveSession(const AId: string);
-    procedure CloseAll;
-    function IsShuttingDown: Boolean;
-  end;
 
   // ---------------------------------------------------------------------------
   // TMCPServer — main entry point
@@ -167,11 +127,12 @@ type
     FRegistry: TMCPToolRegistry;
     FResources: TMCPResourceRegistry;
     FPrompts: TMCPPromptRegistry;
-    FSessions: TMCPSessionManager;
+    FSessions: IStreamableSessionManager;
     FHost: IWebHost;
+    FShuttingDown: Boolean;
 
     // ---- JSON-RPC dispatch ----
-    function Dispatch(const Body: string; const SessionId: string = ''): string;
+    function Dispatch(const Body: string; const SessionId: string = ''): string; reintroduce; overload;
     function HandleInitialize(const Id: TJSONValue; const Params: TJSONObject;
       out ANewSessionId: string): string;
     function HandlePing(const Id: TJSONValue): string;
@@ -198,7 +159,6 @@ type
 
     // ---- Helpers ----
     class function ReadBody(Ctx: IHttpContext): string; static;
-    class function NewSessionId: string; static;
     class function ToolResultToJSON(const CallResult: string): TJSONObject; static;
     class procedure AddCORSHeaders(const Response: IHttpResponse); static;
     procedure LogDebug(const AMsg: string);
@@ -253,7 +213,8 @@ implementation
 
 {$IFDEF MSWINDOWS}
 uses
-  Winapi.Windows;
+  Winapi.Windows,
+  System.Rtti;
 {$ENDIF}
 
 // ---------------------------------------------------------------------------
@@ -299,169 +260,12 @@ begin
 end;
 
 // ---------------------------------------------------------------------------
-// TMCPSession
-// ---------------------------------------------------------------------------
-
-constructor TMCPSession.Create(const AId: string);
-begin
-  inherited Create;
-  FId        := AId;
-  FMessages  := TQueue<string>.Create;
-  FLock      := TCriticalSection.Create;
-  FClosed    := 0;
-  FCreatedAt := Now;
-end;
-
-destructor TMCPSession.Destroy;
-begin
-  FLock.Free;
-  FMessages.Free;
-  inherited;
-end;
-
-procedure TMCPSession.Enqueue(const AMessage: string);
-begin
-  if TInterlocked.Read(FClosed) = 1 then Exit;
-  FLock.Enter;
-  try
-    FMessages.Enqueue(AMessage);
-  finally
-    FLock.Leave;
-  end;
-end;
-
-function TMCPSession.Dequeue: string;
-begin
-  if TInterlocked.Read(FClosed) = 1 then Exit('');
-  FLock.Enter;
-  try
-    if FMessages.Count > 0 then
-      Result := FMessages.Dequeue
-    else
-      Result := '';
-  finally
-    FLock.Leave;
-  end;
-end;
-
-function TMCPSession.HasMessages: Boolean;
-begin
-  if TInterlocked.Read(FClosed) = 1 then Exit(False);
-  FLock.Enter;
-  try
-    Result := FMessages.Count > 0;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TMCPSession.Close;
-begin
-  TInterlocked.Exchange(FClosed, 1);
-end;
-
-function TMCPSession.IsClosed: Boolean;
-begin
-  Result := TInterlocked.Read(FClosed) = 1;
-end;
-
-// ---------------------------------------------------------------------------
-// TMCPSessionManager
-// ---------------------------------------------------------------------------
-
-constructor TMCPSessionManager.Create;
-begin
-  inherited Create;
-  FSessions     := TObjectDictionary<string, TMCPSession>.Create([doOwnsValues]);
-  FLock         := TCriticalSection.Create;
-  FShuttingDown := False;
-end;
-
-destructor TMCPSessionManager.Destroy;
-begin
-  CloseAll;
-  FLock.Enter;
-  try
-    FSessions.Free;
-  finally
-    FLock.Leave;
-  end;
-  FLock.Free;
-  inherited;
-end;
-
-function TMCPSessionManager.CreateSession: TMCPSession;
-var
-  Session: TMCPSession;
-  Id: string;
-begin
-  Id      := TMCPServer.NewSessionId;
-  Session := TMCPSession.Create(Id);
-  FLock.Enter;
-  try
-    FSessions.Add(Id, Session);
-  finally
-    FLock.Leave;
-  end;
-  Result := Session;
-end;
-
-function TMCPSessionManager.GetSession(const AId: string): TMCPSession;
-begin
-  FLock.Enter;
-  try
-    if not FSessions.TryGetValue(AId, Result) then
-      Result := nil;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TMCPSessionManager.RemoveSession(const AId: string);
-begin
-  FLock.Enter;
-  try
-    FSessions.Remove(AId);
-  finally
-    FLock.Leave;
-  end;
-end;
-
-procedure TMCPSessionManager.CloseAll;
-var
-  Session: TMCPSession;
-begin
-  FShuttingDown := True;
-  FLock.Enter;
-  try
-    for Session in FSessions.Values do
-      Session.Close;
-  finally
-    FLock.Leave;
-  end;
-end;
-
-function TMCPSessionManager.IsShuttingDown: Boolean;
-begin
-  Result := FShuttingDown;
-end;
-
-// ---------------------------------------------------------------------------
 // TMCPServer — helpers
 // ---------------------------------------------------------------------------
 
 class function TMCPServer.ReadBody(Ctx: IHttpContext): string;
 begin
   Result := StreamToString(Ctx.Request.Body);
-end;
-
-class function TMCPServer.NewSessionId: string;
-begin
-  Result := TGUID.NewGuid.ToString
-    .Replace('{', '', [rfReplaceAll])
-    .Replace('}', '', [rfReplaceAll])
-    .Replace('-', '', [rfReplaceAll])
-    .ToLower;
 end;
 
 class function TMCPServer.ToolResultToJSON(
@@ -894,7 +698,7 @@ end;
 procedure TMCPServer.RouteStreamableDelete(Ctx: IHttpContext);
 var
   SessionId: string;
-  Session: TMCPSession;
+  Session: IStreamableSession;
 begin
   AddCORSHeaders(Ctx.Response);
 
@@ -907,8 +711,7 @@ begin
     Session := FSessions.GetSession(SessionId);
     if Session <> nil then
     begin
-      Session.Close;
-      FSessions.RemoveSession(SessionId);
+      FSessions.DestroySession(SessionId);
     end;
   end;
 
@@ -921,8 +724,8 @@ end;
 
 procedure TMCPServer.RouteSSE(Ctx: IHttpContext);
 var
-  Session: TMCPSession;
-  Msg: string;
+  Session: IStreamableSession;
+  EvtName, Msg: string;
   KeepAlive: Integer;
 begin
   Session := FSessions.CreateSession;
@@ -934,13 +737,12 @@ begin
 
   KeepAlive := 0;
 
-  while (not Session.IsClosed) and (not FSessions.IsShuttingDown) do
+  while not FShuttingDown do
   begin
-    while Session.HasMessages and not FSessions.IsShuttingDown do
+    while Session.HasEvents and not FShuttingDown do
     begin
-      Msg := Session.Dequeue;
-      if Msg <> '' then
-        WriteSSEEvent(Ctx.Response, 'message', Msg);
+      if Session.TryDequeueEvent(EvtName, Msg) then
+        WriteSSEEvent(Ctx.Response, EvtName, Msg);
     end;
 
     Inc(KeepAlive);
@@ -953,13 +755,13 @@ begin
     Sleep(100);
   end;
 
-  FSessions.RemoveSession(Session.Id);
+  FSessions.DestroySession(Session.Id);
 end;
 
 procedure TMCPServer.RouteMessage(Ctx: IHttpContext);
 var
   SessionId, Body, Response: string;
-  Session: TMCPSession;
+  Session: IStreamableSession;
 begin
   if Ctx.Request.Method = 'OPTIONS' then
   begin
@@ -986,7 +788,7 @@ begin
   Response := Dispatch(Body, SessionId);
 
   if Response <> '' then
-    Session.Enqueue(Response);
+    Session.SendSseEvent('message', Response);
 
   Ctx.Response.StatusCode := 202;
 end;
@@ -1023,13 +825,14 @@ begin
   FRegistry  := TMCPToolRegistry.Create;
   FResources := TMCPResourceRegistry.Create;
   FPrompts   := TMCPPromptRegistry.Create;
-  FSessions  := TMCPSessionManager.Create;
+  FSessions  := TInMemoryStreamableSessionManager.Create;
+  FShuttingDown := False;
 end;
 
 destructor TMCPServer.Destroy;
 begin
   Stop;
-  FSessions.Free;
+  FSessions  := nil;
   FPrompts.Free;
   FResources.Free;
   FRegistry.Free;
@@ -1151,7 +954,7 @@ end;
 
 procedure TMCPServer.Stop;
 begin
-  FSessions.CloseAll;
+  FShuttingDown := True;
 
   if FHost <> nil then
   begin

@@ -19,7 +19,9 @@ uses
   Dext.Web.Binding.Tests in 'Dext.Web.Binding.Tests.pas',
   Dext.Web.Features.Tests in 'Dext.Web.Features.Tests.pas',
   Dext.Web.DataApi.Utils.Tests in 'Dext.Web.DataApi.Utils.Tests.pas',
-  Dext.Web.Hosting.Tests in 'Dext.Web.Hosting.Tests.pas';
+  Dext.Web.Hosting.Tests in 'Dext.Web.Hosting.Tests.pas',
+  Dext.Web.Htmx.Tests in 'Dext.Web.Htmx.Tests.pas',
+  Dext.Web.Mocks in '..\Common\Dext.Web.Mocks.pas';
 
 var
   TestResult: Boolean;
@@ -44,7 +46,8 @@ begin
         TWebFeaturesTests,
         TDataApiNamingTests,
         TWebHostingTests,
-        TDataApiConventionTests
+        TDataApiConventionTests,
+        THtmxResponseTests
       ]).Run;
 
     TTest.SetExitCode(TestResult);

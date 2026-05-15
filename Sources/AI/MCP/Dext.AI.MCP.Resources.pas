@@ -20,25 +20,25 @@
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
-{    MCP Resource registry and fluent builder.                             }
+{    MCP Resource registry and fluent builder.                              }
 {                                                                           }
-{    Resources are read-only data sources that LLMs can fetch by URI.      }
-{    Think of them as "files" or "documents" the model can read.           }
+{    Resources are read-only data sources that LLMs can fetch by URI.       }
+{    Think of them as "files" or "documents" the model can read.            }
 {                                                                           }
 {  Fluent registration:                                                     }
 {    Server.Resource('file:///config', 'App Config', 'text/json')           }
 {      .Description('Returns the current application configuration')        }
 {      .OnRead(function(const AUri: string): TMCPResourceContents           }
-{        begin                                                               }
+{        begin                                                              }
 {          Result := TMCPResourceContents.TextResource(AUri, LoadConfig);   }
-{        end);                                                               }
+{        end);                                                              }
 {                                                                           }
 {  RTTI provider (via MCPResource attribute on TMCPToolProvider subclass):  }
 {    [MCPResource('file:///logs', 'App Logs', 'Recent application logs')]   }
 {    function ReadLogs(const AUri: string): TMCPResourceContents; virtual;  }
 {                                                                           }
 {***************************************************************************}
-unit Dext.MCP.Resources;
+unit Dext.AI.MCP.Resources;
 
 interface
 
@@ -46,9 +46,10 @@ uses
   System.SysUtils,
   System.JSON,
   System.RTTI,
-  System.Generics.Collections,
-  Dext.MCP.Types,
-  Dext.MCP.Attributes;
+  Dext.Collections,
+  Dext.Collections.Dict,
+  Dext.AI.MCP.Types,
+  Dext.AI.MCP.Attributes;
 
 type
   /// <summary>Internal representation of a registered MCP resource.</summary>

@@ -191,6 +191,26 @@ type
   end;
 
   /// <summary>
+  ///   Implementation of the HTMX fluent interface.
+  /// </summary>
+  THtmxResponse = class(TInterfacedObject, IHtmxResponse)
+  private
+    [Weak] FResponse: IHttpResponse;
+  public
+    constructor Create(const AResponse: IHttpResponse);
+    function Trigger(const AEvent: string): IHtmxResponse; overload;
+    function Trigger(const AEvent: string; const APayload: string): IHtmxResponse; overload;
+    function Retarget(const ASelector: string): IHtmxResponse;
+    function Reswap(const ASwap: string): IHtmxResponse;
+    function Redirect(const AUrl: string): IHtmxResponse;
+    function Refresh: IHtmxResponse;
+    function Reselect(const ASelector: string): IHtmxResponse;
+    function PushUrl(const AUrl: string): IHtmxResponse;
+    function ReplaceUrl(const AUrl: string): IHtmxResponse;
+    function Location(const AUrl: string): IHtmxResponse;
+  end;
+
+  /// <summary>
   ///   Static helper class (Factory) for creating common HTTP results.
   ///   Mainly used in Minimal APIs and Controllers to return standardized responses.
   /// </summary>
@@ -926,6 +946,74 @@ end;
 procedure TForbidResult.Execute(AContext: IHttpContext);
 begin
   AContext.Response.StatusCode := HttpStatus.Forbidden;
+end;
+
+{ THtmxResponse }
+
+constructor THtmxResponse.Create(const AResponse: IHttpResponse);
+begin
+  inherited Create;
+  FResponse := AResponse;
+end;
+
+function THtmxResponse.PushUrl(const AUrl: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Push-Url', AUrl);
+  Result := Self;
+end;
+
+function THtmxResponse.Redirect(const AUrl: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Redirect', AUrl);
+  Result := Self;
+end;
+
+function THtmxResponse.Refresh: IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Refresh', 'true');
+  Result := Self;
+end;
+
+function THtmxResponse.ReplaceUrl(const AUrl: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Replace-Url', AUrl);
+  Result := Self;
+end;
+
+function THtmxResponse.Reselect(const ASelector: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Reselect', ASelector);
+  Result := Self;
+end;
+
+function THtmxResponse.Reswap(const ASwap: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Reswap', ASwap);
+  Result := Self;
+end;
+
+function THtmxResponse.Retarget(const ASelector: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Retarget', ASelector);
+  Result := Self;
+end;
+
+function THtmxResponse.Trigger(const AEvent: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Trigger', AEvent);
+  Result := Self;
+end;
+
+function THtmxResponse.Trigger(const AEvent, APayload: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Trigger', Format('{"%s": %s}', [AEvent, APayload]));
+  Result := Self;
+end;
+
+function THtmxResponse.Location(const AUrl: string): IHtmxResponse;
+begin
+  FResponse.AddHeader('HX-Location', AUrl);
+  Result := Self;
 end;
 
 end.

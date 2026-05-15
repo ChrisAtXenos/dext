@@ -17,6 +17,7 @@ uses
   Dext.Hosting.CLI.Registry,
   Dext.Logging,
   Dext.Hosting.ApplicationLifetime,
+  Dext.Web,
   Dext.Web.Interfaces,
   Dext.Web.Hubs.Extensions,
   Dext.WebHost,
@@ -81,16 +82,21 @@ begin
       begin
         RegistryType := TServiceType.FromClass(TProjectRegistry);
         Services.AddSingleton(RegistryType, TProjectRegistry, nil);
-        
+
         LoggerType := TServiceType.FromInterface(TypeInfo(ILoggerFactory));
         FactoryFunc := function(Provider: IServiceProvider): TObject
            begin
               Result := TLoggerFactory.Create; // Silent logger for Sidecar
            end;
         Services.AddSingleton(LoggerType, TClass(nil), FactoryFunc);
+
+        // S23: Register Streamable Session Manager (IStreamableSessionManager)
+        TDextServices.Create(Services).AddStreamableSessions;
       end)
     .Configure(procedure(App: IApplicationBuilder)
       begin
+        // S23: Start the Scavenger GC (checks every 60s, evicts after 30min idle)
+        TAppBuilder.Create(App).UseStreamableSessions(60, 30);
         TDashboardRoutes.Configure(App);
       end)
     .Build;

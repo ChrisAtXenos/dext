@@ -56,6 +56,7 @@ uses
   Dext.DI.Interfaces,
   Dext.Configuration.Interfaces,
   Dext.Auth.Identity,
+  Dext.Web.Results,
   Dext.Json;
 {$ENDIF DEXT_ENABLE_DCS}
 
@@ -151,9 +152,14 @@ type
     FContentType: string;
     FCustomHeaders: TStringList;
     FCookies: array of TDCSCookieEntry;
+    FHtmx: IHtmxResponse;
+    FHeaders: IStringDictionary;
   public
     constructor Create(AResponse: ICrossHttpResponse);
     destructor Destroy; override;
+
+    function GetHtmx: IHtmxResponse;
+    function GetHeaders: IStringDictionary;
 
     /// <summary>
     ///   Writes buffered response data to the underlying ICrossHttpResponse.
@@ -617,9 +623,31 @@ begin
   Json(TDextJson.Serialize(AValue));
 end;
 
+function TDextDCSResponse.GetHtmx: IHtmxResponse;
+begin
+  if FHtmx = nil then
+    FHtmx := THtmxResponse.Create(Self);
+  Result := FHtmx;
+end;
+
+function TDextDCSResponse.GetHeaders: IStringDictionary;
+var
+  i: Integer;
+begin
+  if FHeaders = nil then
+  begin
+    FHeaders := TCollections.CreateStringDictionary(True);
+    for i := 0 to FCustomHeaders.Count - 1 do
+      FHeaders.AddOrSetValue(FCustomHeaders.Names[i], FCustomHeaders.ValueFromIndex[i]);
+  end;
+  Result := FHeaders;
+end;
+
 procedure TDextDCSResponse.AddHeader(const AName, AValue: string);
 begin
   FCustomHeaders.Add(AName + '=' + AValue);
+  if FHeaders <> nil then
+    FHeaders.AddOrSetValue(AName, AValue);
 end;
 
 procedure TDextDCSResponse.AppendCookie(const AName, AValue: string;

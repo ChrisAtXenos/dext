@@ -20,31 +20,32 @@
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
-{    MCP Prompt registry and fluent builder.                               }
+{    MCP Prompt registry and fluent builder.                                }
 {                                                                           }
-{    Prompts are reusable message templates that LLMs can invoke by name.  }
-{    They may accept arguments to customise the generated messages.        }
+{    Prompts are reusable message templates that LLMs can invoke by name.   }
+{    They may accept arguments to customise the generated messages.         }
 {                                                                           }
 {  Fluent registration:                                                     }
 {    Server.Prompt('code-review', 'Reviews Delphi code for quality issues') }
-{      .Arg('code',     'Delphi source code to review')                    }
+{      .Arg('code',     'Delphi source code to review')                     }
 {      .Arg('language', 'Language hint', False)                             }
 {      .OnGet(function(Args: TJSONObject): TMCPPromptResult                 }
 {        var Code: string;                                                  }
-{        begin                                                               }
+{        begin                                                              }
 {          Code := Args.GetValue<string>('code', '');                       }
 {          Result := TMCPPromptResult.Create('Code review prompt');         }
 {          Result.AddMessage(TMCPPromptMessage.User(                        }
 {            'Review this Delphi code:' + sLineBreak + Code));              }
-{        end);                                                               }
+{        end);                                                              }
 {                                                                           }
-{  RTTI provider (via MCPPrompt attribute on TMCPToolProvider subclass):   }
+{  RTTI provider (via MCPPrompt attribute on TMCPToolProvider subclass):    }
 {    [MCPPrompt('code-review', 'Reviews Delphi code')]                      }
 {    [MCPPromptArg('code', 'Source code to review')]                        }
-{    function CodeReview(const Args: TJSONObject): TMCPPromptResult; virtual;}
+{    function CodeReview(const Args: TJSONObject):                          }
+{      TMCPPromptResult; virtual;                                           }
 {                                                                           }
 {***************************************************************************}
-unit Dext.MCP.Prompts;
+unit Dext.AI.MCP.Prompts;
 
 interface
 
@@ -52,9 +53,10 @@ uses
   System.SysUtils,
   System.JSON,
   System.RTTI,
-//  System.Generics.Collections,
-  Dext.MCP.Types,
-  Dext.MCP.Attributes;
+  Dext.Collections,
+  Dext.Collections.Dict,
+  Dext.AI.MCP.Types,
+  Dext.AI.MCP.Attributes;
 
 type
   /// <summary>Describes one argument of a prompt template.</summary>

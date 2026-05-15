@@ -1036,8 +1036,154 @@ begin
                TMonitor.Exit(FLock);
             end;
          end;
+     end);
+
+  // ----------------------------------------------------------------------------------
+  // S23 Validation: Streamable Sessions + HTMX Fragments
+  // ----------------------------------------------------------------------------------
+
+  // POST /sidecar/session
+  // Creates a new IStreamableSession and returns its ID.
+  // Used by HTMX or any client to establish a bidirectional stream channel.
+  App.MapPost('/sidecar/session',
+    procedure(Ctx: IHttpContext)
+    var
+      Manager: IStreamableSessionManager;
+      Session: IStreamableSession;
+    begin
+      Manager := TDextServices.GetService<IStreamableSessionManager>(Ctx.Services);
+      if Manager = nil then
+      begin
+        Results.StatusCode(503, '{"error":"StreamableSession not registered. Call Services.AddStreamableSessions."}').Execute(Ctx);
+        Exit;
+      end;
+      Session := Manager.CreateSession;
+      Results.Json(Format('{"sessionId":"%s"}', [Session.Id])).Execute(Ctx);
     end);
-    
+
+  // GET /sidecar/events
+  // SSE endpoint that streams events from an IStreamableSession.
+  // Requires ?sessionId=<id> query param (or Dext-Session-Id header).
+  App.MapGet('/sidecar/events',
+    procedure(Ctx: IHttpContext)
+    var
+      Manager: IStreamableSessionManager;
+      Session: IStreamableSession;
+      SessionId, EventName, Data: string;
+      IndyCtx: TIdContext;
+      Msg: string;
+      HeartbeatTick: Integer;
+    begin
+      if not Ctx.Request.Query.TryGetValue('sessionId', SessionId) then
+        SessionId := Ctx.Request.GetHeader('Dext-Session-Id');
+
+      if SessionId.IsEmpty then
+      begin
+        Results.BadRequest('{"error":"sessionId required"}').Execute(Ctx);
+        Exit;
+      end;
+
+      Manager := TDextServices.GetService<IStreamableSessionManager>(Ctx.Services);
+      if Manager = nil then
+      begin
+        Results.StatusCode(503, '{"error":"StreamableSession not registered."}').Execute(Ctx);
+        Exit;
+      end;
+
+      Session := Manager.GetSession(SessionId);
+      if Session = nil then
+      begin
+        Results.NotFound('{"error":"Session not found or expired."}').Execute(Ctx);
+        Exit;
+      end;
+
+      IndyCtx := nil;
+      if Ctx is TDextIndyHttpContext then
+        IndyCtx := TDextIndyHttpContext(Ctx).Context;
+
+      if IndyCtx <> nil then
+      begin
+        IndyCtx.Connection.IOHandler.WriteLn('HTTP/1.1 200 OK');
+        IndyCtx.Connection.IOHandler.WriteLn('Content-Type: text/event-stream; charset=utf-8');
+        IndyCtx.Connection.IOHandler.WriteLn('Cache-Control: no-cache');
+        IndyCtx.Connection.IOHandler.WriteLn('Connection: keep-alive');
+        IndyCtx.Connection.IOHandler.WriteLn('');
+        IndyCtx.Connection.IOHandler.Write('event: connected'#10'data: {"sessionId":"' + SessionId + '"}'#10#10);
+
+        HeartbeatTick := 0;
+        while IndyCtx.Connection.Connected do
+        begin
+          if Session.TryDequeueEvent(EventName, Data) then
+          begin
+            Msg := Format('event: %s'#10'data: %s'#10#10, [EventName, Data]);
+            IndyCtx.Connection.IOHandler.Write(ToBytes(Msg, IndyTextEncoding_UTF8));
+            HeartbeatTick := 0;
+          end
+          else
+          begin
+            Inc(HeartbeatTick);
+            // Send heartbeat comment every ~15s (75 * 200ms) to keep alive through proxies
+            if HeartbeatTick >= 75 then
+            begin
+              IndyCtx.Connection.IOHandler.Write(ToBytes(':heartbeat'#10#10, IndyTextEncoding_UTF8));
+              HeartbeatTick := 0;
+            end;
+            Sleep(200);
+          end;
+        end;
+      end
+      else
+      begin
+        // Fallback for non-Indy hosts
+        Ctx.Response.SetContentType('text/event-stream; charset=utf-8');
+        Ctx.Response.AddHeader('Cache-Control', 'no-cache');
+        Ctx.Response.Write('event: connected'#10'data: {"sessionId":"' + SessionId + '"}'#10#10);
+      end;
+
+      Manager.DestroySession(SessionId);
+    end);
+
+  // GET /sidecar/fragments/metrics
+  // HTMX-compatible HTML fragment with real-time Windows system metrics.
+  // Designed for: hx-get="/sidecar/fragments/metrics" hx-trigger="every 3s" hx-swap="innerHTML"
+  App.MapGet('/sidecar/fragments/metrics',
+    procedure(Ctx: IHttpContext)
+    var
+      MemStatus: TMemoryStatusEx;
+      TotalMB, AvailMB, UsedMB: Int64;
+      UsedPct: Double;
+      Html: string;
+    begin
+      MemStatus.dwLength := SizeOf(MemStatus);
+      GlobalMemoryStatusEx(MemStatus);
+
+      TotalMB := MemStatus.ullTotalPhys div (1024 * 1024);
+      AvailMB := MemStatus.ullAvailPhys div (1024 * 1024);
+      UsedMB  := TotalMB - AvailMB;
+      UsedPct := MemStatus.dwMemoryLoad;
+
+      Html :=
+        '<div class="s23-metrics">' +
+        '  <div class="s23-metric">' +
+        '    <span class="s23-metric-label">Memory Used</span>' +
+        '    <span class="s23-metric-value">' + IntToStr(UsedMB) + ' MB</span>' +
+        '    <span class="s23-metric-sub">' + IntToStr(TotalMB) + ' MB total &mdash; ' +
+               FormatFloat('0.0', UsedPct) + '% used</span>' +
+        '    <div class="s23-bar-bg"><div class="s23-bar-fill" style="width:' +
+               FormatFloat('0.0', UsedPct) + '%"></div></div>' +
+        '  </div>' +
+        '  <div class="s23-metric">' +
+        '    <span class="s23-metric-label">Sidecar</span>' +
+        '    <span class="s23-metric-value" style="color:#2ecc71">&#x25CF; Online</span>' +
+        '    <span class="s23-metric-sub">S23 HTMX Fragment &mdash; ' +
+               FormatDateTime('hh:nn:ss', Now) + '</span>' +
+        '  </div>' +
+        '</div>';
+
+      // Results.Html sets Content-Type: text/html — required for HTMX fragment swap
+      Results.Html(Html, 200).Execute(Ctx);
+    end);
+
 end;
 
 procedure BroadcastSSE(const EventName, Data: string);

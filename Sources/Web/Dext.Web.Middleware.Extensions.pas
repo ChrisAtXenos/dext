@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -67,7 +67,7 @@ var
   Middleware: IMiddleware;
   ServiceProvider: IServiceProvider;
 begin
-  // ✅ Try to resolve ILogger from DI, fallback to console logger
+  // ? Try to resolve ILogger from DI, fallback to console logger
   Logger := nil;
   ServiceProvider := ABuilder.GetServiceProvider;
   if ServiceProvider <> nil then
@@ -91,7 +91,7 @@ var
   Middleware: IMiddleware;
   ServiceProvider: IServiceProvider;
 begin
-  // ✅ Try to resolve ILogger from DI, fallback to console logger
+  // ? Try to resolve ILogger from DI, fallback to console logger
   Logger := nil;
   ServiceProvider := ABuilder.GetServiceProvider;
   if ServiceProvider <> nil then

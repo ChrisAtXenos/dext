@@ -14,6 +14,7 @@ uses
   Dext.Auth.Identity,
   Dext.Mocks,
   Dext.Mocks.Matching,
+  Dext.Web.Results,
   Dext.Json;
 
 type
@@ -57,6 +58,9 @@ type
   public
     constructor Create;
 
+    function GetHtmx: IHtmxResponse;
+    function GetHeaders: IStringDictionary;
+
     function GetContentType: string;
     function GetStatusCode: Integer;
     function Status(AValue: Integer): IHttpResponse;
@@ -99,6 +103,7 @@ type
     function GetResponse: IHttpResponse;
     function GetServices: IServiceProvider;
     function GetUser: IClaimsPrincipal;
+    function GetSession: IStreamableSession;
 
     procedure SetResponse(const AValue: IHttpResponse);
     procedure SetServices(const AValue: IServiceProvider);
@@ -206,6 +211,16 @@ begin
   FStatusCode := 200;
   FContentType := 'text/plain';
   FHeaders := TCollections.CreateStringDictionary(True);
+end;
+
+function TStatefulMockResponse.GetHtmx: IHtmxResponse;
+begin
+  Result := THtmxResponse.Create(Self);
+end;
+
+function TStatefulMockResponse.GetHeaders: IStringDictionary;
+begin
+  Result := FHeaders;
 end;
 
 function TStatefulMockResponse.GetStatusCode: Integer;
@@ -354,6 +369,11 @@ end;
 function TStatefulMockHttpContext.GetUser: IClaimsPrincipal;
 begin
   Result := FUser;
+end;
+
+function TStatefulMockHttpContext.GetSession: IStreamableSession;
+begin
+  Result := nil;
 end;
 
 procedure TStatefulMockHttpContext.SetUser(const AValue: IClaimsPrincipal);

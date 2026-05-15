@@ -1,4 +1,4 @@
-Ôªø{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -477,7 +477,7 @@ var
   ResIntf: IResult;
   I: Integer;
 begin
-  // ? VERIFICA√á√ÉO DE SEGURAN√áA APRIMORADA
+  // ? VERIFICA«√O DE SEGURAN«A APRIMORADA
   if not Assigned(AMethod) then
   begin
     FContext.Response.Status(500).Json('{"error": "Internal server error: Method reference lost"}');
@@ -508,11 +508,11 @@ begin
     // LIDAR COM PROCEDURES (SEM RETORNO)
     if ResultValue.IsEmpty then
     begin
-      // N√£o faz nada - o controller j√° setou a resposta via Ctx.Response
+      // N„o faz nada - o controller j· setou a resposta via Ctx.Response
     end
     else
     begin
-      // VERIFICAR SE RETORNOU IResult (APENAS SE N√ÉO ESTIVER VAZIO)
+      // VERIFICAR SE RETORNOU IResult (APENAS SE N√O ESTIVER VAZIO)
       if ResultValue.TryAsType<IResult>(ResIntf) then
       begin
         ResIntf.Execute(FContext);

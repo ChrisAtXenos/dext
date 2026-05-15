@@ -151,6 +151,9 @@ type
     constructor Create(AOriginal: IHttpResponse);
     destructor Destroy; override;
     
+    function GetHtmx: IHtmxResponse;
+    function GetHeaders: IStringDictionary;
+    
     // IHttpResponse methods
     function GetStatusCode: Integer;
     function GetContentType: string;
@@ -749,6 +752,16 @@ begin
   FStatusCode := 404;
   if AMessage <> '' then FBodyBuffer.Append(AMessage);
   FOriginal.NotFound(AMessage);
+end;
+
+function TResponseCaptureWrapper.GetHtmx: IHtmxResponse;
+begin
+  Result := FOriginal.Htmx;
+end;
+
+function TResponseCaptureWrapper.GetHeaders: IStringDictionary;
+begin
+  Result := FOriginal.Headers;
 end;
 
 function TResponseCaptureWrapper.GetCapturedBody: string;

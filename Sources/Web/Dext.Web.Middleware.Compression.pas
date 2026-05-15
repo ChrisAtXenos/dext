@@ -8,7 +8,7 @@ uses
   System.Rtti,
   System.SysUtils,
   System.ZLib,
-  Dext.Web.Interfaces, Dext.Web.Core;
+  Dext.Web.Interfaces, Dext.Web.Core, Dext.Collections.Dict;
 
 type
   TCompressionMiddleware = class(TMiddleware)
@@ -29,6 +29,9 @@ type
   public
     constructor Create(const AInner: IHttpResponse);
     destructor Destroy; override;
+
+    function GetHtmx: IHtmxResponse;
+    function GetHeaders: IStringDictionary;
 
     function GetStatusCode: Integer;
     function GetContentType: string;
@@ -79,6 +82,8 @@ procedure TBufferedResponse.Unauthorized(const AMessage: string); begin FInner.U
 procedure TBufferedResponse.Forbidden(const AMessage: string); begin FInner.Forbidden(AMessage); end;
 procedure TBufferedResponse.BadRequest(const AMessage: string); begin FInner.BadRequest(AMessage); end;
 procedure TBufferedResponse.NotFound(const AMessage: string); begin FInner.NotFound(AMessage); end;
+function TBufferedResponse.GetHtmx: IHtmxResponse; begin Result := FInner.Htmx; end;
+function TBufferedResponse.GetHeaders: IStringDictionary; begin Result := FInner.Headers; end;
 function TBufferedResponse.GetStatusCode: Integer; begin Result := FInner.StatusCode; end;
 function TBufferedResponse.GetContentType: string; begin Result := FInner.ContentType; end;
 procedure TBufferedResponse.Json(const AJson: string);

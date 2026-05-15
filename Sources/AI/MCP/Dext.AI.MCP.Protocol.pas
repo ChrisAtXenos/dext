@@ -20,22 +20,22 @@
 {***************************************************************************}
 {                                                                           }
 {  Description:                                                             }
-{    MCP (Model Context Protocol) core types and JSON-RPC 2.0 helpers.     }
+{    MCP (Model Context Protocol) core types and JSON-RPC 2.0 helpers.      }
 {                                                                           }
-{    The MCP protocol uses JSON-RPC 2.0 as its message format.             }
-{    Supports: initialize, ping, tools/list, tools/call                    }
+{    The MCP protocol uses JSON-RPC 2.0 as its message format.              }
+{    Supports: initialize, ping, tools/list, tools/call                     }
 {                                                                           }
-{  Reference: https://spec.modelcontextprotocol.io                         }
+{  Reference: https://spec.modelcontextprotocol.io                          }
 {                                                                           }
 {***************************************************************************}
-unit Dext.MCP.Protocol;
+unit Dext.AI.MCP.Protocol;
 
 interface
 
 uses
   System.SysUtils,
   System.JSON,
-  Dext.MCP.Types;
+  Dext.AI.MCP.Types;
 
 const
   MCP_JSONRPC_VERSION  = '2.0';
