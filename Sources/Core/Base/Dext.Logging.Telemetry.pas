@@ -32,7 +32,8 @@ uses
   System.Classes,
   System.JSON,
   Dext.Collections,
-  Dext.Logging;
+  Dext.Logging,
+  Dext.Telemetry.Context;
 
 type
   /// <summary>
@@ -46,6 +47,9 @@ type
     DurationMs: Int64;
     Status: string; // 'Success', 'Error'
     ErrorMessage: string;
+    TraceId: string;
+    SpanId: string;
+    ParentId: string;
   end;
 
   /// <summary>
@@ -72,6 +76,8 @@ type
     procedure OnEvent(const AEvent: TTelemetryEvent);
   end;
 
+
+
   /// <summary>
   ///   Centralized publisher for framework diagnostic events.
   ///   Inspired by .NET DiagnosticSource.
@@ -97,7 +103,9 @@ type
     procedure Unsubscribe(AObserver: ITelemetryObserver);
     
     /// <summary>Writes a new telemetry event to all subscribed observers.</summary>
-    procedure Write(const AName: string; const AData: TJSONObject; const ACategory: string = 'SYS'; const ADuration: Int64 = 0; const AStatus: string = 'Success'; const AError: string = '');
+    procedure Write(const AName: string; const AData: TJSONObject; const ACategory: string = 'SYS'; 
+      const ADuration: Int64 = 0; const AStatus: string = 'Success'; const AError: string = '';
+      const ATraceId: string = ''; const ASpanId: string = ''; const AParentId: string = '');
     
     /// <summary>Gets or sets whether the diagnostic source is enabled.</summary>
     property Enabled: Boolean read FEnabled write FEnabled;
@@ -130,16 +138,20 @@ begin
 end;
 
 procedure TDiagnosticSource.Write(const AName: string; const AData: TJSONObject;
-  const ACategory: string; const ADuration: Int64; const AStatus, AError: string);
+  const ACategory: string; const ADuration: Int64; const AStatus, AError: string;
+  const ATraceId, ASpanId, AParentId: string);
 var
   Ev: TTelemetryEvent;
   Observer: ITelemetryObserver;
+  Ctx: PScopeNode;
 begin
   if not FEnabled or (FObservers.Count = 0) then
   begin
-    AData.Free;
+    if Assigned(AData) then AData.Free;
     Exit;
   end;
+
+  Ctx := TraceContext.Current;
 
   Ev.Name := AName;
   Ev.Timestamp := Now;
@@ -148,12 +160,16 @@ begin
   Ev.DurationMs := ADuration;
   Ev.Status := AStatus;
   Ev.ErrorMessage := AError;
+  
+  if ATraceId <> '' then Ev.TraceId := ATraceId else if Ctx <> nil then Ev.TraceId := Ctx.TraceId.ToString;
+  if ASpanId <> '' then Ev.SpanId := ASpanId else if Ctx <> nil then Ev.SpanId := Ctx.SpanId.ToString;
+  if AParentId <> '' then Ev.ParentId := AParentId else if (Ctx <> nil) and (Ctx.Parent <> nil) then Ev.ParentId := Ctx.Parent.SpanId.ToString;
 
   try
     for Observer in FObservers do
       Observer.OnEvent(Ev);
   finally
-    Ev.Data.Free;
+    if Assigned(Ev.Data) then Ev.Data.Free;
   end;
 end;
 

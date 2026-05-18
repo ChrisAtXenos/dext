@@ -12,7 +12,10 @@ uses
   Dext.Logging,
   Dext.Logging.Async,
   Dext.Logging.Sinks,
-  Dext.Logging.Sinks.Sidecar;
+  Dext.Logging.Sinks.Sidecar,
+  Dext.Logging.Telemetry,
+  Dext.Options,
+  Dext;
 
 type
   /// <summary>
@@ -94,6 +97,8 @@ class procedure Log.Initialize;
 var
   PortStr: string;
   Port: Integer;
+  SidecarUrl: string;
+  Options: IOptions<TSidecarOptions>;
 begin
   if FFactory <> nil then Exit; // Already initialized
 
@@ -101,23 +106,42 @@ begin
   
   // Default Sinks
   FFactory.AddSink(TConsoleSink.Create);
-  // Optional: Add File Sink by default? Or let the user configure it?
-  // User request: "registro padrão de Logger multhtread para facilitar a adoção"
-  // Let's add a file sink in the current directory or temp.
-  // Ideally, based on config. But for "Zero Config", a reasonable default is needed.
 
+  // Sidecar Discovery
+  Port := 3030;
   
-  // Sidecar Sink (Fire and Forget)
-  // Auto-discovery via Environment Variable (set by Sidecar or execution context)
+  // 1. Environment Variable
   PortStr := GetEnvironmentVariable('DEXT_SIDECAR_PORT');
-  if PortStr <> '' then
-  begin
+  if PortStr <> '' then 
     Port := StrToIntDef(PortStr, 3030);
-    FFactory.AddSink(TSidecarSink.Create('http://localhost:' + Port.ToString));
+
+  // 2. IOptions (if available via Default Provider)
+  try
+    Options := TDextServices.GetService<IOptions<TSidecarOptions>>(TDextServices.DefaultProvider);
+    if (Options <> nil) and (Options.Value <> nil) then
+    begin
+      if Options.Value.Port <> 0 then
+        Port := Options.Value.Port;
+        
+      if not Options.Value.Enabled then
+      begin
+        // Sidecar disabled via options
+        FLogger := FFactory.CreateLogger('App');
+        Exit;
+      end;
+    end;
+  except
+    // Provider might not be ready or Options not registered, ignore
   end;
+
+  SidecarUrl := 'http://localhost:' + Port.ToString;
+  WriteLn('>> [Log] Initializing Sidecar Sink at ', SidecarUrl);
+  FFactory.AddSink(TSidecarSink.Create(SidecarUrl));
+  TDiagnosticSource.Instance.Subscribe(TSidecarTelemetryObserver.Create(SidecarUrl));
   
-  // Let's Create the Logger instance
+  // Create the Logger instance
   FLogger := FFactory.CreateLogger('App');
+  WriteLn('>> [Log] Logger initialized');
 end;
 
 class procedure Log.AddSink(const ASink: ILogSink);

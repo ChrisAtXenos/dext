@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {           Dext Framework                                                  }
 {           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
 {***************************************************************************}
@@ -18,9 +18,18 @@ uses
   Dext.Logging,
   Dext.Logging.Async,
   Dext.Logging.RingBuffer,
-  Dext.Types.UUID;
+  Dext.Logging.Telemetry,
+  Dext.Types.UUID,
+  System.JSON;
 
 type
+  TSidecarOptions = class
+  public
+    Port: Integer;
+    Enabled: Boolean;
+    constructor Create;
+  end;
+
   /// <summary>
   ///   Sink that sends logs to Dext Sidecar via HTTP.
   /// </summary>
@@ -51,7 +60,28 @@ type
     procedure Execute; override;
   end;
 
+  /// <summary>
+  ///   Observer that sends telemetry events (Spans) to Dext Sidecar via HTTP.
+  /// </summary>
+  TSidecarTelemetryObserver = class(TInterfacedObject, ITelemetryObserver)
+  private
+    FUrl: string;
+    FClient: THTTPClient;
+  public
+    constructor Create(const ABaseUrl: string = 'http://localhost:5000');
+    destructor Destroy; override;
+    procedure OnEvent(const AEvent: TTelemetryEvent);
+  end;
+
 implementation
+
+{ TSidecarOptions }
+
+constructor TSidecarOptions.Create;
+begin
+  Port := 3030;
+  Enabled := True;
+end;
 
 { TSidecarSink }
 
@@ -137,7 +167,6 @@ end;
 procedure TSidecarSink.FlushInternal;
 var
   Payload: TStringStream;
-  Resp: IHTTPResponse;
 begin
   if FCount = 0 then Exit;
   
@@ -150,10 +179,10 @@ begin
       // Since we are in Consumer Thread (or Timer), blocking is bad but necessary for HTTP.
       // 50 logs won't take long.
       try
-        Resp := FClient.Post(FUrl, Payload);
+        FClient.Post(FUrl, Payload);
+        WriteLn('>> [SidecarSink] Batch sent successfully');
       except
-        // Network error - ignore to prevent crash
-        // Ideally retry or log to fallback
+        on E: Exception do WriteLn('>> [SidecarSink] Failed: ', E.Message);
       end;
     finally
       Payload.Free;
@@ -182,6 +211,57 @@ begin
     Sleep(1000); // 1 second
     if not Terminated then
       FSink.Flush;
+  end;
+end;
+
+{ TSidecarTelemetryObserver }
+
+constructor TSidecarTelemetryObserver.Create(const ABaseUrl: string);
+begin
+  inherited Create;
+  FUrl := ABaseUrl + '/api/telemetry/events';
+  FClient := THTTPClient.Create;
+  FClient.ContentType := 'application/json';
+end;
+
+destructor TSidecarTelemetryObserver.Destroy;
+begin
+  FClient.Free;
+  inherited;
+end;
+
+procedure TSidecarTelemetryObserver.OnEvent(const AEvent: TTelemetryEvent);
+var
+  JO: TJSONObject;
+  Payload: TStringStream;
+begin
+  JO := TJSONObject.Create;
+  try
+    JO.AddPair('name', AEvent.Name);
+    JO.AddPair('ts', DateToISO8601(AEvent.Timestamp));
+    if Assigned(AEvent.Data) then
+      JO.AddPair('data', AEvent.Data.Clone as TJSONObject);
+    JO.AddPair('cat', AEvent.Category);
+    JO.AddPair('dur', TJSONNumber.Create(AEvent.DurationMs));
+    JO.AddPair('status', AEvent.Status);
+    JO.AddPair('error', AEvent.ErrorMessage);
+    JO.AddPair('traceId', AEvent.TraceId);
+    JO.AddPair('spanId', AEvent.SpanId);
+    JO.AddPair('parentId', AEvent.ParentId);
+    
+    Payload := TStringStream.Create(JO.ToJSON, TEncoding.UTF8);
+    try
+      try
+        FClient.Post(FUrl, Payload);
+        WriteLn('>> [SidecarTelemetry] Span sent: ', AEvent.Name);
+      except
+        on E: Exception do WriteLn('>> [SidecarTelemetry] Failed: ', E.Message);
+      end;
+    finally
+      Payload.Free;
+    end;
+  finally
+    JO.Free;
   end;
 end;
 

@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -161,7 +161,9 @@ type
   TDextServices = record
   private
     FServices: IServiceCollection;
+    class var FDefaultProvider: IServiceProvider;
   public
+    class property DefaultProvider: IServiceProvider read FDefaultProvider write FDefaultProvider;
     constructor Create(AServices: IServiceCollection);
     class function New: TDextServices; static;
     function Unwrap: IServiceCollection;
@@ -501,6 +503,8 @@ end;
 function TDextServices.BuildServiceProvider: IServiceProvider;
 begin
   Result := FServices.BuildServiceProvider;
+  if FDefaultProvider = nil then
+    FDefaultProvider := Result;
 end;
 
 { TDextDIFactory }
@@ -519,6 +523,9 @@ class function TDextServices.GetRequiredService<T>(const AProvider: IServiceProv
 var
   LService: IInterface;
 begin
+  if AProvider = nil then
+    raise EDextDIException.Create('Service provider is not initialized');
+    
   LService := AProvider.GetServiceAsInterface(TServiceType.FromInterface(TypeInfo(T)));
   if not Assigned(LService) then
     raise EDextDIException.Create('Service not registered: ' + string(PTypeInfo(TypeInfo(T))^.Name));
@@ -529,6 +536,9 @@ class function TDextServices.GetRequiredServiceObject<T>(const AProvider: IServi
 var
   LObj: TObject;
 begin
+  if AProvider = nil then
+    raise EDextDIException.Create('Service provider is not initialized');
+
   LObj := AProvider.GetRequiredService(TServiceType.FromClass(T));
   Result := T(LObj);
 end;
@@ -537,6 +547,9 @@ class function TDextServices.GetService<T>(const AProvider: IServiceProvider): T
 var
   Intf: IInterface;
 begin
+  if AProvider = nil then
+    Exit(Default(T));
+
   Intf := AProvider.GetServiceAsInterface(TServiceType.FromInterface(TypeInfo(T)));
   if Intf = nil then
     Exit(Default(T));
@@ -547,6 +560,9 @@ class function TDextServices.GetServiceObject<T>(const AProvider: IServiceProvid
 var
   LObj: TObject;
 begin
+  if AProvider = nil then
+    Exit(nil);
+
   LObj := AProvider.GetService(TServiceType.FromClass(T));
   if LObj = nil then
     Exit(nil);

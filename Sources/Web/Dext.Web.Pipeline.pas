@@ -35,6 +35,7 @@ uses
   Dext.Collections,
   Dext.Collections.Dict,
   Dext.Logging.Telemetry,
+  Dext.Logging.Tracing,
   Dext.Web.Interfaces, Dext.Web.Routing;
 
 type
@@ -150,7 +151,9 @@ procedure TDextPipeline.Execute(AContext: IHttpContext);
 var
   SW: TStopwatch;
   Payload: TJSONObject;
+  Span: TSpan;
 begin
+  Span := TTracer.BeginSpan(AContext.Request.Method + ' ' + AContext.Request.Path, 'HTTP');
   SW := TStopwatch.StartNew;
   try
     // Just execute the complete pipeline
@@ -163,6 +166,7 @@ begin
     Payload.AddPair('status', TJSONNumber.Create(AContext.Response.StatusCode));
     
     TDiagnosticSource.Instance.Write('HTTP.Request', Payload, 'HTTP', SW.ElapsedMilliseconds);
+    Span.SetStatus('Success');
   except
     on E: Exception do
     begin
@@ -172,6 +176,7 @@ begin
       Payload.AddPair('error', E.Message);
       
       TDiagnosticSource.Instance.Write('HTTP.Request', Payload, 'HTTP', SW.ElapsedMilliseconds, 'Error', E.Message);
+      Span.SetStatus('Error', E.Message);
       raise;
     end;
   end;

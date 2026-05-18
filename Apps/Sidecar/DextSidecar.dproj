@@ -64,6 +64,8 @@
 $(PreBuildEvent)]]></PreBuildEvent>
         <PostBuildEvent><![CDATA[copy /Y "$(OUTPUTPATH)" "$(OUTPUTDIR)..\Apps\dext-sidecar.exe"
 $(PostBuildEvent)]]></PostBuildEvent>
+        <DCC_RuntimePackages>true</DCC_RuntimePackages>
+        <DCC_UsePackage>rtl;vcl;vclimg;vclwinx;Dext.Core;Dext.Web.Core;Dext.Hosting;Dext.Web.Hubs;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;System;$(DCC_Namespace)</DCC_Namespace>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
@@ -75,7 +77,6 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <UWP_DelphiLogo44>$(ProjectName).Artwork\Windows\Uwp_44.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>$(ProjectName).Artwork\Windows\Uwp_150.png</UWP_DelphiLogo150>
         <DCC_ExeOutput>..\..\Output</DCC_ExeOutput>
-        <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">

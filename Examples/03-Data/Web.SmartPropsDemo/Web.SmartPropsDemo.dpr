@@ -18,7 +18,8 @@ uses
   Dext.Entity.Prototype,
   Dext.Core.SmartTypes,
   App.Entities in 'App.Entities.pas',
-  App.Context in 'App.Context.pas';
+  App.Context in 'App.Context.pas',
+  Dext.Logging.Global;
 
 var
   App: IWebApplication;
@@ -97,6 +98,7 @@ begin
 
     // Build services BEFORE seeding
     App.BuildServices;
+    Log.Initialize;
     
     // Seed database AFTER services are built
     SeedDatabase;

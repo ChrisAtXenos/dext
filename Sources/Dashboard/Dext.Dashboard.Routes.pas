@@ -73,6 +73,7 @@ uses
 var
   FSSEClients: IList<IHttpContext>;
   FLock: TObject;
+  FTraceHistory: IList<string>;
 
 procedure BroadcastSSE(const EventName, Data: string); forward;
 
@@ -911,15 +912,26 @@ begin
         // If it's a specific dashboard event, broadcast legacy + push to S23
         if SEvent <> '' then
         begin
-          BroadcastSSE(SEvent, AItem.ToJson);
           if Streamer <> nil then
             Streamer.PushEvent(SEvent, AItem.ToJson);
+          
+          // Only broadcast high-level events (run_start, etc) to legacy clients
+          BroadcastSSE(SEvent, AItem.ToJson);
         end
         else
         begin
           // Assume it's a standard log entry
           if Streamer <> nil then
             Streamer.PushEvent('log', AItem.ToJson);
+            
+          // Persistence
+          TMonitor.Enter(FLock);
+          try
+            FTraceHistory.Add('{"event":"log","data":' + AItem.ToJson + '}');
+            while FTraceHistory.Count > 1000 do FTraceHistory.RemoveAt(0);
+          finally
+            TMonitor.Exit(FLock);
+          end;
         end;
       end;
 
@@ -959,6 +971,43 @@ begin
         end;
 
         Ctx.Response.StatusCode := 202; // Accepted
+      finally
+        SR.Free;
+      end;
+    end);
+
+  // API: Telemetry Events Ingestion (Spans/Traces)
+  App.MapPost('/api/telemetry/events',
+    procedure(Ctx: IHttpContext)
+    var
+      Body: string;
+      SR: TStreamReader;
+      Streamer: IEventStreamer;
+    begin
+      Streamer := TDextServices.GetService<IEventStreamer>(Ctx.Services);
+
+      SR := TStreamReader.Create(Ctx.Request.Body);
+      try
+        Body := SR.ReadToEnd;
+        if Body.IsEmpty then
+        begin
+          Ctx.Response.StatusCode := 204;
+          Exit;
+        end;
+
+        if Streamer <> nil then
+          Streamer.PushEvent('span', Body);
+
+        // Persistence
+        TMonitor.Enter(FLock);
+        try
+          FTraceHistory.Add('{"event":"span","data":' + Body + '}');
+          while FTraceHistory.Count > 1000 do FTraceHistory.RemoveAt(0);
+        finally
+          TMonitor.Exit(FLock);
+        end;
+
+        Ctx.Response.StatusCode := 202;
       finally
         SR.Free;
       end;
@@ -1072,6 +1121,28 @@ begin
             end;
          end;
      end);
+
+  // API: Telemetry History
+  App.MapGet('/api/telemetry/history',
+    procedure(Ctx: IHttpContext)
+    var
+      JSON: string;
+      I: Integer;
+    begin
+      TMonitor.Enter(FLock);
+      try
+        JSON := '[';
+        for I := 0 to FTraceHistory.Count - 1 do
+        begin
+          if I > 0 then JSON := JSON + ',';
+          JSON := JSON + FTraceHistory[I];
+        end;
+        JSON := JSON + ']';
+      finally
+        TMonitor.Exit(FLock);
+      end;
+      Results.Json(JSON).Execute(Ctx);
+    end);
 
   // ----------------------------------------------------------------------------------
   // S23 Validation: Streamable Sessions + HTMX Fragments
@@ -1197,7 +1268,7 @@ begin
       UsedMB  := TotalMB - AvailMB;
       UsedPct := MemStatus.dwMemoryLoad;
 
-      Html :=
+    Html :=
         '<div class="s23-metrics">' +
         '  <div class="s23-metric">' +
         '    <span class="s23-metric-label">Memory Used</span>' +
@@ -1210,7 +1281,7 @@ begin
         '  <div class="s23-metric">' +
         '    <span class="s23-metric-label">Sidecar</span>' +
         '    <span class="s23-metric-value" style="color:#2ecc71">&#x25CF; Online</span>' +
-        '    <span class="s23-metric-sub">S23 HTMX Fragment &mdash; ' +
+        '    <span class="s23-metric-sub">S24 Observability Suite &mdash; ' +
                FormatDateTime('hh:nn:ss', Now) + '</span>' +
         '  </div>' +
         '</div>';
@@ -1262,11 +1333,13 @@ end;
 initialization
   FHttpHistory := TCollections.CreateList<THttpHistoryItem>(True);
   FSSEClients := TCollections.CreateList<IHttpContext>;
+  FTraceHistory := TCollections.CreateList<string>;
   FLock := TObject.Create;
 
 finalization
   FLock.Free;
   FHttpHistory := nil;
+  FTraceHistory := nil;
 
 end.
 

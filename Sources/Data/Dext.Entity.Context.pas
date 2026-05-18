@@ -54,7 +54,8 @@ uses
   Dext.Specifications.Types,
   Dext.Core.Reflection,
   Dext.Threading.Sync,
-  Dext.Threading.Async;
+  Dext.Threading.Async,
+  Dext.Logging.Tracing;
 
 type
   TFluentExpression = Dext.Specifications.Types.TFluentExpression;
@@ -1025,7 +1026,9 @@ var
   List: IList<TObject>;
   Item: TObject;
   Deletes: IList<TObject>;
+  Span: TSpan;
 begin
+  Span := TTracer.BeginSpan('DbContext.SaveChanges', 'SQL');
   ApplyTenantConfig(False);
   Result := 0;
   if not FChangeTracker.HasChanges then Exit;
@@ -1126,8 +1129,11 @@ begin
      
      Commit;
      FChangeTracker.AcceptAllChanges;
+     Span.SetStatus('Success');
+     Span.SetAttribute('affected_rows', Result);
    except
      Rollback;
+     Span.SetStatus('Error', Exception(ExceptObject).Message);
      raise;
    end;
 end;

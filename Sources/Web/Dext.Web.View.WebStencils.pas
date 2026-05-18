@@ -25,19 +25,21 @@ interface
 {$I Dext.inc}
 
 uses
-  System.SysUtils,
   System.Classes,
   System.Rtti,
+  System.SyncObjs,
+  System.SysUtils,
   System.Variants,
   {$IFDEF DEXT_ENABLE_WEB_STENCILS}
-  Web.Stencils,
   System.Bindings.EvalProtocol,
+  Web.Stencils,
   {$ENDIF}
-  Dext.Web.Interfaces,
-  Dext.Web.View,
+  Dext.Collections.Dict,
   Dext.Core.SmartTypes,
+  Dext.Threading.Sync,
   Dext.Types.Nullable,
-  Dext.Collections.Dict;
+  Dext.Web.Interfaces,
+  Dext.Web.View;
 
 type
   {$IFDEF DEXT_ENABLE_WEB_STENCILS}

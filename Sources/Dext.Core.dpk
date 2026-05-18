@@ -125,6 +125,7 @@ contains
   Dext.Text.Escaping in 'Core\Base\Dext.Text.Escaping.pas',
   Dext.Logging.Extensions in 'Core\Dext.Logging.Extensions.pas',
   Dext.Logging.Telemetry in 'Core\Base\Dext.Logging.Telemetry.pas',
+  Dext.Logging.Tracing in 'Core\Base\Dext.Logging.Tracing.pas',
   Dext.Threading.Sync in 'Core\Dext.Threading.Sync.pas';
 
 end.

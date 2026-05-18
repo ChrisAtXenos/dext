@@ -51,6 +51,9 @@ async function load() {
         // Restore active project if exists
         var savedPj = localStorage.getItem("activeProject");
         if (savedPj) selectActiveProject(savedPj, true);
+
+        // Load telemetry history (logs/spans)
+        loadHistory();
     } catch (e) { console.error(e); }
 }
 
@@ -113,12 +116,33 @@ function connectSSE() {
 }
 
 function handleSseEvent(eventName, data) {
-    if (eventName === "log") {
+    if (eventName === "log" || eventName === "span") {
         try {
-            var logObj = JSON.parse(data);
-            processLog(logObj.lvl || "Info", logObj.msg || data, logObj.ts);
+            var obj = JSON.parse(data);
+            
+            // Normalize properties (camelCase from Sidecar to snake_case for main.js)
+            if (obj.traceId) obj.trace_id = obj.traceId;
+            if (obj.spanId) obj.span_id = obj.spanId;
+            if (obj.parentId) obj.parent_id = obj.parentId;
+            if (obj.dur) obj.duration_ms = obj.dur;
+
+            if (eventName === "log") {
+                processLog(obj.lvl || "Info", obj.msg || data, obj.ts);
+                // S24: Process Distributed Tracing if log contains trace data
+                if (obj.trace_id) {
+                    processTrace(obj);
+                }
+            } else {
+                // eventName === "span"
+                // Map span properties for trace processor
+                obj.msg = obj.name; // Use span name as message for display
+                obj.lvl = obj.lvl || "Info"; 
+                if (obj.trace_id) {
+                   processTrace(obj);
+                }
+            }
         } catch(e) {
-            processLog("Info", data);
+            if (eventName === "log") processLog("Info", data);
         }
         return;
     }
@@ -1118,6 +1142,135 @@ function findTestResult(results, fixtureName, testName) {
         if (r.fixture == fixtureName && r.test == testName) return r;
     }
     return null;
+}
+
+// ==================== Distributed Tracing (S24) ====================
+var traceStore = {}; // trace_id -> { spans: [], root: null }
+var activeTraceId = null;
+
+function processTrace(log) {
+    var tid = log.trace_id;
+    var isNew = false;
+    if (!traceStore[tid]) {
+        traceStore[tid] = { spans: [], startTime: log.ts, name: log.msg || "Trace " + tid.substring(0,8) };
+        isNew = true;
+    }
+    
+    // Add span to trace
+    traceStore[tid].spans.push(log);
+    
+    // Update list
+    renderTraceList();
+    
+    // Auto-select if first trace or already active
+    if (!activeTraceId && isNew) {
+        selectTrace(tid);
+    } else if (activeTraceId === tid) {
+        renderTraceDetail(tid);
+    }
+}
+
+function renderTraceList() {
+    var el = document.getElementById("trace-list");
+    if (!el) return;
+    
+    var h = "";
+    var sortedIds = Object.keys(traceStore).sort((a,b) => new Date(traceStore[b].startTime) - new Date(traceStore[a].startTime));
+    
+    sortedIds.forEach(tid => {
+        var t = traceStore[tid];
+        var active = tid === activeTraceId ? "active" : "";
+        var time = new Date(t.startTime).toLocaleTimeString();
+        var status = t.spans.some(s => s.lvl === "Error") ? "error" : "success";
+        
+        h += `<div class="trace-item ${active}" onclick="selectTrace('${tid}')">
+                <div class="trace-item-top">
+                    <span class="trace-item-name">${t.name}</span>
+                    <span class="trace-item-time">${time}</span>
+                </div>
+                <div class="trace-item-meta">
+                    <span><span class="trace-status ${status}"></span>${t.spans.length} Spans</span>
+                    <span style="color:var(--outline)">${tid.substring(0,8)}...</span>
+                </div>
+              </div>`;
+    });
+    el.innerHTML = h;
+}
+
+function selectTrace(tid) {
+    activeTraceId = tid;
+    renderTraceList();
+    renderTraceDetail(tid);
+}
+
+function renderTraceDetail(tid) {
+    var el = document.getElementById("trace-detail");
+    if (!el) return;
+    
+    var t = traceStore[tid];
+    if (!t) return;
+    
+    var h = `<div class="trace-detail-header">
+                <h3>${t.name}</h3>
+                <code style="font-size:11px;color:var(--on-surface-v)">${tid}</code>
+             </div>
+             <div class="trace-tree">`;
+             
+    // Build hierarchy
+    var spans = t.spans;
+    var roots = spans.filter(s => !s.parent_id);
+    
+    if (roots.length === 0 && spans.length > 0) roots = [spans[0]]; // Fallback
+
+    roots.forEach(r => {
+        h += renderSpanNode(r, spans);
+    });
+    
+    h += `</div>`;
+    el.innerHTML = h;
+}
+
+function renderSpanNode(span, allSpans) {
+    var children = allSpans.filter(s => s.parent_id === span.span_id);
+    var duration = span.duration_ms ? span.duration_ms + "ms" : "";
+    var color = span.lvl === "Error" ? "var(--error)" : "var(--primary)";
+    
+    var h = `<div class="trace-node">
+                <div class="trace-node-content" style="border-left: 3px solid ${color}">
+                    <span class="trace-node-name">${span.msg}</span>
+                    <span class="trace-node-duration">${duration}</span>
+                </div>`;
+                
+    if (children.length > 0) {
+        h += `<div class="trace-node-children">`;
+        children.forEach(c => {
+            h += renderSpanNode(c, allSpans);
+        });
+        h += `</div>`;
+    }
+    
+    h += `</div>`;
+    return h;
+}
+
+function tracesClear() {
+    traceStore = {};
+    activeTraceId = null;
+    renderTraceList();
+    document.getElementById("trace-detail").innerHTML = '<div class="trace-empty-msg" data-i18n="select_trace">Select a trace to view details</div>';
+    applyI18n();
+}
+
+async function loadHistory() {
+    try {
+        const r = await fetch("/api/telemetry/history");
+        if (r.ok) {
+            const history = await r.json();
+            history.forEach(item => {
+                handleSseEvent(item.event, JSON.stringify(item.data));
+            });
+        }
+    } catch(e) { console.warn("Failed to load telemetry history:", e); }
 }
 
 // ==================== Init ====================

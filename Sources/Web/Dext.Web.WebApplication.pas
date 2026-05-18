@@ -257,9 +257,13 @@ end;
 
 function TWebApplication.BuildServices: IServiceProvider;
 begin
-  // ? REBUILD ServiceProvider to include all services registered after Create()
+  // Rebuild ServiceProvider to include all services registered after Create()
   FServiceProvider := nil; // Release old provider
   FServiceProvider := FServices.BuildServiceProvider;
+  
+  // Set as global default provider for record-based service resolution (TDextServices.GetService<T>)
+  TDextServices.DefaultProvider := FServiceProvider;
+
   // Ensure AppBuilder is updated or created with the new provider
   GetApplicationBuilder.SetServiceProvider(FServiceProvider);
   // Force logger resolution to initialize Telemetry Bridge
@@ -348,8 +352,7 @@ begin
   // Build ServiceProvider now if not already built via BuildServices()
   // This is the correct place to do it, AFTER all services have been registered
   if FServiceProvider = nil then
-    FServiceProvider := FServices.BuildServiceProvider;
-  ResolveLogger; // Force telemetry subscription early
+    BuildServices;
   
   // Update ApplicationBuilder with the final ServiceProvider
   GetApplicationBuilder.SetServiceProvider(FServiceProvider);

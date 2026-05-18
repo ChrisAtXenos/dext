@@ -58,7 +58,9 @@ uses
   Dext.Specifications.Types,
   Dext.Threading.Async,
   Dext.Types.Nullable,
-  Dext.Types.UUID;
+  Dext.Types.UUID,
+  Dext.Logging.Tracing,
+  System.Diagnostics;
 
 // Helper function to convert TValue to string for identity map keys
 // TValue.ToString does not work correctly for TGUID (returns type name, not value)
@@ -328,7 +330,6 @@ implementation
 
 uses
   Data.DB,
-  System.Diagnostics,
   System.JSON,
   Dext.Entity.ProxyFactory,
   Dext.Logging.Telemetry,
@@ -1099,7 +1100,6 @@ var
   NewId: string;
   Pair: TPair<string, TValue>;
   ParamType: TFieldType;
-  Payload: TJSONObject;
   PKConvert: TValue;
   PKVal: Variant;
   Prop, AutoIncProp: TRttiProperty;
@@ -1107,10 +1107,12 @@ var
   ReturningClause: string;
   RetVal, RawPKVal: TValue;
   Sql: string;
-  SW: TStopwatch;
+  Span: TSpan;
   UseReturning: Boolean;
   ValuesPos: Integer;
 begin
+  Span := TTracer.BeginSpan('DbSet.Add', 'SQL');
+  Span.SetAttribute('entity', string(PTypeInfo(TypeInfo(T)).Name));
   HandleTimestamps(AEntity, True);
   Generator := CreateGenerator;
   try
@@ -1181,20 +1183,13 @@ begin
     end;
     if UseReturning then
     begin
-      SW := TStopwatch.StartNew;
       try
         RetVal := Cmd.ExecuteScalar;
-        Payload := TJSONObject.Create;
-        Payload.AddPair('sql', Sql);
-        Payload.AddPair('rows', TJSONNumber.Create(1));
-        TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds);
+        Span.SetAttribute('sql', Sql);
       except
         on E: Exception do
         begin
-          Payload := TJSONObject.Create;
-          Payload.AddPair('sql', Sql);
-          Payload.AddPair('rows', TJSONNumber.Create(1));
-          TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+          Span.SetStatus('Error', E.Message);
           raise;
         end;
       end;
@@ -1202,20 +1197,13 @@ begin
     end
     else
     begin
-      SW := TStopwatch.StartNew;
       try
         Cmd.ExecuteNonQuery;
-        Payload := TJSONObject.Create;
-        Payload.AddPair('sql', Sql);
-        Payload.AddPair('rows', TJSONNumber.Create(1));
-        TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds);
+        Span.SetAttribute('sql', Sql);
       except
         on E: Exception do
         begin
-          Payload := TJSONObject.Create;
-          Payload.AddPair('sql', Sql);
-          Payload.AddPair('rows', TJSONNumber.Create(1));
-          TDiagnosticSource.Instance.Write('SQL.Insert', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+          Span.SetStatus('Error', E.Message);
           raise;
         end;
       end;
@@ -1332,13 +1320,14 @@ var
   NewVer: Integer;
   Pair: TPair<string, TValue>;
   ParamType: TFieldType;
-  Payload: TJSONObject;
   Prop: TRttiProperty;
   RowsAffected: Integer;
   Sql, Id: string;
-  SW: TStopwatch;
   Val: TValue;
+  Span: TSpan;
 begin
+  Span := TTracer.BeginSpan('DbSet.Update', 'SQL');
+  Span.SetAttribute('entity', string(PTypeInfo(TypeInfo(T)).Name));
   HandleTimestamps(AEntity, False);
   Generator := CreateGenerator;
   try
@@ -1351,20 +1340,14 @@ begin
       else
         Cmd.AddParam(Pair.Key, Pair.Value);
     end;
-    SW := TStopwatch.StartNew;
     try
       RowsAffected := Cmd.ExecuteNonQuery;
-      Payload := TJSONObject.Create;
-      Payload.AddPair('sql', Sql);
-      Payload.AddPair('rows', TJSONNumber.Create(RowsAffected));
-      TDiagnosticSource.Instance.Write('SQL.Update', Payload, 'SQL', SW.ElapsedMilliseconds);
+      Span.SetAttribute('sql', Sql);
+      Span.SetAttribute('rows', RowsAffected);
     except
       on E: Exception do
       begin
-        Payload := TJSONObject.Create;
-        Payload.AddPair('sql', Sql);
-        Payload.AddPair('rows', TJSONNumber.Create(0));
-        TDiagnosticSource.Instance.Write('SQL.Update', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+        Span.SetStatus('Error', E.Message);
         raise;
       end;
     end;
@@ -1409,7 +1392,6 @@ var
   Key: string;
   Pair: TPair<string, TValue>;
   ParamType: TFieldType;
-  Payload: TJSONObject;
   Prop: TRttiProperty;
   PropName: string;
   PropMap: TPropertyMap;
@@ -1417,11 +1399,13 @@ var
   RType: TRttiType;
   SoftDeleteAttr: SoftDeleteAttribute;
   Sql: string;
-  SW: TStopwatch;
   ValToSet: TValue;
+  Span: TSpan;
   NowVal: TDateTime;
   HasChanged: Boolean;
 begin
+  Span := TTracer.BeginSpan('DbSet.Delete', 'SQL');
+  Span.SetAttribute('entity', string(PTypeInfo(TypeInfo(T)).Name));
   IsSoftDelete := False;
   PropName := '';
   
@@ -1531,20 +1515,14 @@ begin
       else
         Cmd.AddParam(Pair.Key, Pair.Value);
     end;
-    SW := TStopwatch.StartNew;
     try
       RowsAffected := Cmd.ExecuteNonQuery;
-      Payload := TJSONObject.Create;
-      Payload.AddPair('sql', Sql);
-      Payload.AddPair('rows', TJSONNumber.Create(RowsAffected));
-      TDiagnosticSource.Instance.Write('SQL.Delete', Payload, 'SQL', SW.ElapsedMilliseconds);
+      Span.SetAttribute('sql', Sql);
+      Span.SetAttribute('rows', RowsAffected);
     except
       on E: Exception do
       begin
-        Payload := TJSONObject.Create;
-        Payload.AddPair('sql', Sql);
-        Payload.AddPair('rows', TJSONNumber.Create(0));
-        TDiagnosticSource.Instance.Write('SQL.Delete', Payload, 'SQL', SW.ElapsedMilliseconds, 'Error', E.Message);
+        Span.SetStatus('Error', E.Message);
         raise;
       end;
     end;
@@ -1840,15 +1818,17 @@ var
   LSpec: ISpecification<T>;
   Pair: TPair<string, TValue>;
   ParamType: TFieldType;
-  Payload: TJSONObject;
   Reader: IDbReader;
   RowCount: Integer;
   Sql: string;
-  SW: TStopwatch;
   Tracking: Boolean;
+  Span: TSpan;
 begin
   LSpec := ASpec;
   ApplyTenantFilter(LSpec);
+
+  Span := TTracer.BeginSpan('DbSet.ToList', 'SQL');
+  Span.SetAttribute('entity', string(PTypeInfo(TypeInfo(T)).Name));
 
   IsProjection := (LSpec <> nil) and (Length(LSpec.GetSelectedColumns) > 0);
   
@@ -1885,7 +1865,6 @@ begin
     end;
     
     try
-      SW := TStopwatch.StartNew;
       Reader := Cmd.ExecuteQuery;
       RowCount := 0;
       while Reader.Next do
@@ -1894,14 +1873,12 @@ begin
         Entity := Hydrate(Reader, Tracking);
         Result.Add(Entity);
       end;
-      
-      Payload := TJSONObject.Create;
-      Payload.AddPair('sql', Sql);
-      Payload.AddPair('rows', TJSONNumber.Create(RowCount));
-      TDiagnosticSource.Instance.Write('SQL.Query', Payload, 'SQL', SW.ElapsedMilliseconds);
+      Span.SetAttribute('rows', RowCount);
+      Span.SetAttribute('sql', Sql);
     except
       on E: Exception do
       begin
+        Span.SetStatus('Error', E.Message);
         raise;
       end;
     end;
@@ -2570,7 +2547,11 @@ var
   Spec: ISpecification<T>;
   Val: TValue;
   VariantArray: TArray<Variant>;
+  Span: TSpan;
 begin
+  Span := TTracer.BeginSpan('DbSet.Find');
+  Span.SetAttribute('entity', string(PTypeInfo(TypeInfo(T)).Name));
+
   // Check if AId is a VarArray (composite key)
   if VarIsArray(AId) then
   begin
@@ -2609,14 +2590,23 @@ begin
 
   Expr := TPropExpression.Create(PropName) = Val;
   Spec := TSpecification<T>.Create(Expr);
-  L := ToList(Spec);
-  if L.Count > 0 then
-  begin
-    Result := L[0];
-    L.Extract(Result);
-  end
-  else
-    Result := nil;
+  
+  try
+    L := ToList(Spec);
+    if L.Count > 0 then
+    begin
+      Result := L[0];
+      L.Extract(Result);
+    end
+    else
+      Result := nil;
+  except
+    on E: Exception do
+    begin
+      Span.SetStatus('Error', E.Message);
+      raise;
+    end;
+  end;
 end;
 
 function TDbSet<T>.Find(const AId: array of Variant): T;

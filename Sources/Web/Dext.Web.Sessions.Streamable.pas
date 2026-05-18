@@ -84,6 +84,19 @@ type
     FScavengerTimeout: Integer;
   end;
 
+  TScavengerThread = class(TThread)
+  private
+    [Weak] FManager: IStreamableSessionManager;
+    FStopEvent: TEvent;
+    FInterval: Integer;
+    FTimeout: Integer;
+    FToken: ICancellationToken;
+  public
+    constructor Create(AManager: IStreamableSessionManager; AStopEvent: TEvent;
+      AInterval, ATimeout: Integer; const AToken: ICancellationToken);
+    procedure Execute; override;
+  end;
+
 implementation
 
 { TSseEvent }
@@ -341,34 +354,46 @@ begin
   FStoppingToken     := AStoppingToken;
   FStopEvent.ResetEvent;
 
-  FScavengerThread := TThread.CreateAnonymousThread(
-    procedure
-    var
-      Elapsed, TargetMs: Cardinal;
-      Token: ICancellationToken;
-    begin
-      Token    := FStoppingToken; // capture once; avoids interface access inside tight loop
-      TargetMs := Cardinal(FScavengerInterval) * 1000;
-      Elapsed  := 0;
-
-      // Poll in 500ms ticks so we respond quickly to either shutdown signal
-      while FStopEvent.WaitFor(500) = wrTimeout do
-      begin
-        if TThread.CurrentThread.CheckTerminated then Exit;
-        if (Token <> nil) and Token.IsCancellationRequested then Exit;
-
-        Inc(Elapsed, 500);
-        if Elapsed >= TargetMs then
-        begin
-          Elapsed := 0;
-          CollectGarbage(FScavengerTimeout);
-        end;
-      end;
-      // FStopEvent signaled by StopScavenger — exit cleanly
-    end
-  );
-  FScavengerThread.FreeOnTerminate := False;
+  FScavengerThread := TScavengerThread.Create(Self, FStopEvent, FScavengerInterval, 
+    FScavengerTimeout, FStoppingToken);
   FScavengerThread.Start;
+end;
+
+{ TScavengerThread }
+
+constructor TScavengerThread.Create(AManager: IStreamableSessionManager;
+  AStopEvent: TEvent; AInterval, ATimeout: Integer; const AToken: ICancellationToken);
+begin
+  inherited Create(True);
+  FreeOnTerminate := False;
+  FManager := AManager;
+  FStopEvent := AStopEvent;
+  FInterval := AInterval;
+  FTimeout := ATimeout;
+  FToken := AToken;
+end;
+
+procedure TScavengerThread.Execute;
+var
+  Elapsed, TargetMs: Cardinal;
+  Mgr: IStreamableSessionManager;
+begin
+  TargetMs := Cardinal(FInterval) * 1000;
+  Elapsed  := 0;
+
+  while not Terminated and (FStopEvent.WaitFor(500) = wrTimeout) do
+  begin
+    if (FToken <> nil) and FToken.IsCancellationRequested then Exit;
+
+    Inc(Elapsed, 500);
+    if Elapsed >= TargetMs then
+    begin
+      Elapsed := 0;
+      Mgr := FManager;
+      if Mgr <> nil then
+        (Mgr as TInMemoryStreamableSessionManager).CollectGarbage(FTimeout);
+    end;
+  end;
 end;
 
 procedure TInMemoryStreamableSessionManager.StopScavenger;

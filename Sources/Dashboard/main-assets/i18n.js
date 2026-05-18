@@ -1,6 +1,7 @@
 const i18n = {
     en: {
-        dashboard: "Dashboard", projects: "Projects", tests: "Tests", http: "HTTP", settings: "Settings", logs: "Logs",
+        dashboard: "Dashboard", projects: "Projects", tests: "Tests", http: "HTTP", traces: "Traces", settings: "Settings", logs: "Logs",
+        distributed_tracing: "Distributed Tracing",
         active_workspace: "Active Workspace", active_project: "Active Project", no_project: "No Project",
         select_folder: "Select Folder...", no_env: "No environments", scan_env: "Scan Environments",
         coverage: "Coverage", coverage_sub: "Code test coverage across all projects",
@@ -26,7 +27,8 @@ const i18n = {
         settings_soon: "Settings coming soon..."
     },
     pt: {
-        dashboard: "Painel", projects: "Projetos", tests: "Testes", http: "HTTP", settings: "Configurações", logs: "Logs",
+        dashboard: "Painel", projects: "Projetos", tests: "Testes", http: "HTTP", traces: "Traces", settings: "Configurações", logs: "Logs",
+        distributed_tracing: "Tracing Distribuído",
         active_workspace: "Workspace Ativo", active_project: "Projeto Ativo", no_project: "Sem Projeto",
         select_folder: "Selecionar Pasta...", no_env: "Sem ambientes", scan_env: "Escanear Ambientes",
         coverage: "Cobertura", coverage_sub: "Cobertura de testes em todos os projetos",
@@ -52,7 +54,8 @@ const i18n = {
         settings_soon: "Configurações em breve..."
     },
     es: {
-        dashboard: "Tablero", projects: "Proyectos", tests: "Pruebas", http: "HTTP", settings: "Ajustes", logs: "Registros",
+        dashboard: "Tablero", projects: "Proyectos", tests: "Pruebas", http: "HTTP", traces: "Traces", settings: "Ajustes", logs: "Registros",
+        distributed_tracing: "Tracing Distribuido",
         active_workspace: "Espacio Activo", active_project: "Proyecto Activo", no_project: "Sin Proyecto",
         select_folder: "Seleccionar Carpeta...", no_env: "Sin entornos", scan_env: "Escanear Entornos",
         coverage: "Cobertura", coverage_sub: "Cobertura de pruebas en todos los proyectos",

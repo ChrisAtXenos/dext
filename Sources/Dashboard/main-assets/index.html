@@ -99,6 +99,8 @@
                 class="lb" data-i18n="tests">Tests</span></a>
         <a href="#" class="ni" data-page="http"><span class="ms material-symbols-outlined">http</span><span class="lb"
                 data-i18n="http">HTTP</span></a>
+        <a href="#" class="ni" data-page="traces"><span class="ms material-symbols-outlined">analytics</span><span class="lb"
+                data-i18n="traces">Traces</span></a>
         <a href="#" class="ni" data-page="settings"><span class="ms material-symbols-outlined">settings</span><span
                 class="lb" data-i18n="settings">Settings</span></a>
         <a href="#" class="ni" data-page="logs"><span class="ms material-symbols-outlined">terminal</span><span
@@ -442,6 +444,32 @@ Content-Type: application/json
             </section>
         </div>
 
+        <!-- PAGE: Traces -->
+        <div id="page-traces" class="page">
+            <div class="http-toolbar">
+                <button class="btn btn-primary" onclick="tracesClear()"><span
+                        class="ms material-symbols-outlined">delete_sweep</span><span data-i18n="clear">Clear</span></button>
+                <div class="http-sep"></div>
+                <div style="flex:1;display:flex;align-items:center;background:var(--surface-v);border-radius:4px;padding:0 8px;border:1px solid var(--outline-v)">
+                    <span class="ms material-symbols-outlined" style="font-size:18px;color:var(--on-surface-v)">filter_list</span>
+                    <input type="text" id="trace-filter" placeholder="Filter traces..." 
+                        style="background:transparent;border:none;color:var(--on-surface);padding:8px;width:100%;outline:none;">
+                </div>
+            </div>
+            <div class="trace-layout">
+                <div class="trace-list-panel">
+                    <div id="trace-list" class="trace-list">
+                        <!-- Traces go here -->
+                    </div>
+                </div>
+                <div class="trace-detail-panel">
+                   <div id="trace-detail" class="trace-detail">
+                       <div class="trace-empty-msg" data-i18n="select_trace">Select a trace to view details</div>
+                   </div>
+                </div>
+            </div>
+        </div>
+
         <!-- PAGE: Settings (Placeholder) -->
         <div id="page-settings" class="page">
             <section class="sec">
@@ -494,7 +522,7 @@ Content-Type: application/json
 
           this._source.addEventListener('connected', e => console.log('[DextSSE] connected:', e.data));
           
-          ["run_start", "test_start", "test_complete", "run_complete", "log"].forEach(evt => {
+          ["run_start", "test_start", "test_complete", "run_complete", "log", "span"].forEach(evt => {
              this._source.addEventListener(evt, e => this._onEvent(evt, e.data));
           });
 
