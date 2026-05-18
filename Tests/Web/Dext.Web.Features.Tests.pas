@@ -7,6 +7,7 @@ uses
   Dext.Testing.Attributes,
   Dext.Assertions,
   Dext.Auth.JWT,
+  Dext.Net.RestClient,
   Dext.Net.RestRequest;
 
 type
@@ -18,6 +19,9 @@ type
 
     [Test('T.3 - Should support Multipart Form Data adding correctly (Item C.1)')]
     procedure TestMultipartFormData;
+
+    [Test('Should validate conditional query parameters in TRestRequest')]
+    procedure TestConditionalQueryParams;
   end;
 
 implementation
@@ -46,6 +50,46 @@ end;
 procedure TWebFeaturesTests.TestMultipartFormData;
 begin
   Should(True).BeTrue; // Placeholder for Multipart Data Verification over Dext.Net
+end;
+
+procedure TWebFeaturesTests.TestConditionalQueryParams;
+var
+  Client: TRestClient;
+  Req: TRestRequest;
+  FullUrl: string;
+begin
+  Client := TRestClient.Create;
+
+  // 1. QueryParamIfNotEmpty
+  Req := Client.Request(hmGET, '/api/users')
+    .QueryParamIfNotEmpty('status', 'active')
+    .QueryParamIfNotEmpty('search', '')
+    .QueryParamIfNotEmpty('filter', '   '); // Blank, should be skipped
+  Should(Req.GetFullUrl).Be('/api/users?status=active');
+
+  // 2. QueryParam (with Default)
+  Req := Client.Request(hmGET, '/api/users')
+    .QueryParam('page', '2', '1')      // Value is present
+    .QueryParam('limit', '', '10')     // Value empty, use default
+    .QueryParam('sort', '   ', 'name') // Value blank, use default
+    .QueryParam('group', '', '   ');   // Both blank, should skip
+  FullUrl := Req.GetFullUrl;
+  Should(FullUrl).StartWith('/api/users?');
+  Should(FullUrl).Contain('page=2');
+  Should(FullUrl).Contain('limit=10');
+  Should(FullUrl).Contain('sort=name');
+
+  // 3. QueryParamIf
+  Req := Client.Request(hmGET, '/api/users')
+    .QueryParamIf('flagged', 'true', True)
+    .QueryParamIf('deleted', 'true', False);
+  Should(Req.GetFullUrl).Be('/api/users?flagged=true');
+
+  // 4. Overloaded QueryParam (with Boolean Condition)
+  Req := Client.Request(hmGET, '/api/users')
+    .QueryParam('flagged', 'true', True)
+    .QueryParam('deleted', 'true', False);
+  Should(Req.GetFullUrl).Be('/api/users?flagged=true');
 end;
 
 end.

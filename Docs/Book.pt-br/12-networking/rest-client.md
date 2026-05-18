@@ -79,6 +79,47 @@ Client.Get('/search')
   .Start;
 ```
 
+### Parâmetros de Consulta Condicionais (Conditional Query Parameters)
+
+Ao construir URLs dinâmicas, muitas vezes você precisa omitir parâmetros opcionais (como filtros ou buscas) ou aplicar valores padrão. O Dext fornece três helpers altamente ergonômicos e com **zero alocação de memória** no heap para lidar com isso de forma fluente:
+
+#### `QueryParamIfNotEmpty(const AName, AValue: string)`
+Adiciona o parâmetro de consulta apenas quando o valor não estiver vazio e não for composto unicamente por espaços em branco. Ele valida a string in-place para evitar alocações desnecessárias.
+
+```pascal
+Client.Request.Get('/v1/products')
+  .QueryParamIfNotEmpty('search', SearchStr) // Ignorado se SearchStr for '' ou '   '
+  .Start;
+```
+
+#### `QueryParam(const AName, AValue, ADefault: string)` (Sobreposição/Overload)
+Usa `AValue` se não estiver vazio/blank. Se `AValue` estiver vazio/blank, recorre ao `ADefault` (higienizado com Trim). Se ambos estiverem em branco, o parâmetro é totalmente omitido da URL.
+
+```pascal
+Client.Request.Get('/v1/users')
+  .QueryParam('page', PageStr, '1') // Usa '1' se PageStr for vazio/blank
+  .Start;
+```
+
+#### `QueryParamIf(const AName, AValue: string; AInclude: Boolean)`
+Adiciona o parâmetro apenas se a condição booleana `AInclude` for `True`.
+
+```pascal
+Client.Request.Get('/v1/reports')
+  .QueryParamIf('deleted', 'true', ShowDeleted) // Adicionado apenas se ShowDeleted for True
+  .Start;
+```
+
+#### `QueryParam(const AName, AValue: string; AInclude: Boolean)` (Sobreposição/Overload)
+Como alternativa, você pode usar a sobreposição de `QueryParam` com um terceiro argumento booleano para uma sintaxe compacta semelhante à do RestSharp (.NET). O parâmetro é adicionado apenas se `AInclude` for `True`.
+
+```pascal
+Client.Request.Get('/v1/reports')
+  .QueryParam('deleted', 'true', ShowDeleted) // Adicionado apenas se ShowDeleted for True
+  .Start;
+```
+
+
 ### Corpo da Requisição (Body)
 
 Para requisições `POST` e `PUT`, você pode fornecer um corpo:

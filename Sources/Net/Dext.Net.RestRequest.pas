@@ -50,9 +50,9 @@ type
   private
     FData: IRestRequestData;
     function GetData: IRestRequestData;
-    function GetFullUrl: string;
   public
     constructor Create(AClient: TRestClient; AMethod: TDextHttpMethod; const AEndpoint: string);
+    function GetFullUrl: string;
 
     // Configuração
     /// <summary>Adds a custom HTTP header to the request.</summary>
@@ -62,7 +62,18 @@ type
     /// <summary>Adds a query parameter (Query String) to the URL.</summary>
     /// <param name="AName">The parameter name.</param>
     /// <param name="AValue">The parameter value.</param>
-    function QueryParam(const AName, AValue: string): TRestRequest;
+    function QueryParam(const AName, AValue: string): TRestRequest; overload;
+    /// <summary>Adds a query parameter only when Trim(AValue) is not empty.</summary>
+    function QueryParamIfNotEmpty(const AName, AValue: string): TRestRequest;
+    /// <summary>
+    ///   Uses AValue when non-empty; otherwise uses Trim(ADefault).
+    ///   Skips the parameter when both are empty.
+    /// </summary>
+    function QueryParam(const AName, AValue, ADefault: string): TRestRequest; overload;
+    /// <summary>Adds a query parameter only when AInclude is True.</summary>
+    function QueryParamIf(const AName, AValue: string; AInclude: Boolean): TRestRequest;
+    /// <summary>Adds a query parameter only when AInclude is True.</summary>
+    function QueryParam(const AName, AValue: string; AInclude: Boolean): TRestRequest; overload;
     /// <summary>Defines the request body from a Stream.</summary>
     /// <param name="ABody">The stream containing the payload.</param>
     /// <param name="AOwns">If true, the stream will be freed after the request completes.</param>
@@ -496,10 +507,51 @@ begin
   Result := Self;
 end;
 
+function IsBlank(const AText: string): Boolean;
+var
+  C: Char;
+begin
+  for C in AText do
+    if C > ' ' then
+      Exit(False);
+  Result := True;
+end;
+
 function TRestRequest.QueryParam(const AName, AValue: string): TRestRequest;
 begin
   GetData.GetQueryParams.AddOrSetValue(AName, AValue);
   Result := Self;
+end;
+
+function TRestRequest.QueryParamIfNotEmpty(const AName, AValue: string): TRestRequest;
+begin
+  if not IsBlank(AValue) then
+    Result := QueryParam(AName, AValue)
+  else
+    Result := Self;
+end;
+
+function TRestRequest.QueryParam(const AName, AValue, ADefault: string): TRestRequest;
+begin
+  if not IsBlank(AValue) then
+    Result := QueryParam(AName, AValue)
+  else if not IsBlank(ADefault) then
+    Result := QueryParam(AName, Trim(ADefault))
+  else
+    Result := Self;
+end;
+
+function TRestRequest.QueryParamIf(const AName, AValue: string; AInclude: Boolean): TRestRequest;
+begin
+  if AInclude then
+    Result := QueryParam(AName, AValue)
+  else
+    Result := Self;
+end;
+
+function TRestRequest.QueryParam(const AName, AValue: string; AInclude: Boolean): TRestRequest;
+begin
+  Result := QueryParamIf(AName, AValue, AInclude);
 end;
 
 function TRestRequest.Body(ABody: TStream; AOwns: Boolean): TRestRequest;
