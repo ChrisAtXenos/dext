@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {           Dext Framework                                                  }
 {           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
 {***************************************************************************}
@@ -94,13 +94,19 @@ class procedure Log.Initialize;
 var
   PortStr: string;
   Port: Integer;
+  IsTestMode: Boolean;
 begin
   if FFactory <> nil then Exit; // Already initialized
 
   FFactory := TAsyncLoggerFactory.Create;
   
-  // Default Sinks
-  FFactory.AddSink(TConsoleSink.Create);
+  // Default Sinks (Disable console sink in test mode to keep runner output clean)
+  IsTestMode := (Pos('.tests', LowerCase(ExtractFileName(ParamStr(0)))) > 0) or
+    (GetEnvironmentVariable('DEXT_PROJECT_TYPE') = 'Tests') or
+    FindCmdLineSwitch('no-wait');
+
+  if not IsTestMode then
+    FFactory.AddSink(TConsoleSink.Create);
   // Optional: Add File Sink by default? Or let the user configure it?
   // User request: "registro padrão de Logger multhtread para facilitar a adoção"
   // Let's add a file sink in the current directory or temp.

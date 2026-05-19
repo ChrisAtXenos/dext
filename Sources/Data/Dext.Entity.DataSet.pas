@@ -1,4 +1,4 @@
-﻿
+
 unit Dext.Entity.DataSet;
 
 interface
@@ -209,6 +209,7 @@ type
     procedure LoadFromUtf8Json(const ASpan: TByteSpan; AClass: TClass); overload;
     procedure LoadFromUtf8Json<T: class>(const ASpan: TByteSpan); overload;
     procedure Refresh;
+    procedure RefreshRecord;
     procedure SetFieldData(Field: TField; Buffer: Pointer); overload; override;
     procedure SetFieldData(Field: TField; Buffer: TValueBuffer); overload; override;
 
@@ -339,6 +340,12 @@ begin
     ApplyFilterAndSort(Filtered);
     Resync([]);
   end;
+end;
+
+procedure TEntityDataSet.RefreshRecord;
+begin
+  if Active and (FCurrentRec >= 0) then
+    Resync([]);
 end;
 
 function TEntityDataSet.GetProperty(const APropName: string): TRttiProperty;
@@ -1050,13 +1057,13 @@ begin
     if Assigned(FMasterLink) and (FMasterLink.DataSource <> nil) then
       SyncMasterDetail;
 
-    FVirtualIndex.Clear;
-    FCurrentRec := -1;
-
     // Salvar objeto p/ restaurar cursor
     CurrentObj := ATrackObj;
     if Assigned(FItems) and (CurrentObj = nil) and (FCurrentRec >= 0) and (FCurrentRec < FVirtualIndex.Count) then
       CurrentObj := FItems[FVirtualIndex[FCurrentRec]];
+
+    FVirtualIndex.Clear;
+    FCurrentRec := -1;
 
     if Assigned(FItems) and (FItems.Count > 0) then 
       ItemsCount := FItems.Count
@@ -3393,6 +3400,8 @@ begin
           PBoolean(P)^ := PBoolean(Buffer)^;
         ftDateTime, ftDate, ftTime:
           PDateTime(P)^ := TimeStampToDateTime(MSecsToTimeStamp(Trunc(PDouble(Buffer)^)));
+        ftCurrency:
+          PCurrency(P)^ := PDouble(Buffer)^;
       else
         Move(Buffer^, P^, Field.DataSize);
       end;
@@ -3424,7 +3433,7 @@ begin
         ftFloat:
           V := PDouble(Buffer)^;
         ftCurrency:
-          V := PCurrency(Buffer)^;
+          V := Currency(PDouble(Buffer)^);
         ftBoolean:
           V := PBoolean(Buffer)^;
         ftDateTime, ftDate, ftTime:
@@ -3477,16 +3486,18 @@ begin
   begin
     FEntityDataSet.SyncMasterDetail;
     FEntityDataSet.ApplyFilterAndSort;
+    FEntityDataSet.Resync([]);
   end;
 end;
 
 procedure TEntityMasterDataLink.RecordChanged(Field: TField);
 begin
-  // Field = nil significa que o cursor mudou de posição no mestre
+  // Field = nil significa que o cursor mudou de posiÃ§Ã£o no mestre
   if (FEntityDataSet <> nil) and (Field = nil) then
   begin
     FEntityDataSet.SyncMasterDetail;
     FEntityDataSet.ApplyFilterAndSort;
+    FEntityDataSet.Resync([]);
   end;
 end;
 
