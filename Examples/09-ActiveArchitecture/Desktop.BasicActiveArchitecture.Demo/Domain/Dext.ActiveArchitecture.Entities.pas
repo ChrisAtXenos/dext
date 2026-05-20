@@ -51,13 +51,14 @@ type
     [PK, Column('OrderID'), DisplayLabel('Pedido')]
     property OrderId: IntType read FOrderId write FOrderId;
 
-    [MaxLength(5), Column('CustomerID'), DisplayLabel('Cliente')]
+    [Column('CustomerID'), DisplayLabel('Cliente'), MaxLength(5)]
     property CustomerId: StringType read FCustomerId write FCustomerId;
 
     [Column('EmployeeID'), DisplayLabel('Usuário')]
     property EmployeeId: IntType read FEmployeeId write FEmployeeId;
 
     property OrderDate: DateTimeType read FOrderDate write FOrderDate;
+    [Visible(False)]
     property RequiredDate: DateTimeType read FRequiredDate write FRequiredDate;
     property ShippedDate: DateTimeType read FShippedDate write FShippedDate;
     property ShipVia: IntType read FShipVia write FShipVia;
@@ -91,12 +92,15 @@ type
     FQuantity: IntType;
     FDiscount: FloatType;
   public
-    [PK, Column('OrderID')]
+    [PK, Column('OrderID'), DisplayLabel('Pedido')]
     property OrderId: IntType read FOrderId write FOrderId;
-    [PK, Column('ProductID')]
+    [PK, Column('ProductID'), DisplayLabel('Produto')]
     property ProductId: IntType read FProductId write FProductId;
+    [DisplayLabel('Preço Unitário')]
     property UnitPrice: CurrencyType read FUnitPrice write FUnitPrice;
+    [DisplayLabel('Quantidade')]
     property Quantity: IntType read FQuantity write FQuantity;
+    [DisplayLabel('Desconto')]
     property Discount: FloatType read FDiscount write FDiscount;
 
     // Regra de Domínio Rico (Desconto Progressivo)
@@ -393,12 +397,12 @@ implementation
 
 function TOrderDetails.CalcularDescontoProgressivo: Double;
 var
-  Qtd: Integer;
+  Quantidade: Integer;
 begin
-  Qtd := FQuantity;
-  if Qtd <= 10 then
+  Quantidade := FQuantity;
+  if Quantidade <= 10 then
     FDiscount := 0.0
-  else if Qtd <= 50 then
+  else if Quantidade <= 50 then
     FDiscount := 0.05
   else
     FDiscount := 0.10;

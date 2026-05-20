@@ -18,12 +18,12 @@ uses
 
 begin
   try
-    WriteLn;
-    WriteLn('========================================================');
-    WriteLn('          DEXT FRAMEWORK - DELPHI CONNECT PORTUGAL      ');
-    WriteLn('                SUITE DE TESTES UNITARIOS               ');
-    WriteLn('========================================================');
-    WriteLn;
+    SafeWriteLn;
+    SafeWriteLn('========================================================');
+    SafeWriteLn('          DEXT FRAMEWORK - DELPHI CONNECT PORTUGAL      ');
+    SafeWriteLn('                SUITE DE TESTES UNITARIOS               ');
+    SafeWriteLn('========================================================');
+    SafeWriteLn;
     
     // Registra e executa todas as fixtures da nossa unit de testes
     TTest.SetExitCode(
@@ -40,7 +40,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLn('ERRO FATAL: ', E.ClassName, ': ', E.Message);
+      SafeWriteLn('ERRO FATAL: ' + E.ClassName + ': ' + E.Message);
       ExitCode := 1;
     end;
   end;

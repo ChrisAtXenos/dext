@@ -1,9 +1,12 @@
-unit Dext.ActiveArchitecture.Startup;
+﻿unit Dext.ActiveArchitecture.Startup;
 
 interface
 
 uses
-  System.SysUtils, Dext, Dext.DI.Interfaces, Dext.ActiveArchitecture.ViewModels;
+  System.SysUtils,
+  Dext,
+  Dext.DI.Interfaces,
+  Dext.ActiveArchitecture.ViewModels;
 
 type
   TStartup = class

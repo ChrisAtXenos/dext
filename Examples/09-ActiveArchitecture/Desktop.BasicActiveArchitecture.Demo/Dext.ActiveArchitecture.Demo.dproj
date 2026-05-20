@@ -161,7 +161,6 @@
         </DCCReference>
         <DCCReference Include="Domain\Dext.ActiveArchitecture.Entities.pas"/>
         <DCCReference Include="Domain\Dext.ActiveArchitecture.Specifications.pas"/>
-        <DCCReference Include="Domain\ProductsTable.Entity.pas"/>
         <DCCReference Include="Infra\Dext.Logging.Sinks.VCL.pas"/>
         <DCCReference Include="Domain\Dext.ActiveArchitecture.Domain.pas"/>
         <DCCReference Include="Infra\Dext.ActiveArchitecture.Services.pas"/>

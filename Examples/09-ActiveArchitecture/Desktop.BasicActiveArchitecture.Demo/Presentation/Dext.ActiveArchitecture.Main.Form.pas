@@ -24,18 +24,26 @@ type
     OrderDetailsGrid: TDBGrid;
     OrderEntityDataSet: TEntityDataSet;
     OrderGrid: TDBGrid;
-    ProductsTable: TFDQuery;
-    ProductsTableCategoryID: TIntegerField;
-    ProductsTableDiscontinued: TBooleanField;
-    ProductsTableProductID: TFDAutoIncField;
-    ProductsTableProductName: TStringField;
-    ProductsTableQuantityPerUnit: TStringField;
-    ProductsTableReorderLevel: TSmallintField;
-    ProductsTableSupplierID: TIntegerField;
-    ProductsTableUnitPrice: TCurrencyField;
-    ProductsTableUnitsInStock: TSmallintField;
-    ProductsTableUnitsOnOrder: TSmallintField;
     SqliteDemoConnection: TFDConnection;
+    OrderDetailsEntityDataSetOrderId: TIntegerField;
+    OrderDetailsEntityDataSetProductId: TIntegerField;
+    OrderDetailsEntityDataSetUnitPrice: TCurrencyField;
+    OrderDetailsEntityDataSetQuantity: TIntegerField;
+    OrderDetailsEntityDataSetDiscount: TFloatField;
+    OrderEntityDataSetOrderId: TIntegerField;
+    OrderEntityDataSetCustomerId: TStringField;
+    OrderEntityDataSetEmployeeId: TIntegerField;
+    OrderEntityDataSetOrderDate: TDateTimeField;
+    OrderEntityDataSetRequiredDate: TDateTimeField;
+    OrderEntityDataSetShippedDate: TDateTimeField;
+    OrderEntityDataSetShipVia: TIntegerField;
+    OrderEntityDataSetFreight: TCurrencyField;
+    OrderEntityDataSetShipName: TStringField;
+    OrderEntityDataSetShipAddress: TStringField;
+    OrderEntityDataSetShipCity: TStringField;
+    OrderEntityDataSetShipRegion: TStringField;
+    OrderEntityDataSetShipPostalCode: TStringField;
+    OrderEntityDataSetShipCountry: TStringField;
   private
     FDbConnection: IDbConnection;
     FDbContext: TDbContext;
@@ -43,6 +51,7 @@ type
     FOrders: IList<TOrders>;
     FViewModel: TOrderViewModel;
 
+    procedure CreateControls;
     procedure DoFormDestroy(Sender: TObject);
     procedure DoOrderDataSourceDataChange(Sender: TObject; Field: TField);
     procedure DoFilterComboChange(Sender: TObject);
@@ -69,23 +78,12 @@ uses
 
 {$R *.dfm}
 
-{ TMainForm }
-
-procedure TMainForm.InjectDependencies(AViewModel: TOrderViewModel);
+procedure TMainForm.CreateControls;
 var
   FilterPanel: TPanel;
   FilterLabel: TLabel;
   FilterCombo: TComboBox;
 begin
-  FViewModel := AViewModel;
-
-  // Vincula os eventos em runtime de forma segura para não corromper o arquivo DFM da IDE
-  OnDestroy := DoFormDestroy;
-  OrderDataSource.OnDataChange := DoOrderDataSourceDataChange;
-
-  // Inicialização que antes ficava no FormCreate
-  Self.Caption := 'Dext Framework - Delphi Connect Portugal - Clean Architecture VCL';
-
   // Criação dinâmica do Painel de Filtros (DDD Specifications Showcase)
   FilterPanel := TPanel.Create(Self);
   FilterPanel.Parent := Self;
@@ -117,6 +115,21 @@ begin
   FilterCombo.Items.Add('Especificação 3: Pedidos do Brasil combinados com Frete Alto (> R$ 30,00)');
   FilterCombo.ItemIndex := 0;
   FilterCombo.OnChange := DoFilterComboChange;
+end;
+
+{ TMainForm }
+
+procedure TMainForm.InjectDependencies(AViewModel: TOrderViewModel);
+begin
+  FViewModel := AViewModel;
+
+  // Vincula os eventos em runtime de forma segura para não corromper o arquivo DFM da IDE
+  OnDestroy := DoFormDestroy;
+  OrderDataSource.OnDataChange := DoOrderDataSourceDataChange;
+
+  // Inicialização que antes ficava no FormCreate
+  Self.Caption := 'Dext - Active Architecture';
+  CreateControls;
 
   SqliteDemoConnection.ConnectionDefName := 'SQLite_Demo';
   SqliteDemoConnection.Connected := True;
@@ -211,33 +224,25 @@ end;
 
 procedure TMainForm.DoFilterComboChange(Sender: TObject);
 var
-  Combo: TComboBox;
   Spec: ISpecification<TOrders>;
 begin
   try
-    Combo := TComboBox(Sender);
-    case Combo.ItemIndex of
-      0: // Sem Filtro
-        OrderEntityDataSet.FilterExpression := nil;
-
-      1: // Pedidos do Brasil
-        begin
-          Spec := TBrazilOrdersSpec.Create;
-          OrderEntityDataSet.FilterExpression := Spec.GetExpression;
-        end;
-
-      2: // Pedidos com Frete Alto (> R$ 50)
-        begin
-          Spec := TExpensiveFreightSpec.Create(50.00);
-          OrderEntityDataSet.FilterExpression := Spec.GetExpression;
-        end;
-
-      3: // Brasil + Frete Alto (> R$ 30)
-        begin
-          Spec := TBrazilHeavyFreightSpec.Create(30.00);
-          OrderEntityDataSet.FilterExpression := Spec.GetExpression;
-        end;
+    case TComboBox(Sender).ItemIndex of
+         // Pedidos do Brasil
+      1: Spec := TBrazilOrdersSpec.Create;
+         // Pedidos com Frete Alto (> R$ 50)
+      2: Spec := TExpensiveFreightSpec.Create(50.00);
+         // Brasil + Frete Alto (> R$ 30)
+      3: Spec := TBrazilHeavyFreightSpec.Create(30.00);
+    else
+      // Sem Filtro
+      Spec := nil;
     end;
+
+    if Assigned(Spec) then
+      OrderEntityDataSet.FilterExpression := Spec.GetExpression
+    else
+      OrderEntityDataSet.FilterExpression := nil;
 
     Log.Info('Especificação aplicada! Filtro Ativo: "' + OrderEntityDataSet.Filter + '"');
   except on E: Exception do

@@ -23,8 +23,8 @@ type
     FDirty: Boolean;
     FErrors: TStrings;
     FIsCalculating: Boolean;
-    FOrder: TOrders;
-    FShippingService: IShippingService;
+    FOrder: TOrders; // Domínio rico injetado
+    FShippingService: IShippingService; // Serviço injetado (Use Case)
 
     function GetTotalWeight: Double;
   public
@@ -39,6 +39,7 @@ type
     property Order: TOrders read FOrder;
     
     // Propriedades exclusivamente de controle de estado e UI (não persistentes no banco)
+    // Sem duplicar OrderId, CustomerId ou Freight!
     property IsCalculating: Boolean read FIsCalculating;
     property CalculatedFreight: Double read FCalculatedFreight;
     property TotalWeight: Double read GetTotalWeight;

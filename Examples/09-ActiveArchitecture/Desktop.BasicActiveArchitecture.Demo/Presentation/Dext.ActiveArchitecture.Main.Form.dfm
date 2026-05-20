@@ -1,8 +1,8 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'Design Time Scaffolding'
-  ClientHeight = 600
+  Caption = 'Dext - Active Architecture'
+  ClientHeight = 561
   ClientWidth = 849
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,7 +16,7 @@ object MainForm: TMainForm
     Left = 3
     Top = 3
     Width = 843
-    Height = 303
+    Height = 264
     Align = alClient
     DataSource = OrderDataSource
     TabOrder = 0
@@ -29,7 +29,7 @@ object MainForm: TMainForm
   object OrderDetailsGrid: TDBGrid
     AlignWithMargins = True
     Left = 3
-    Top = 312
+    Top = 273
     Width = 843
     Height = 126
     Align = alBottom
@@ -44,7 +44,7 @@ object MainForm: TMainForm
   object LogsMemo: TMemo
     AlignWithMargins = True
     Left = 3
-    Top = 444
+    Top = 405
     Width = 843
     Height = 153
     Align = alBottom
@@ -70,6 +70,10 @@ object MainForm: TMainForm
     ModelUnits.Strings = (
       
         'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
+        'p.BasicActiveArchitecture.Demo\Infra\Dext.ActiveArchitecture.Sta' +
+        'rtup.pas'
+      
+        'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
         'p.BasicActiveArchitecture.Demo\Presentation\Dext.ActiveArchitect' +
         'ure.Main.Form.pas'
       
@@ -78,220 +82,25 @@ object MainForm: TMainForm
         'tities.pas'
       
         'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
-        'p.BasicActiveArchitecture.Demo\Domain\ProductsTable.Entity.pas')
+        'p.BasicActiveArchitecture.Demo\Domain\Dext.ActiveArchitecture.Sp' +
+        'ecifications.pas'
+      
+        'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
+        'p.BasicActiveArchitecture.Demo\Infra\Dext.Logging.Sinks.VCL.pas'
+      
+        'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
+        'p.BasicActiveArchitecture.Demo\Domain\Dext.ActiveArchitecture.Do' +
+        'main.pas'
+      
+        'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
+        'p.BasicActiveArchitecture.Demo\Infra\Dext.ActiveArchitecture.Ser' +
+        'vices.pas'
+      
+        'C:\dev\Dext\DextRepository\Examples\09-ActiveArchitecture\Deskto' +
+        'p.BasicActiveArchitecture.Demo\Presentation\Dext.ActiveArchitect' +
+        'ure.ViewModels.pas')
     Dialect = ddSQLite
     EntitiesMetadata = <
-      item
-        EntityClassName = 'TSuppliers'
-        DisplayName = ''
-        TableName = 'Suppliers'
-        EntityUnitName = 'Dext.ActiveArchitecture.Entities'
-        Members = <
-          item
-            Name = 'SupplierId'
-            MemberType = 'IntType'
-            IsPrimaryKey = True
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'CompanyName'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 40
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'ContactName'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 30
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'ContactTitle'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 30
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'Address'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 60
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'City'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 15
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'Region'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 15
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'PostalCode'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 10
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'Country'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 15
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'Phone'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 24
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'Fax'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 24
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'HomePage'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end>
-      end
       item
         EntityClassName = 'TOrders'
         DisplayName = ''
@@ -381,7 +190,7 @@ object MainForm: TMainForm
             Scale = 0
             Alignment = taLeftJustify
             DisplayWidth = 0
-            Visible = True
+            Visible = False
             IsCurrency = False
             HasJoin = False
             HasInclude = False
@@ -610,6 +419,7 @@ object MainForm: TMainForm
             MaxLength = 0
             Precision = 0
             Scale = 0
+            DisplayLabel = 'Pedido'
             Alignment = taLeftJustify
             DisplayWidth = 0
             Visible = True
@@ -627,6 +437,7 @@ object MainForm: TMainForm
             MaxLength = 0
             Precision = 0
             Scale = 0
+            DisplayLabel = 'Produto'
             Alignment = taLeftJustify
             DisplayWidth = 0
             Visible = True
@@ -644,6 +455,7 @@ object MainForm: TMainForm
             MaxLength = 0
             Precision = 0
             Scale = 0
+            DisplayLabel = 'Pre'#231'o Unit'#225'rio'
             Alignment = taLeftJustify
             DisplayWidth = 0
             Visible = True
@@ -661,6 +473,7 @@ object MainForm: TMainForm
             MaxLength = 0
             Precision = 0
             Scale = 0
+            DisplayLabel = 'Quantidade'
             Alignment = taLeftJustify
             DisplayWidth = 0
             Visible = True
@@ -671,6 +484,218 @@ object MainForm: TMainForm
           item
             Name = 'Discount'
             MemberType = 'FloatType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            DisplayLabel = 'Desconto'
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end>
+      end
+      item
+        EntityClassName = 'TSuppliers'
+        DisplayName = ''
+        TableName = 'Suppliers'
+        EntityUnitName = 'Dext.ActiveArchitecture.Entities'
+        Members = <
+          item
+            Name = 'SupplierId'
+            MemberType = 'IntType'
+            IsPrimaryKey = True
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 0
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'CompanyName'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 40
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'ContactName'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 30
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'ContactTitle'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 30
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'Address'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 60
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'City'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 15
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'Region'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 15
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'PostalCode'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 10
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'Country'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 15
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'Phone'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 24
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'Fax'
+            MemberType = 'StringType'
+            IsPrimaryKey = False
+            IsRequired = False
+            IsAutoInc = False
+            IsReadOnly = False
+            MaxLength = 24
+            Precision = 0
+            Scale = 0
+            Alignment = taLeftJustify
+            DisplayWidth = 0
+            Visible = True
+            IsCurrency = False
+            HasJoin = False
+            HasInclude = False
+          end
+          item
+            Name = 'HomePage'
+            MemberType = 'StringType'
             IsPrimaryKey = False
             IsRequired = False
             IsAutoInc = False
@@ -1868,183 +1893,6 @@ object MainForm: TMainForm
             HasJoin = False
             HasInclude = False
           end>
-      end
-      item
-        EntityClassName = 'TProductsTable'
-        DisplayName = ''
-        TableName = 'ProductsTable'
-        EntityUnitName = 'ProductsTable.Entity'
-        Members = <
-          item
-            Name = 'ProductId'
-            MemberType = 'IntType'
-            IsPrimaryKey = True
-            IsRequired = False
-            IsAutoInc = True
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'ProductName'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = True
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 40
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'SupplierId'
-            MemberType = 'IntType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'CategoryId'
-            MemberType = 'IntType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'QuantityPerUnit'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 20
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'UnitPrice'
-            MemberType = 'CurrencyType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'UnitsInStock'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'UnitsOnOrder'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'ReorderLevel'
-            MemberType = 'StringType'
-            IsPrimaryKey = False
-            IsRequired = False
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end
-          item
-            Name = 'Discontinued'
-            MemberType = 'BoolType'
-            IsPrimaryKey = False
-            IsRequired = True
-            IsAutoInc = False
-            IsReadOnly = False
-            MaxLength = 0
-            Precision = 0
-            Scale = 0
-            Alignment = taLeftJustify
-            DisplayWidth = 0
-            Visible = True
-            IsCurrency = False
-            HasJoin = False
-            HasInclude = False
-          end>
       end>
     Left = 72
     Top = 144
@@ -2052,15 +1900,152 @@ object MainForm: TMainForm
   object OrderEntityDataSet: TEntityDataSet
     DataProvider = EntityDataProvider
     EntityClassName = 'TOrders'
-    FieldDefs = <>
+    FieldDefs = <
+      item
+        Name = 'OrderId'
+        DataType = ftInteger
+      end
+      item
+        Name = 'CustomerId'
+        DataType = ftString
+        Size = 5
+      end
+      item
+        Name = 'EmployeeId'
+        DataType = ftInteger
+      end
+      item
+        Name = 'OrderDate'
+        DataType = ftDateTime
+      end
+      item
+        Name = 'RequiredDate'
+        DataType = ftDateTime
+      end
+      item
+        Name = 'ShippedDate'
+        DataType = ftDateTime
+      end
+      item
+        Name = 'ShipVia'
+        DataType = ftInteger
+      end
+      item
+        Name = 'Freight'
+        DataType = ftCurrency
+      end
+      item
+        Name = 'ShipName'
+        DataType = ftString
+        Size = 40
+      end
+      item
+        Name = 'ShipAddress'
+        DataType = ftString
+        Size = 60
+      end
+      item
+        Name = 'ShipCity'
+        DataType = ftString
+        Size = 15
+      end
+      item
+        Name = 'ShipRegion'
+        DataType = ftString
+        Size = 15
+      end
+      item
+        Name = 'ShipPostalCode'
+        DataType = ftString
+        Size = 10
+      end
+      item
+        Name = 'ShipCountry'
+        DataType = ftString
+        Size = 15
+      end>
     TableName = 'Orders'
     Left = 528
     Top = 152
+    object OrderEntityDataSetOrderId: TIntegerField
+      DisplayLabel = 'Pedido'
+      FieldName = 'OrderId'
+    end
+    object OrderEntityDataSetCustomerId: TStringField
+      DisplayLabel = 'Cliente'
+      FieldName = 'CustomerId'
+      Size = 5
+    end
+    object OrderEntityDataSetEmployeeId: TIntegerField
+      DisplayLabel = 'Usu'#225'rio'
+      FieldName = 'EmployeeId'
+    end
+    object OrderEntityDataSetOrderDate: TDateTimeField
+      FieldName = 'OrderDate'
+    end
+    object OrderEntityDataSetRequiredDate: TDateTimeField
+      FieldName = 'RequiredDate'
+      Visible = False
+    end
+    object OrderEntityDataSetShippedDate: TDateTimeField
+      FieldName = 'ShippedDate'
+    end
+    object OrderEntityDataSetShipVia: TIntegerField
+      FieldName = 'ShipVia'
+    end
+    object OrderEntityDataSetFreight: TCurrencyField
+      FieldName = 'Freight'
+    end
+    object OrderEntityDataSetShipName: TStringField
+      FieldName = 'ShipName'
+      Size = 40
+    end
+    object OrderEntityDataSetShipAddress: TStringField
+      FieldName = 'ShipAddress'
+      Size = 60
+    end
+    object OrderEntityDataSetShipCity: TStringField
+      FieldName = 'ShipCity'
+      Size = 15
+    end
+    object OrderEntityDataSetShipRegion: TStringField
+      FieldName = 'ShipRegion'
+      Size = 15
+    end
+    object OrderEntityDataSetShipPostalCode: TStringField
+      FieldName = 'ShipPostalCode'
+      Size = 10
+    end
+    object OrderEntityDataSetShipCountry: TStringField
+      FieldName = 'ShipCountry'
+      Size = 15
+    end
   end
   object OrderDetailsEntityDataSet: TEntityDataSet
     DataProvider = EntityDataProvider
     EntityClassName = 'TOrderDetails'
-    FieldDefs = <>
+    FieldDefs = <
+      item
+        Name = 'OrderId'
+        DataType = ftInteger
+      end
+      item
+        Name = 'ProductId'
+        DataType = ftInteger
+      end
+      item
+        Name = 'UnitPrice'
+        DataType = ftCurrency
+      end
+      item
+        Name = 'Quantity'
+        DataType = ftInteger
+      end
+      item
+        Name = 'Discount'
+        DataType = ftFloat
+      end>
+    Filter = 'OrderId = 10248'
     Filtered = True
     IndexFieldNames = 'OrderId'
     MasterFields = 'OrderId'
@@ -2068,6 +2053,26 @@ object MainForm: TMainForm
     TableName = 'Order Details'
     Left = 512
     Top = 336
+    object OrderDetailsEntityDataSetOrderId: TIntegerField
+      DisplayLabel = 'Pedido'
+      FieldName = 'OrderId'
+    end
+    object OrderDetailsEntityDataSetProductId: TIntegerField
+      DisplayLabel = 'Produto'
+      FieldName = 'ProductId'
+    end
+    object OrderDetailsEntityDataSetUnitPrice: TCurrencyField
+      DisplayLabel = 'Pre'#231'o Unit'#225'rio'
+      FieldName = 'UnitPrice'
+    end
+    object OrderDetailsEntityDataSetQuantity: TIntegerField
+      DisplayLabel = 'Quantidade'
+      FieldName = 'Quantity'
+    end
+    object OrderDetailsEntityDataSetDiscount: TFloatField
+      DisplayLabel = 'Desconto'
+      FieldName = 'Discount'
+    end
   end
   object OrderDataSource: TDataSource
     DataSet = OrderEntityDataSet
@@ -2078,57 +2083,5 @@ object MainForm: TMainForm
     DataSet = OrderDetailsEntityDataSet
     Left = 680
     Top = 336
-  end
-  object ProductsTable: TFDQuery
-    Connection = SqliteDemoConnection
-    SQL.Strings = (
-      'SELECT * FROM Products')
-    Left = 513
-    Top = 488
-    object ProductsTableProductID: TFDAutoIncField
-      FieldName = 'ProductID'
-      Origin = 'ProductID'
-      ProviderFlags = [pfInWhere, pfInKey]
-      ReadOnly = False
-    end
-    object ProductsTableProductName: TStringField
-      FieldName = 'ProductName'
-      Origin = 'ProductName'
-      Required = True
-      Size = 40
-    end
-    object ProductsTableSupplierID: TIntegerField
-      FieldName = 'SupplierID'
-      Origin = 'SupplierID'
-    end
-    object ProductsTableCategoryID: TIntegerField
-      FieldName = 'CategoryID'
-      Origin = 'CategoryID'
-    end
-    object ProductsTableQuantityPerUnit: TStringField
-      FieldName = 'QuantityPerUnit'
-      Origin = 'QuantityPerUnit'
-    end
-    object ProductsTableUnitPrice: TCurrencyField
-      FieldName = 'UnitPrice'
-      Origin = 'UnitPrice'
-    end
-    object ProductsTableUnitsInStock: TSmallintField
-      FieldName = 'UnitsInStock'
-      Origin = 'UnitsInStock'
-    end
-    object ProductsTableUnitsOnOrder: TSmallintField
-      FieldName = 'UnitsOnOrder'
-      Origin = 'UnitsOnOrder'
-    end
-    object ProductsTableReorderLevel: TSmallintField
-      FieldName = 'ReorderLevel'
-      Origin = 'ReorderLevel'
-    end
-    object ProductsTableDiscontinued: TBooleanField
-      FieldName = 'Discontinued'
-      Origin = 'Discontinued'
-      Required = True
-    end
   end
 end
