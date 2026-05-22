@@ -3,6 +3,7 @@ unit Dext.Web.Features.Tests;
 interface
 
 uses
+  System.Classes,
   System.SysUtils,
   Dext.Testing.Attributes,
   Dext.Assertions,
@@ -26,6 +27,11 @@ type
 
 implementation
 
+type
+  TTRestRequestHack = record
+    Data: IRestRequestData;
+  end;
+
 { TWebFeaturesTests }
 
 procedure TWebFeaturesTests.TestJwtBuilderAndValidation;
@@ -48,8 +54,44 @@ begin
 end;
 
 procedure TWebFeaturesTests.TestMultipartFormData;
+var
+  Client: TRestClient;
+  Req: TRestRequest;
+  ReqData: IRestRequestData;
+  Stream: TStream;
+  StrStream: TStringStream;
+  BodyText: string;
 begin
-  Should(True).BeTrue; // Placeholder for Multipart Data Verification over Dext.Net
+  Client := TRestClient.Create;
+  Req := Client.Request(hmPOST, '/api/test')
+    .AddFormField('name', 'value')
+    .AddFormField('config', '{"debug":true}', 'application/json');
+
+  ReqData := TTRestRequestHack(Req).Data;
+  Should(ReqData.HasMultipartData).BeTrue;
+
+  Stream := ReqData.BuildMultipartBody;
+  try
+    Should(Stream).NotBeNil;
+    StrStream := TStringStream.Create('', TEncoding.UTF8);
+    try
+      StrStream.CopyFrom(Stream, 0);
+      BodyText := StrStream.DataString;
+    finally
+      StrStream.Free;
+    end;
+  finally
+    Stream.Free;
+  end;
+
+  // Assert standard field is present and correct
+  Should(BodyText).Contain('Content-Disposition: form-data; name="name"');
+  Should(BodyText).Contain('value');
+
+  // Assert field with custom Content-Type is present and correct
+  Should(BodyText).Contain('Content-Disposition: form-data; name="config"');
+  Should(BodyText).Contain('Content-Type: application/json');
+  Should(BodyText).Contain('{"debug":true}');
 end;
 
 procedure TWebFeaturesTests.TestConditionalQueryParams;

@@ -363,6 +363,8 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 - **Thread Safety** — Immutable configuration snapshot in `Execute`; isolated execution via pool.
 - **Response Headers** — Full access via `GetHeader` (case-insensitive) and `GetHeaders` (TNetHeaders array).
 - **THttpRequestInfo** — Integration with `.http` parsers for ad-hoc request execution.
+- **Multipart Form Fields with Content-Type** — Support for specifying custom MIME types (e.g. `application/json`) for individual form fields in multipart requests via `AddFormField` and `AddMultipartField` (Issue #125).
+- **Conditional Query Parameters** — Support for fluently adding query parameters conditionally (`QueryParamIfNotEmpty`, `QueryParamIf`, and overloads with default values) to simplify request building (Issue #123).
 
 ### 5.2 Authentication Providers
 - **Bearer Token (JWT)** — Automatic `Authorization: Bearer <token>` header.

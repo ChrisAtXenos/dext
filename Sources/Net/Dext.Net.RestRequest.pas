@@ -91,7 +91,10 @@ type
     /// <param name="AJson">The raw JSON content.</param>
     function JsonBody(const AJson: string): TRestRequest;
     /// <summary>Adds a form field to a multipart/form-data payload.</summary>
-    function AddFormField(const AName, AValue: string): TRestRequest;
+    /// <param name="AName">The field name.</param>
+    /// <param name="AValue">The field value.</param>
+    /// <param name="AContentType">Optional content type of the field.</param>
+    function AddFormField(const AName, AValue: string; const AContentType: string = ''): TRestRequest;
     /// <summary>Adds a file (from disk path) to a multipart/form-data payload.</summary>
     function AddFile(const AFieldName, AFilePath: string): TRestRequest; overload;
     /// <summary>Adds a file (from disk path) with explicit content type.</summary>
@@ -170,7 +173,7 @@ type
 
     procedure SetBody(ABody: TStream; AOwns: Boolean);
     procedure SetToken(AToken: ICancellationToken);
-    procedure AddMultipartField(const AName, AValue: string);
+    procedure AddMultipartField(const AName, AValue: string; const AContentType: string = '');
     procedure AddMultipartFile(const AFieldName, AFileName: string; const AData: TBytes;
       const AContentType: string);
     function DetachBody: TStream;
@@ -202,7 +205,7 @@ type
   public
     constructor Create;
     function HasParts: Boolean;
-    procedure AddField(const AName, AValue: string);
+    procedure AddField(const AName, AValue: string; const AContentType: string = '');
     procedure AddFile(const AFieldName, AFileName: string; const AData: TBytes;
       const AContentType: string);
     function BuildBody: TStream;
@@ -238,7 +241,7 @@ type
 
     procedure SetBody(ABody: TStream; AOwns: Boolean);
     procedure SetToken(AToken: ICancellationToken);
-    procedure AddMultipartField(const AName, AValue: string);
+    procedure AddMultipartField(const AName, AValue: string; const AContentType: string = '');
     procedure AddMultipartFile(const AFieldName, AFileName: string; const AData: TBytes;
       const AContentType: string);
     function DetachBody: TStream;
@@ -275,7 +278,7 @@ begin
   Result := (FParts <> nil) and (FParts.Count > 0);
 end;
 
-procedure TMultipartFormDataBuilder.AddField(const AName, AValue: string);
+procedure TMultipartFormDataBuilder.AddField(const AName, AValue: string; const AContentType: string);
 var
   Part: TMultipartPart;
 begin
@@ -283,7 +286,7 @@ begin
   Part.Name := AName;
   Part.Value := AValue;
   Part.FileName := '';
-  Part.ContentType := '';
+  Part.ContentType := AContentType;
   Part.Data := nil;
   FParts.Add(Part);
 end;
@@ -306,7 +309,7 @@ function TMultipartFormDataBuilder.BuildBody: TStream;
 var
   Part: TMultipartPart;
   BoundaryLine: string;
-  LContentType: string;
+  PartContentType: string;
 begin
   Result := TMemoryStream.Create;
   BoundaryLine := '--' + FBoundary + #13#10;
@@ -317,20 +320,21 @@ begin
     case Part.Kind of
       mpField:
         begin
-          WriteUtf8(Result,
-            Format('Content-Disposition: form-data; name="%s"'#13#10#13#10,
-            [Part.Name]));
+          WriteUtf8(Result, Format('Content-Disposition: form-data; name="%s"'#13#10, [Part.Name]));
+          if Part.ContentType <> '' then
+            WriteUtf8(Result, 'Content-Type: ' + Part.ContentType + #13#10);
+          WriteUtf8(Result, #13#10);
           WriteUtf8(Result, Part.Value + #13#10);
         end;
       mpFile:
         begin
-          LContentType := Part.ContentType;
-          if LContentType = '' then
-            LContentType := 'application/octet-stream';
+          PartContentType := Part.ContentType;
+          if PartContentType = '' then
+            PartContentType := 'application/octet-stream';
           WriteUtf8(Result,
             Format('Content-Disposition: form-data; name="%s"; filename="%s"'#13#10,
             [Part.Name, Part.FileName]));
-          WriteUtf8(Result, 'Content-Type: ' + LContentType + #13#10#13#10);
+          WriteUtf8(Result, 'Content-Type: ' + PartContentType + #13#10#13#10);
           if Length(Part.Data) > 0 then
             Result.WriteBuffer(Part.Data[0], Length(Part.Data));
           WriteUtf8(Result, #13#10);
@@ -438,11 +442,12 @@ begin
   FToken := AToken;
 end;
 
-procedure TRestRequestData.AddMultipartField(const AName, AValue: string);
+procedure TRestRequestData.AddMultipartField(const AName, AValue: string;
+  const AContentType: string);
 begin
   if FMultipartBuilder = nil then
     FMultipartBuilder := TMultipartFormDataBuilder.Create;
-  FMultipartBuilder.AddField(AName, AValue);
+  FMultipartBuilder.AddField(AName, AValue, AContentType);
 end;
 
 procedure TRestRequestData.AddMultipartFile(const AFieldName, AFileName: string;
@@ -580,9 +585,9 @@ begin
   Result := Self;
 end;
 
-function TRestRequest.AddFormField(const AName, AValue: string): TRestRequest;
+function TRestRequest.AddFormField(const AName, AValue: string; const AContentType: string): TRestRequest;
 begin
-  GetData.AddMultipartField(AName, AValue);
+  GetData.AddMultipartField(AName, AValue, AContentType);
   Result := Self;
 end;
 

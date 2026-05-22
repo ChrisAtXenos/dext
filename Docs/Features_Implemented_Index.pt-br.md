@@ -363,6 +363,8 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **Thread Safety** — Snapshot imutável da configuração no `Execute`; execução isolada via pool.
 - **Response Headers** — Acesso completo via `GetHeader` (case-insensitive) e `GetHeaders` (TNetHeaders array).
 - **THttpRequestInfo** — Integração com parsers `.http` para execução de requisições ad-hoc.
+- **Campos de Formulário Multipart com Content-Type** — Suporte para definição de tipos MIME específicos (ex: `application/json`) para campos individuais de formulário em requisições multipart via `AddFormField` e `AddMultipartField` (Issue #125).
+- **Parâmetros de Consulta Condicionais** — Suporte para adição fluente de parâmetros de consulta condicionais (`QueryParamIfNotEmpty`, `QueryParamIf` e sobrecargas com valores padrão fallback) para simplificar a construção de requisições (Issue #123).
 
 ### 5.2 Authentication Providers
 - **Bearer Token (JWT)** — Envio automático de `Authorization: Bearer <token>`.

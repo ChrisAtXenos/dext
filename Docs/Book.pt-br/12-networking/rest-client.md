@@ -181,6 +181,23 @@ Os tipos de conteúdo suportados e seus respectivos métodos de atalho são:
 | `ctBinary` | `ContentTypeBinary` | `application/octet-stream` |
 | `ctText` | `ContentTypePlainText` | `text/plain` |
 
+#### Dados Multipart / Form Data
+
+Para enviar arquivos ou campos em uma requisição `multipart/form-data`, use os helpers fluentes de form-data. Se a API de destino exigir tipos MIME específicos para campos individuais (como `application/json` para um payload de configurações), você pode passar um parâmetro opcional de tipo de conteúdo para `AddFormField`:
+
+```pascal
+Client.Request
+  .Post('/submit')
+  // Adiciona campos de formulário padrão
+  .AddFormField('name', 'John Doe')
+  // Adiciona um campo com um Content-Type específico
+  .AddFormField('query', '{"IsTrue":true}', 'application/json')
+  // Adiciona arquivos
+  .AddFile('avatar', 'C:\path\to\avatar.png', 'image/png')
+  .Execute
+  .Start;
+```
+
 #### Suporte a Records e Coleções
 
 O Dext REST Client suporta nativamente **records** e **arrays de records** como DTOs, eliminando a necessidade de gerenciar memória manualmente para objetos simples.
