@@ -1,4 +1,4 @@
-﻿program Dext.Entity.Tests;
+program Dext.Entity.Tests;
 
 {$APPTYPE CONSOLE}
 
@@ -30,6 +30,7 @@ uses
   Dext.Entity.Mapping.Test,
   Dext.Entity.DbType.Test,
   Dext.Entity.SmartTypes.Test,
+  Dext.Entity.Setup.Test,
   Dext.Entity.Query.Test;
 
 procedure RunTests;
@@ -54,10 +55,20 @@ var
   TestDBT: TDbTypeTest;
   TestST: TSmartTypesTest;
   TestQuery: TQueryParityTest;
+  TestSetup: TSetupTest;
 begin
   SetConsoleCharSet(65001);
   WriteLn('🧪 Running Dext Entity Unit Tests...');
   WriteLn('====================================');
+
+  // Setup & ConnectionString
+  TestSetup := TSetupTest.Create;
+  try
+    TestSetup.Run;
+  finally
+    TestSetup.Free;
+  end;
+  WriteLn('');
 
   // Query Parity & Optimizations
   TestQuery := TQueryParityTest.Create;

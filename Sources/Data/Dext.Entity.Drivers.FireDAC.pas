@@ -30,13 +30,6 @@ interface
 {$I Dext.inc}
 
 uses
-  System.SysUtils,
-  System.Classes,
-  System.Variants,
-  System.Rtti,
-  System.TypInfo,
-  Dext.Collections,
-  System.DateUtils,
   Data.DB,
   Data.FmtBcd,
   FireDAC.Comp.Client,
@@ -45,15 +38,24 @@ uses
   FireDAC.DApt.Intf,
   FireDAC.DatS,
   FireDAC.Phys.Intf,
-  Dext.Entity.Drivers.FireDAC.Links,
   FireDAC.Stan.Async,
   FireDAC.Stan.Def,
   FireDAC.Stan.Error,
+  FireDAC.Stan.Intf,
   FireDAC.Stan.Option,
   FireDAC.Stan.Param,
+  System.Classes,
+  System.DateUtils,
+  System.Rtti,
+  System.SysUtils,
+  System.TypInfo,
+  System.Variants,
+
+  Dext.Collections,
+  Dext.Entity.Dialects,
+  Dext.Entity.Drivers.FireDAC.Links,
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.TypeConverters,
-  Dext.Entity.Dialects,
   Dext.Types.Nullable,
   Dext.Types.UUID;
 
@@ -192,9 +194,9 @@ begin
         Result := TValue.From<Int64>(Field.AsLargeInt);
       ftLargeint:
         Result := TValue.From<Int64>(Field.AsLargeInt);
-      ftFloat, ftSingle:
+      ftFloat, Data.DB.ftSingle:
         Result := TValue.From<Double>(Field.AsFloat);
-      ftExtended:
+      Data.DB.ftExtended:
         Result := TValue.From<Double>(Field.AsFloat);
       ftCurrency, ftBCD:
         Result := TValue.From<Currency>(Field.AsCurrency);
@@ -438,7 +440,7 @@ begin
         Param.AsInteger := V.AsInteger;
     ftLargeint:
       Param.AsLargeInt := V.AsInt64;
-    ftFloat, ftCurrency, ftExtended:
+    ftFloat, ftCurrency, Data.DB.ftExtended:
       Param.AsFloat := V.AsExtended;
     ftBCD:
       Param.AsBCD := V.AsType<Currency>;
@@ -1216,13 +1218,24 @@ begin
 end;
 
 function TFireDACConnection.IsPooled: Boolean;
+var
+  Def: IFDStanConnectionDef;
 begin
   // First check if the connection is assigned to a manager/pool
   if FConnection.ConnectionDefName <> '' then
   begin
      // We assume if it has a DefName AND it was registered through our manager, it is pooled.
      // FireDAC pooling is usually defined at the definition level.
-     Result := FConnection.Params.Pooled;
+     if FConnection.Params.Pooled then
+       Result := True
+     else
+     begin
+       Def := TFDManager(FireDAC.Comp.Client.FDManager).ConnectionDefs.FindConnectionDef(FConnection.ConnectionDefName);
+       if Def <> nil then
+         Result := Def.Params.Pooled
+       else
+         Result := False;
+     end;
   end
   else
     Result := False;
@@ -1301,6 +1314,7 @@ end;
 procedure TFireDACConnection.DetectDialect;
 var
   DriverID: string;
+  Def: IFDStanConnectionDef;
 begin
   if FDialect <> ddUnknown then Exit;
 
@@ -1308,6 +1322,13 @@ begin
   if DriverID = '' then
     DriverID := FConnection.Params.DriverID;
     
+  if (DriverID = '') and (FConnection.ConnectionDefName <> '') then
+  begin
+    Def := TFDManager(FireDAC.Comp.Client.FDManager).ConnectionDefs.FindConnectionDef(FConnection.ConnectionDefName);
+    if Def <> nil then
+      DriverID := Def.Params.DriverID;
+  end;
+     
   FDialect := TDialectFactory.DetectDialect(DriverID.ToLower);
 end;
 

@@ -102,15 +102,29 @@ begin
 end;
 ```
 
-Supported database drivers:
+Supported database drivers and connections:
 - `.UseSQLite('filename.db')`
 - `.UsePostgreSQL('connection-string')`
 - `.UseMySQL('connection-string')`
 - `.UseSQLServer('connection-string')`
 - `.UseFirebird('connection-string')`
 - `.UseOracle('connection-string')`
+- `.UseConnectionDef('nome-def-firedac')` (Uses a global connection definition pre-registered in FireDAC)
 
-### 3.1. Dialect Configuration
+### 3.1. Using UseConnectionDef and FireDAC Pooling
+
+When using `.UseConnectionDef('NameDef')`, Dext automatically resolves the SQL dialect based on the driver configured inside FireDAC. Additionally, if the FireDAC connection definition has pooling enabled (`Pooled=True`), Dext natively detects it and inherits that setting:
+
+```pascal
+procedure TStartup.ConfigureDatabase(Options: TDbContextOptions);
+begin
+  Options
+    .UseConnectionDef('MyConnectionFB')
+    .WithPooling(True); // Enables reusing connections managed by FireDAC
+end;
+```
+
+### 3.2. Dialect Configuration
 
 Dext attempts to infer the SQL dialect automatically based on the FireDAC DriverID. If you are using a custom Connection String or if detection fails, you can force the dialect manually:
 

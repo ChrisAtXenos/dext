@@ -231,8 +231,20 @@ end;
 procedure TDextFireDACManager.ApplyResourceOptions(AConnection: TFDConnection; AOptimizations: TFireDACOptimizations);
 var
   Dialect: TDatabaseDialect;
+  DriverID: string;
+  Def: IFDStanConnectionDef;
 begin
-  Dialect := TDialectFactory.DetectDialect(AConnection.DriverName);
+  DriverID := AConnection.DriverName;
+  if DriverID = '' then
+    DriverID := AConnection.Params.DriverID;
+  if (DriverID = '') and (AConnection.ConnectionDefName <> '') then
+  begin
+    Def := FManager.ConnectionDefs.FindConnectionDef(AConnection.ConnectionDefName);
+    if Def <> nil then
+      DriverID := Def.Params.DriverID;
+  end;
+
+  Dialect := TDialectFactory.DetectDialect(DriverID);
   
   // Apply SQLite specific settings
   if Dialect = ddSQLite then

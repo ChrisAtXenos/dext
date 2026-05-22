@@ -286,6 +286,8 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 - **TDbContext** — Unit of Work with automatic **Change Tracking** (states: Added, Modified, Deleted, Unchanged). **Identity Map** for instance uniqueness by primary key.
 - **DbSet\<T\>** — Generic repository. Operations: `Add`, `Update`, `Remove`, `Find`, `FirstOrDefault`, `Where`, `Include`, `ToList`.
 - **SaveChanges** — Persists all tracked changes in a transaction.
+- **Fluent Connection Setup & Pooling Auto-Detection** — Connection builders (`UsePostgreSQL`, `UseFirebird`, etc.) support automatic parameter extraction and synchronization with property setters, resolving empty-options/pooling bugs.
+- **ConnectionDefName Support (FireDAC)** — Direct support for FireDAC connection definition names (`UseConnectionDef`). Automatically queries `FDManager.ConnectionDefs` to resolve the database dialect, driver ID, and pooling configuration dynamically.
 
 ### 4.2 Query Engine (LINQ-like)
 - Fluent queries with **Projection (Select)**, **Paging** (`Skip`/`Take`), and **Aggregates** (`Count`, `Sum`, `Max`, `Min`, `Average`).

@@ -134,35 +134,35 @@ end;
 function TDbContextOptions.UseSQLServer(const AConnectionString: string): TDbContextOptions;
 begin
   FDriverName := 'MSSQL';
-  FConnectionString := AConnectionString;
+  ConnectionString := AConnectionString;
   Result := Self;
 end;
 
 function TDbContextOptions.UsePostgreSQL(const AConnectionString: string): TDbContextOptions;
 begin
   FDriverName := 'PG';
-  FConnectionString := AConnectionString;
+  ConnectionString := AConnectionString;
   Result := Self;
 end;
 
 function TDbContextOptions.UseMySQL(const AConnectionString: string): TDbContextOptions;
 begin
   FDriverName := 'MySQL';
-  FConnectionString := AConnectionString;
+  ConnectionString := AConnectionString;
   Result := Self;
 end;
 
 function TDbContextOptions.UseFirebird(const AConnectionString: string): TDbContextOptions;
 begin
   FDriverName := 'FB';
-  FConnectionString := AConnectionString;
+  ConnectionString := AConnectionString;
   Result := Self;
 end;
 
 function TDbContextOptions.UseOracle(const AConnectionString: string): TDbContextOptions;
 begin
   FDriverName := 'Ora';
-  FConnectionString := AConnectionString;
+  ConnectionString := AConnectionString;
   Result := Self;
 end;
 
@@ -311,6 +311,7 @@ var
   PosEq: Integer;
 begin
   FConnectionString := AValue;
+  FParams.Clear;
   
   // Basic parsing to populate Params for other uses (like Dialect detection)
   if AValue <> '' then

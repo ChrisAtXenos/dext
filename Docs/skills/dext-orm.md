@@ -136,6 +136,7 @@ end;
 - **MySQL / MariaDB**: `.UseMySQL()`
 - **Firebird**: `.UseFirebird()`
 - **Oracle**: `.UseOracle()`
+- **FireDAC Connection Definition**: `.UseConnectionDef('DefName')` (with automatic dialect detection and pooling support)
 
 ## 5. CRUD Operations
 
