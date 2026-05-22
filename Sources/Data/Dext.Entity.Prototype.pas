@@ -119,10 +119,47 @@ var
   ColumnName: string;
   EntityMap: TEntityMap;
   PropMap: TPropertyMap;
+  HasSmartProperty: Boolean;
+  Fld: TRttiField;
+  RttiProp: TRttiProperty;
 begin
   Typ := TReflection.Context.GetType(ATypeInfo);
   if (Typ = nil) or (Typ.TypeKind <> tkClass) then
     raise Exception.Create('Prototype.Entity<T> only supports class types.');
+
+  // Verify if the entity has at least one smart property of type Prop<T> (excluding Nullable<T> and Lazy<T>)
+  HasSmartProperty := False;
+  for Fld in Typ.GetFields do
+  begin
+    if TReflection.IsSmartProp(Fld.FieldType.Handle) and 
+       not TReflection.GetMetadata(Fld.FieldType.Handle).IsNullable and 
+       not TReflection.GetMetadata(Fld.FieldType.Handle).IsLazy then
+    begin
+      HasSmartProperty := True;
+      Break;
+    end;
+  end;
+
+  if not HasSmartProperty then
+  begin
+    for RttiProp in Typ.GetProperties do
+    begin
+      if TReflection.IsSmartProp(RttiProp.PropertyType.Handle) and 
+         not TReflection.GetMetadata(RttiProp.PropertyType.Handle).IsNullable and 
+         not TReflection.GetMetadata(RttiProp.PropertyType.Handle).IsLazy then
+      begin
+        HasSmartProperty := True;
+        Break;
+      end;
+    end;
+  end;
+
+  if not HasSmartProperty then
+    raise Exception.CreateFmt(
+      'Entity "%s" does not contain any Smart Properties (Prop<T>). ' +
+      'Expressions using Prototype.Entity<%s> will fail because standard Delphi properties compare at compile-time. ' +
+      'To query this entity, please use its metadata class (inheriting from TEntityType<%s>) or string-based properties (e.g. Prop(''PropertyName'')).',
+      [Typ.Name, Typ.Name, Typ.Name]);
 
   // Create Instance - Prefer default constructor if available
   Result := Typ.AsInstance.MetaclassType.Create;

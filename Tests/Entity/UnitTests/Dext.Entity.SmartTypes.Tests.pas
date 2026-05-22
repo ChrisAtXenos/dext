@@ -1,4 +1,4 @@
-﻿unit Dext.Entity.SmartTypes.Tests;
+unit Dext.Entity.SmartTypes.Tests;
 
 interface
 
@@ -9,9 +9,44 @@ uses
   Dext.Assertions,
   Dext.Testing.Attributes,
   Dext.Core.SmartTypes,
-  Dext.Types.Nullable;
+  Dext.Types.Nullable,
+  Dext.Entity.Attributes,
+  Dext.Entity.TypeSystem,
+  Dext.Entity.Prototype,
+  Dext.Entity.Query,
+  Dext.Specifications.Interfaces,
+  Dext.Specifications.Base,
+  Dext.Specifications.Types;
 
 type
+  [Table('plain_users')]
+  TPlainTestUser = class
+  private
+    FId: Integer;
+    FName: string;
+    FEmail: string;
+  public
+    [PK, AutoInc] property Id: Integer read FId write FId;
+    property Name: string read FName write FName;
+    property Email: string read FEmail write FEmail;
+  end;
+
+  TPlainTestUserType = class(TEntityType<TPlainTestUser>)
+  public
+    class var Name: TPropExpression;
+    class constructor Create;
+  end;
+
+  [Table('nullable_only_users')]
+  TNullableOnlyTestUser = class
+  private
+    FId: Integer;
+    FName: Nullable<string>;
+  public
+    [PK, AutoInc] property Id: Integer read FId write FId;
+    property Name: Nullable<string> read FName write FName;
+  end;
+
   [TestFixture('SmartTypes (Prop<T>) Tests')]
   TSmartTypesTests = class
   public
@@ -34,6 +69,22 @@ type
     [Test]
     [Description('Verify assertions working with Nullable<T>')]
     procedure TestNullableAssertions;
+
+    [Test]
+    [Description('Verify that calling Prototype.Entity on a plain entity raises an exception')]
+    procedure TestPlainEntityPrototypeRaisesException;
+
+    [Test]
+    [Description('Verify that calling Prototype.Entity on an entity with only Nullable properties raises an exception')]
+    procedure TestNullableOnlyEntityPrototypeRaisesException;
+
+    [Test]
+    [Description('Verify that a query return-all doesn''t trigger prototype validation exception')]
+    procedure TestPlainEntityQueryAllWorks;
+
+    [Test]
+    [Description('Verify that querying plain entities using metadata class works')]
+    procedure TestPlainEntityTypeQueryWorks;
   end;
 
   [TestFixture('SmartTypes Combinatorial Matrix')]
@@ -175,6 +226,62 @@ begin
   // Test failure case (Manual check if needed, but here we just verify success)
   N.Clear;
   // Should(N).Be(0); // This would call Assert.Fail as expected
+end;
+
+procedure TSmartTypesTests.TestPlainEntityPrototypeRaisesException;
+begin
+  Should(procedure
+    begin
+      Prototype.Entity<TPlainTestUser>;
+    end).Throw(Exception)
+        .ThrowWithMessageContaining('does not contain any Smart Properties');
+end;
+
+procedure TSmartTypesTests.TestNullableOnlyEntityPrototypeRaisesException;
+begin
+  Should(procedure
+    begin
+      Prototype.Entity<TNullableOnlyTestUser>;
+    end).Throw(Exception)
+        .ThrowWithMessageContaining('does not contain any Smart Properties');
+end;
+
+procedure TSmartTypesTests.TestPlainEntityQueryAllWorks;
+var
+  Query: TFluentQuery<TPlainTestUser>;
+  Spec: ISpecification<TPlainTestUser>;
+begin
+  Spec := TSpecification<TPlainTestUser>.Create;
+  Query := TFluentQuery<TPlainTestUser>.Create(nil, Spec);
+  
+  Query.Skip(10);
+
+  Query := Default(TFluentQuery<TPlainTestUser>);
+  Spec := nil;
+end;
+
+procedure TSmartTypesTests.TestPlainEntityTypeQueryWorks;
+var
+  Query: TFluentQuery<TPlainTestUser>;
+  Spec: ISpecification<TPlainTestUser>;
+begin
+  Spec := TSpecification<TPlainTestUser>.Create;
+  Query := TFluentQuery<TPlainTestUser>.Create(nil, Spec);
+
+  Query.Where(TPlainTestUserType.Name = 'John');
+
+  Should(Spec.Expression).NotBeNil;
+
+  Query := Default(TFluentQuery<TPlainTestUser>);
+  Spec := nil;
+end;
+
+
+{ TPlainTestUserType }
+
+class constructor TPlainTestUserType.Create;
+begin
+  Name := TPropExpression.Create('Name');
 end;
 
 initialization
