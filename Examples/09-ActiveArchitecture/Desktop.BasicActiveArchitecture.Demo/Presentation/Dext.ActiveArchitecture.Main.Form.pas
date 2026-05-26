@@ -3,16 +3,45 @@
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, FireDAC.Stan.Intf, FireDAC.Stan.Option,
-  FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def, FireDAC.Stan.Pool,
-  FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.SQLite, FireDAC.Phys.SQLiteDef,
-  FireDAC.Stan.ExprFuncs, FireDAC.Phys.SQLiteWrapper.Stat, FireDAC.VCLUI.Wait,
-  FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt, Data.DB,
-  FireDAC.Comp.DataSet, FireDAC.Comp.Client, Vcl.Grids, Vcl.DBGrids, Dext.Entity.DataSet,
-  Dext.Entity.DataProvider, Dext.ActiveArchitecture.ViewModels, Dext.ActiveArchitecture.Domain,
-  Dext.Collections, Dext.Entity.Drivers.Interfaces, Dext.Entity, Dext.ActiveArchitecture.Entities,
-  Vcl.StdCtrls, Vcl.ExtCtrls;
+  Data.DB,
+  FireDAC.Comp.Client,
+  FireDAC.Comp.DataSet,
+  FireDAC.DApt,
+  FireDAC.DApt.Intf,
+  FireDAC.DatS,
+  FireDAC.Phys,
+  FireDAC.Phys.Intf,
+  FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef,
+  FireDAC.Phys.SQLiteWrapper.Stat,
+  FireDAC.Stan.Async,
+  FireDAC.Stan.Def,
+  FireDAC.Stan.Error,
+  FireDAC.Stan.ExprFuncs,
+  FireDAC.Stan.Intf,
+  FireDAC.Stan.Option,
+  FireDAC.Stan.Param,
+  FireDAC.Stan.Pool,
+  FireDAC.UI.Intf,
+  FireDAC.VCLUI.Wait,
+  System.Classes,
+  System.SysUtils,
+  Vcl.Controls,
+  Vcl.DBGrids,
+  Vcl.Dialogs,
+  Vcl.ExtCtrls,
+  Vcl.Forms,
+  Vcl.Graphics,
+  Vcl.Grids,
+  Vcl.StdCtrls,
+  Dext.Collections,
+  Dext.Entity,
+  Dext.Entity.DataProvider,
+  Dext.Entity.DataSet,
+  Dext.Entity.Drivers.Interfaces,
+  Dext.ActiveArchitecture.Domain,
+  Dext.ActiveArchitecture.Entities,
+  Dext.ActiveArchitecture.ViewModels;
 
 type
   TMainForm = class(TForm)
@@ -52,9 +81,11 @@ type
     FViewModel: TOrderViewModel;
 
     procedure CreateControls;
+    procedure DoDiscountGetText(Sender: TField; var Text: string; DisplayText: Boolean);
+    procedure DoFilterComboChange(Sender: TObject);
     procedure DoFormDestroy(Sender: TObject);
     procedure DoOrderDataSourceDataChange(Sender: TObject; Field: TField);
-    procedure DoFilterComboChange(Sender: TObject);
+    procedure DoQuantityChange(Sender: TField);
   public
     procedure InjectDependencies(AViewModel: TOrderViewModel);
   end;
@@ -90,8 +121,6 @@ begin
   FilterPanel.Align := alTop;
   FilterPanel.Height := 45;
   FilterPanel.BevelOuter := bvNone;
-  FilterPanel.Color := clWhite;
-  FilterPanel.ParentBackground := False;
   FilterPanel.BringToFront;
 
   FilterLabel := TLabel.Create(Self);
@@ -101,7 +130,6 @@ begin
   FilterLabel.Caption := 'Filtrar por Especificação (DDD/Specification):';
   FilterLabel.Font.Name := 'Segoe UI';
   FilterLabel.Font.Style := [fsBold];
-  FilterLabel.Font.Color := $00404040;
 
   FilterCombo := TComboBox.Create(Self);
   FilterCombo.Parent := FilterPanel;
@@ -126,6 +154,8 @@ begin
   // Vincula os eventos em runtime de forma segura para não corromper o arquivo DFM da IDE
   OnDestroy := DoFormDestroy;
   OrderDataSource.OnDataChange := DoOrderDataSourceDataChange;
+  OrderDetailsEntityDataSetQuantity.OnChange := DoQuantityChange;
+  OrderDetailsEntityDataSetDiscount.OnGetText := DoDiscountGetText;
 
   // Inicialização que antes ficava no FormCreate
   Self.Caption := 'Dext - Active Architecture';
@@ -251,6 +281,32 @@ begin
       Log.Error(E.ClassName + ' - ' + E.Message);
     end;
   end;
+end;
+
+procedure TMainForm.DoQuantityChange(Sender: TField);
+var
+  Detail: TOrderDetails;
+begin
+  Detail := TOrderDetails(OrderDetailsEntityDataSet.GetCurrentObject);
+  if Assigned(Detail) then
+  begin
+    // Sincroniza a quantidade com o objeto de domínio
+    Detail.Quantity := Sender.AsInteger;
+    
+    // Roda a regra rica na própria entidade de domínio
+    Detail.CalcularDescontoProgressivo;
+    
+    // Atualiza o DataSet com o novo desconto para renderizar a Grid VCL instantaneamente
+    OrderDetailsEntityDataSetDiscount.Value := Detail.Discount.Value;
+  end;
+end;
+
+procedure TMainForm.DoDiscountGetText(Sender: TField; var Text: string; DisplayText: Boolean);
+begin
+  if (not Sender.IsNull) and (Sender.AsFloat > 0.00) then
+    Text := FormatFloat('0.0', Sender.AsFloat * 100.0) + ' %'
+  else
+    Text := '';
 end;
 
 end.

@@ -118,11 +118,11 @@ end;
 
 procedure TOrderViewModelTests.Deve_Calcular_Frete_Usando_Serviço_Mockado;
 var
-  ShippingMock: Mock<IShippingService>;
-  ViewModel: TOrderViewModel;
-  Order: TOrders;
   ExecutouCallback: Boolean;
+  Order: TOrders;
+  ShippingMock: Mock<IShippingService>;
   TimeoutCounter: Integer;
+  ViewModel: TOrderViewModel;
 begin
   ShippingMock := Mock<IShippingService>.Create;
   ShippingMock.Setup

@@ -2045,7 +2045,6 @@ object MainForm: TMainForm
         Name = 'Discount'
         DataType = ftFloat
       end>
-    Filter = 'OrderId = 10248'
     Filtered = True
     IndexFieldNames = 'OrderId'
     MasterFields = 'OrderId'
