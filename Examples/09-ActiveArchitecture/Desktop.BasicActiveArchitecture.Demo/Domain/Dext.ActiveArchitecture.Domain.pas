@@ -1,8 +1,9 @@
-unit Dext.ActiveArchitecture.Domain;
+﻿unit Dext.ActiveArchitecture.Domain;
 
 interface
 
 type
+  {$M+}
   /// <summary>
   /// Contrato do serviço de cotação de frete externo (Clean Architecture).
   /// Esta interface reside na camada Core/Domain e é independente de rede ou HTTP.

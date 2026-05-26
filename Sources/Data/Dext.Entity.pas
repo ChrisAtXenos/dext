@@ -114,13 +114,13 @@ type
   PK = Dext.Entity.Attributes.PK;
   FK = Dext.Entity.Attributes.FK;
 
-  Alignment = Dext.Entity.Attributes.Alignment;
   Caption = Dext.Entity.Attributes.Caption;
-  DefaultValue = Dext.Entity.Attributes.DefaultValue;
-  DisplayFormat = Dext.Entity.Attributes.DisplayFormat;
   DisplayLabel = Dext.Entity.Attributes.DisplayLabel;
+  DisplayFormat = Dext.Entity.Attributes.DisplayFormat;
   DisplayWidth = Dext.Entity.Attributes.DisplayWidth;
+  DefaultValue = Dext.Entity.Attributes.DefaultValue;
   EditMask = Dext.Entity.Attributes.EditMask;
+  Alignment = Dext.Entity.Attributes.Alignment;
   ReadOnly = Dext.Entity.Attributes.ReadOnly;
   Visible = Dext.Entity.Attributes.Visible;
 

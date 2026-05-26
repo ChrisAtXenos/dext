@@ -1,10 +1,11 @@
-unit Dext.ActiveArchitecture.UnitTests;
+﻿unit Dext.ActiveArchitecture.UnitTests;
 
 interface
 
 uses
-  System.SysUtils,
   System.Classes,
+  System.Rtti,
+  System.SysUtils,
   Dext.Testing.Attributes,
   Dext.Assertions,
   Dext.ActiveArchitecture.Entities,
@@ -27,11 +28,7 @@ type
     procedure Deve_Aplicar_10_Porcento_De_Desconto_Para_Mais_De_50_Itens;
   end;
 
-  // Mock in-memory do IShippingService para testes unitários isolados
-  TMockShippingService = class(TInterfacedObject, IShippingService)
-  public
-    function CalcularCotacaoFrete(const Country: string; TotalWeight: Double): Double;
-  end;
+
 
   // 2. Suite de Testes para a ViewModel TOrderViewModel (MVVM & Clean Architecture)
   [Fixture]
@@ -56,6 +53,10 @@ type
   end;
 
 implementation
+
+uses
+  Dext.Mocks,
+  Dext.Mocks.Matching;
 
 { TOrderDetailsTests }
 
@@ -113,29 +114,23 @@ begin
   end;
 end;
 
-{ TMockShippingService }
-
-function TMockShippingService.CalcularCotacaoFrete(const Country: string; TotalWeight: Double): Double;
-begin
-  // Simulação instantânea sem bater em nenhuma API HTTP de verdade
-  if SameText(Country, 'Portugal') then
-    Result := TotalWeight * 8.5
-  else
-    Result := TotalWeight * 15.0;
-end;
-
 { TOrderViewModelTests }
 
 procedure TOrderViewModelTests.Deve_Calcular_Frete_Usando_Serviço_Mockado;
 var
-  MockService: IShippingService;
+  ShippingMock: Mock<IShippingService>;
   ViewModel: TOrderViewModel;
   Order: TOrders;
   ExecutouCallback: Boolean;
   TimeoutCounter: Integer;
 begin
-  MockService := TMockShippingService.Create;
-  ViewModel := TOrderViewModel.Create(MockService);
+  ShippingMock := Mock<IShippingService>.Create;
+  ShippingMock.Setup
+    .Returns<Double>(42.5)
+    .When
+    .CalcularCotacaoFrete(Arg.Any<string>, Arg.Any<Double>);
+
+  ViewModel := TOrderViewModel.Create(ShippingMock.Instance);
   Order := TOrders.Create;
   try
     Order.ShipCountry := 'Portugal';
@@ -170,11 +165,11 @@ end;
 
 procedure TOrderViewModelTests.Deve_Inicializar_Em_Estado_Limpo;
 var
-  MockService: IShippingService;
+  ShippingMock: Mock<IShippingService>;
   ViewModel: TOrderViewModel;
 begin
-  MockService := TMockShippingService.Create;
-  ViewModel := TOrderViewModel.Create(MockService);
+  ShippingMock := Mock<IShippingService>.Create;
+  ViewModel := TOrderViewModel.Create(ShippingMock.Instance);
   try
     Should(ViewModel.IsCalculating).BeFalse;
     Should(ViewModel.CalculatedFreight).Be(0.0);
