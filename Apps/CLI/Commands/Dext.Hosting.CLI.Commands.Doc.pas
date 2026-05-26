@@ -5,6 +5,7 @@ interface
 uses
   System.SysUtils,
   System.Classes,
+  System.Generics.Collections, // for TJSONArray.GetValue
   System.IOUtils,
   System.JSON,
   Dext.Hosting.CLI.Args,
