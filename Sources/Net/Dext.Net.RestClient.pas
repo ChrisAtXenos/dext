@@ -655,12 +655,10 @@ begin
         HttpClient: THttpClient;
         Response: IHTTPResponse;
         Attempt: Integer;
-        LastError: Exception;
         MethodStr: string;
       begin
         try
           Attempt := 0;
-          LastError := nil;
           
           while Attempt <= Retries do
           begin
@@ -688,9 +686,9 @@ begin
               except
                 on E: Exception do
                 begin
-                  LastError := E;
                   Inc(Attempt);
-                  if Attempt > Retries then Break;
+                  if Attempt > Retries then
+                    raise;
                   Sleep(Trunc(Power(2, Attempt) * 100));
                 end;
               end;
@@ -698,8 +696,6 @@ begin
               TConnectionPool(TRestClient.FSharedPool).Release(HttpClient);
             end;
           end;
-          
-          if Assigned(LastError) then raise LastError;
         finally
           if AOwnsBody and Assigned(ABody) then
             ABody.Free;

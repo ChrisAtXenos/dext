@@ -12,7 +12,8 @@ uses
   Dext.Net.RestRequest,
   Dext.Net.Authentication,
   Dext.Web.Interfaces,
-  Dext.WebHost;
+  Dext.WebHost,
+  System.SyncObjs;
 
 type
   [TestFixture('Web Extension Features Tests (Phase 3)')]
@@ -29,6 +30,12 @@ type
 
     [Test('Should retrieve and parse OAuth2 Client Credentials token using local mock server')]
     procedure TestOAuth2ClientCredentialsProvider;
+
+    [Test('Should catch RestClient connection exception safely without Access Violation (Issue #129)')]
+    procedure TestRestClientExceptionHandling;
+
+    [Test('Should catch RestClient connection exception using fluent OnException (Issue #129)')]
+    procedure TestRestClientFluentExceptionHandling;
   end;
 
 implementation
@@ -182,6 +189,66 @@ begin
   finally
     Host.Stop;
   end;
+end;
+
+procedure TWebFeaturesTests.TestRestClientExceptionHandling;
+var
+  Resp: IRestResponse;
+  Caught: Boolean;
+  ErrorMsg: string;
+  ErrorClass: string;
+begin
+  Caught := False;
+  try
+    Resp := RestClient('http://127.0.0.1:9999')
+      .Timeout(2000)
+      .Get('/posts')
+      .Await;
+  except
+    on E: Exception do
+    begin
+      Caught := True;
+      ErrorMsg := E.Message;
+      ErrorClass := E.ClassName;
+    end;
+  end;
+
+  Should(Caught).BeTrue;
+  Should(ErrorMsg).NotBeEmpty;
+  Should(ErrorClass).NotBeEmpty;
+end;
+
+procedure TWebFeaturesTests.TestRestClientFluentExceptionHandling;
+var
+  Caught: Boolean;
+  ErrorMsg: string;
+  ErrorClass: string;
+  Timeout: Integer;
+begin
+  Caught := False;
+  RestClient('http://127.0.0.1:9999')
+    .Timeout(2000)
+    .Get('/posts')
+    .OnException(procedure(E: Exception)
+      begin
+        Caught := True;
+        ErrorMsg := E.Message;
+        ErrorClass := E.ClassName;
+      end)
+    .Start;
+
+  // Since OnException queues to the main thread, we must pump the main thread queue
+  Timeout := 0;
+  while (not Caught) and (Timeout < 5000) do
+  begin
+    CheckSynchronize(10);
+    Inc(Timeout, 10);
+    Sleep(10);
+  end;
+
+  Should(Caught).BeTrue;
+  Should(ErrorMsg).NotBeEmpty;
+  Should(ErrorClass).NotBeEmpty;
 end;
 
 end.
