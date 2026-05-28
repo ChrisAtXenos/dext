@@ -51,7 +51,9 @@ implementation
 uses
   Dext.Logging,
   Dext.Logging.Global,
-  Dext.Logging.Tracing;
+  Dext.Logging.Tracing,
+  Dext.Telemetry.Context,
+  Dext.Types.UUID;
 
 { TOrderViewModel }
 
@@ -93,6 +95,8 @@ var
   OrderId: Integer;
   Weight: Double;
   Span: TSpan;
+  ParentTraceId: string;
+  ParentSpanId: string;
 begin
   if not Assigned(FOrder) then
   begin
@@ -114,25 +118,35 @@ begin
   Span.SetAttribute('order.ship_country', Country);
   Span.SetAttribute('order.weight', FloatToStr(Weight));
 
+  ParentTraceId := Span.TraceId;
+  ParentSpanId := Span.SpanId;
+
   // Executa o consumo da API externa em uma thread de background usando TAsyncTask.Run do Dext Core.
   // Evita congelamento de tela em ERPs (Zero UI Blocking).
   TAsyncTask.Run<Double>(
     function: Double
     var
       SubSpan: TSpan;
+      Node: PScopeNode;
     begin
-      SubSpan := TTracer.BeginSpan('ShippingService.CalcularCotacaoFrete', 'ExternalService');
-      SubSpan.SetAttribute('shipping.country', Country);
-      SubSpan.SetAttribute('shipping.weight', FloatToStr(Weight));
+      Node := TraceContext.Push('AsyncTaskScope', TUUID.FromString(ParentTraceId), TUUID.FromString(ParentSpanId));
       try
-        Result := FShippingService.CalcularCotacaoFrete(Country, Weight);
-        SubSpan.SetAttribute('shipping.result', FloatToStr(Result));
-      except
-        on E: Exception do
-        begin
-          SubSpan.SetStatus('Error', E.Message);
-          raise;
+        SubSpan := TTracer.BeginSpan('ShippingService.CalcularCotacaoFrete', 'ExternalService');
+        SubSpan.SetAttribute('shipping.country', Country);
+        SubSpan.SetAttribute('shipping.weight', FloatToStr(Weight));
+        try
+          Result := FShippingService.CalcularCotacaoFrete(Country, Weight);
+          SubSpan.SetAttribute('shipping.result', FloatToStr(Result));
+        except
+          on E: Exception do
+          begin
+            SubSpan.SetStatus('Error', E.Message);
+            raise;
+          end;
         end;
+      finally
+        SubSpan.Finish;
+        TraceContext.Pop(Node);
       end;
     end)
     .OnComplete(
