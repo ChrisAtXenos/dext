@@ -1401,78 +1401,45 @@ function renderSpanNode(span, allSpans) {
         duration = span.duration_ms === 0 ? "<1ms" : span.duration_ms + "ms";
     }
     
-    var color = span.lvl === "Error" ? "var(--error)" : "var(--primary)";
-    var hasData = (span.data && Object.keys(span.data).length > 0) || span.error;
-    
-    var detailsHtml = "";
-    if (hasData) {
-        detailsHtml += `<div class="trace-node-details">`;
-        if (span.error) {
-            detailsHtml += `<div class="trace-detail-error">
-                                <span class="material-symbols-outlined" style="font-size:14px;color:var(--error);margin-right:5px">error</span>
-                                <strong>Error:</strong> ${span.error}
-                            </div>`;
+    var category = "SYS";
+    if (span.data) {
+        if (span.data['db.statement'] || span.data['sql']) {
+            category = "SQL";
+        } else if (span.data['http.url'] || span.data['http.method']) {
+            category = "HTTP";
+        } else if (span.category) {
+            category = span.category;
         }
-        
-        if (span.data) {
-            var tagsHtml = "";
-            var sqlHtml = "";
-            
-            Object.keys(span.data).forEach(k => {
-                var val = span.data[k];
-                if (val === undefined || val === null || val === "") return;
-                var valStr = String(val);
-                
-                if (k === 'sql') {
-                    var escapedSql = valStr.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-                    sqlHtml = `<div class="trace-detail-sql">
-                                  <div class="trace-sql-header">
-                                      <span>SQL Query</span>
-                                      <button class="trace-copy-btn" onclick="navigator.clipboard.writeText(\`${escapedSql}\`); event.stopPropagation(); alert('SQL copied to clipboard!')">Copy</button>
-                                  </div>
-                                  <pre class="trace-sql-code"><code>${valStr}</code></pre>
-                               </div>`;
-                } else {
-                    tagsHtml += `<span class="trace-tag"><strong>${k}:</strong> ${valStr}</span>`;
-                }
-            });
-            
-            if (tagsHtml) {
-                detailsHtml += `<div class="trace-tags-container">${tagsHtml}</div>`;
-            }
-            if (sqlHtml) {
-                detailsHtml += sqlHtml;
-            }
-        }
-        detailsHtml += `</div>`;
     }
     
-    var contentHtml = "";
-    if (hasData) {
-        contentHtml = `
-            <details class="trace-node-details-disclosure">
-                <summary class="trace-node-content" style="border-left: 3px solid ${color}; cursor: pointer">
-                    <span class="trace-node-name">${span.msg}</span>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <span class="material-symbols-outlined" style="font-size:16px;color:var(--on-surface-v)">expand_more</span>
-                        <span class="trace-node-duration">${duration}</span>
-                    </div>
-                </summary>
-                ${detailsHtml}
-            </details>
-        `;
-    } else {
-        contentHtml = `
-            <div class="trace-node-content" style="border-left: 3px solid ${color}">
-                <span class="trace-node-name">${span.msg}</span>
-                <span class="trace-node-duration">${duration}</span>
-            </div>
-        `;
+    var color = "var(--primary)";
+    if (span.lvl === "Error") {
+        color = "var(--error)";
+    } else if (category === "SQL") {
+        color = "#29b6f6";
+    } else if (category === "HTTP") {
+        color = "#2ecc71";
+    } else if (category === "APP") {
+        color = "var(--warn)";
     }
+    
+    // Stringify span for click handler safely
+    var escapedSpanStr = JSON.stringify(span)
+                            .replace(/\\/g, '\\\\')
+                            .replace(/'/g, "\\'")
+                            .replace(/"/g, '&quot;');
+    
+    var contentHtml = `
+        <div class="trace-node-content" style="border-left: 3px solid ${color}; cursor: pointer" onclick="openInspector('${escapedSpanStr}')">
+            <span class="trace-tag cat-${category.toLowerCase()}" style="margin-right:8px;font-size:9px;padding:1px 5px;border-radius:4px;border:1px solid">${category}</span>
+            <span class="trace-node-name">${span.msg}</span>
+            <span class="trace-node-duration">${duration}</span>
+        </div>
+    `;
     
     var h = `<div class="trace-node">
                 ${contentHtml}`;
-                
+                 
     if (children.length > 0) {
         h += `<div class="trace-node-children">`;
         children.forEach(c => {
@@ -1829,4 +1796,142 @@ function addMetricPointToDataOnly(payload) {
     pushDataOnly(throughputChart, time, [httpRps, sqlQps, httpErrorsRps, avgLatency]);
     pushDataOnly(systemChart, time, [cpu, memory, dbConn, threads]);
 }
+
+function openInspector(spanStr) {
+    try {
+        var span = JSON.parse(spanStr);
+        console.log("Opening inspector for span:", span);
+
+        var drawer = document.getElementById("inspector-drawer");
+        if (!drawer) return;
+
+        // Reset display sections
+        document.getElementById("drawer-error-section").style.display = "none";
+        document.getElementById("drawer-sql-section").style.display = "none";
+        document.getElementById("drawer-http-section").style.display = "none";
+
+        // Fill overview metadata
+        var duration = "";
+        if (span.duration_ms !== undefined && span.duration_ms !== null) {
+            duration = span.duration_ms === 0 ? "<1ms" : span.duration_ms + "ms";
+        }
+        document.getElementById("drawer-meta-name").textContent = span.msg || "-";
+        document.getElementById("drawer-meta-duration").textContent = duration || "-";
+        
+        var category = "SYS";
+        if (span.data) {
+            if (span.data['db.statement'] || span.data['sql']) {
+                category = "SQL";
+            } else if (span.data['http.url'] || span.data['http.method']) {
+                category = "HTTP";
+            } else if (span.category) {
+                category = span.category;
+            }
+        }
+        
+        var catEl = document.getElementById("drawer-meta-category");
+        catEl.textContent = category;
+        catEl.className = "trace-tag cat-" + category.toLowerCase();
+
+        var statusEl = document.getElementById("drawer-meta-status");
+        if (span.lvl === "Error") {
+            statusEl.textContent = "Failed";
+            statusEl.style.color = "var(--error)";
+            
+            // Show error section
+            document.getElementById("drawer-error-section").style.display = "block";
+            document.getElementById("drawer-error-text").textContent = span.data && span.data.error ? span.data.error : "Unknown error occurred";
+        } else {
+            statusEl.textContent = "Success";
+            statusEl.style.color = "var(--success)";
+        }
+
+        // Category specific details
+        if (category === "SQL") {
+            document.getElementById("drawer-sql-section").style.display = "block";
+            var sqlText = span.data ? (span.data.sql || span.data['db.statement'] || "") : "";
+            document.getElementById("drawer-sql-text").textContent = sqlText;
+            
+            var sqlParams = span.data ? (span.data.params || span.data['db.params'] || span.data['db.param'] || span.data['dh.param'] || "{}") : "{}";
+            // If it's a string representing JSON, try to pretty print it
+            try {
+                if (typeof sqlParams === 'string') {
+                    var parsed = JSON.parse(sqlParams);
+                    document.getElementById("drawer-sql-params").textContent = JSON.stringify(parsed, null, 2);
+                } else {
+                    document.getElementById("drawer-sql-params").textContent = JSON.stringify(sqlParams, null, 2);
+                }
+            } catch(e) {
+                document.getElementById("drawer-sql-params").textContent = sqlParams;
+            }
+
+            // Copy SQL button
+            document.getElementById("drawer-copy-sql").onclick = function(e) {
+                e.stopPropagation();
+                navigator.clipboard.writeText(sqlText);
+                alert("SQL copied to clipboard!");
+            };
+        } else if (category === "HTTP") {
+            document.getElementById("drawer-http-section").style.display = "block";
+            var url = span.data ? (span.data.url || span.data['http.url'] || "") : "";
+            var method = span.data ? (span.data.method || span.data['http.method'] || "GET") : "GET";
+            var statusCode = span.data ? (span.data.statusCode || span.data['http.status_code'] || "-") : "-";
+
+            document.getElementById("drawer-http-url").textContent = url;
+            
+            var methodEl = document.getElementById("drawer-http-method");
+            methodEl.textContent = method;
+            methodEl.className = "trace-tag cat-http";
+
+            var statusHttpEl = document.getElementById("drawer-http-status");
+            statusHttpEl.textContent = statusCode;
+            if (parseInt(statusCode) >= 400) {
+                statusHttpEl.style.borderColor = "var(--error)";
+                statusHttpEl.style.color = "var(--error)";
+            } else {
+                statusHttpEl.style.borderColor = "#2ecc71";
+                statusHttpEl.style.color = "#2ecc71";
+            }
+
+            // Copy as cURL button
+            document.getElementById("drawer-copy-curl").onclick = function(e) {
+                e.stopPropagation();
+                var curl = `curl -X ${method} "${url}"`;
+                navigator.clipboard.writeText(curl);
+                alert("cURL command copied to clipboard!");
+            };
+        }
+
+        // Generic Attributes & Metadata
+        var tagsContainer = document.getElementById("drawer-generic-tags");
+        tagsContainer.innerHTML = "";
+        if (span.data) {
+            Object.keys(span.data).forEach(k => {
+                // Skip sql, params, url, method, statusCode, error since they have custom visual blocks
+                if (['sql', 'db.statement', 'params', 'db.params', 'url', 'http.url', 'method', 'http.method', 'statusCode', 'http.status_code', 'error'].includes(k)) return;
+                
+                var val = span.data[k];
+                if (val === undefined || val === null || val === "") return;
+                
+                var spanTag = document.createElement("span");
+                spanTag.className = "trace-tag";
+                spanTag.innerHTML = `<strong>${k}:</strong> ${val}`;
+                tagsContainer.appendChild(spanTag);
+            });
+        }
+
+        // Open the drawer
+        drawer.classList.add("open");
+    } catch(e) {
+        console.error("Failed to open inspector:", e);
+    }
+}
+
+function closeInspector() {
+    var drawer = document.getElementById("inspector-drawer");
+    if (drawer) {
+        drawer.classList.remove("open");
+    }
+}
+
 

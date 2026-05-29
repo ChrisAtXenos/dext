@@ -57,6 +57,8 @@ type
   TDashboardRoutes = class
   public
     class procedure Configure(App: IApplicationBuilder);
+    class procedure BroadcastSSE(const EventName, Data: string);
+    class procedure StopServer;
   end;
 
   /// <summary>
@@ -128,6 +130,16 @@ begin
 end;
 
 { TDashboardRoutes }
+
+class procedure TDashboardRoutes.BroadcastSSE(const EventName, Data: string);
+begin
+  Dext.Dashboard.Routes.BroadcastSSE(EventName, Data);
+end;
+
+class procedure TDashboardRoutes.StopServer;
+begin
+  FServerStopping := True;
+end;
 
 class procedure TDashboardRoutes.Configure(App: IApplicationBuilder);
 begin

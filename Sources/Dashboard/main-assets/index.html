@@ -533,7 +533,6 @@ Content-Type: application/json
                 </div>
             </section>
         </div>
-
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -599,6 +598,81 @@ Content-Type: application/json
       });
     });
     </script>
+
+    <!-- S27: Expandable Context Inspector Drawer -->
+    <div id="inspector-drawer" class="hd-drawer">
+        <div class="drawer-header">
+            <div style="display:flex;align-items:center;gap:10px">
+                <span class="ms material-symbols-outlined" id="drawer-icon">search_insights</span>
+                <span class="drawer-title" id="drawer-title">Details</span>
+            </div>
+            <button class="btn btn-t" onclick="closeInspector()" style="padding: 6px 12px;"><span class="ms material-symbols-outlined" style="font-size:18px">close</span></button>
+        </div>
+        <div class="drawer-body">
+            <div class="drawer-section">
+                <div class="drawer-meta-grid">
+                    <div>
+                        <div class="drawer-meta-label">Operation</div>
+                        <div class="drawer-meta-val" id="drawer-meta-name">-</div>
+                    </div>
+                    <div>
+                        <div class="drawer-meta-label">Duration</div>
+                        <div class="drawer-meta-val" id="drawer-meta-duration">-</div>
+                    </div>
+                    <div>
+                        <div class="drawer-meta-label">Category</div>
+                        <div class="drawer-meta-val"><span class="trace-tag" id="drawer-meta-category">-</span></div>
+                    </div>
+                    <div>
+                        <div class="drawer-meta-label">Status</div>
+                        <div class="drawer-meta-val" id="drawer-meta-status">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drawer-section" id="drawer-error-section" style="display:none">
+                <div class="drawer-section-title" style="color:var(--error)">Error Details</div>
+                <pre class="drawer-error-box" id="drawer-error-text"></pre>
+            </div>
+
+            <div class="drawer-section" id="drawer-sql-section" style="display:none">
+                <div class="drawer-section-title" style="display:flex;justify-content:space-between;align-items:center">
+                    <span>SQL Statement</span>
+                    <button class="trace-copy-btn" id="drawer-copy-sql">Copy SQL</button>
+                </div>
+                <pre class="drawer-code-box"><code class="language-sql" id="drawer-sql-text"></code></pre>
+
+                <div class="drawer-section-title" style="margin-top:14px">Query Parameters</div>
+                <pre class="drawer-code-box"><code class="language-json" id="drawer-sql-params"></code></pre>
+            </div>
+
+            <div class="drawer-section" id="drawer-http-section" style="display:none">
+                <div class="drawer-section-title" style="display:flex;justify-content:space-between;align-items:center">
+                    <span>Request Details</span>
+                    <button class="trace-copy-btn" id="drawer-copy-curl">Copy as cURL</button>
+                </div>
+                <div class="drawer-meta-grid" style="grid-template-columns:1fr; gap:10px; margin-bottom:12px;">
+                    <div>
+                        <div class="drawer-meta-label">Target URL</div>
+                        <div class="drawer-meta-val" style="font-family:monospace;font-size:11px;word-break:break-all;" id="drawer-http-url">-</div>
+                    </div>
+                </div>
+                
+                <div class="drawer-section-title">HTTP Method</div>
+                <span class="trace-tag" id="drawer-http-method">-</span>
+
+                <div class="drawer-section-title" style="margin-top:14px">Status Code</div>
+                <span class="trace-tag" id="drawer-http-status">-</span>
+            </div>
+
+            <div class="drawer-section" id="drawer-generic-section">
+                <div class="drawer-section-title">Attributes & Metadata</div>
+                <div id="drawer-generic-tags" class="trace-tags-container">
+                    <!-- Generic attributes -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Global Modal -->
     <div id="wk-modal" class="modal-overlay">

@@ -345,7 +345,8 @@ implementation
 
 uses
   System.Math,
-  Dext.Json;
+  Dext.Json,
+  Dext.Logging.Tracing;
 
 function RestClient(const ABaseUrl: string = ''): TRestClient;
 begin
@@ -656,7 +657,23 @@ begin
         Response: IHTTPResponse;
         Attempt: Integer;
         MethodStr: string;
+        LSpan: TSpan;
       begin
+        case AMethod of
+          hmGET:    MethodStr := 'GET';
+          hmPOST:   MethodStr := 'POST';
+          hmPUT:    MethodStr := 'PUT';
+          hmDELETE: MethodStr := 'DELETE';
+          hmPATCH:  MethodStr := 'PATCH';
+          hmHEAD:   MethodStr := 'HEAD';
+          hmOPTIONS:MethodStr := 'OPTIONS';
+          else MethodStr := 'GET';
+        end;
+
+        LSpan := TTracer.BeginSpan('HTTP Outbound', 'HTTP');
+        LSpan.SetAttribute('http.url', Url);
+        LSpan.SetAttribute('http.method', MethodStr);
+
         try
           Attempt := 0;
           
@@ -667,28 +684,22 @@ begin
               HttpClient.ConnectionTimeout := Timeout;
               HttpClient.SendTimeout := Timeout;
               HttpClient.ResponseTimeout := Timeout;
-              
-              case AMethod of
-                hmGET:    MethodStr := 'GET';
-                hmPOST:   MethodStr := 'POST';
-                hmPUT:    MethodStr := 'PUT';
-                hmDELETE: MethodStr := 'DELETE';
-                hmPATCH:  MethodStr := 'PATCH';
-                hmHEAD:   MethodStr := 'HEAD';
-                hmOPTIONS:MethodStr := 'OPTIONS';
-                else MethodStr := '';
-              end;
 
               try
                 Response := HttpClient.Execute(MethodStr, Url, ABody, nil, Headers) as IHTTPResponse;
                 Result := TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream, Response.GetHeaders);
+                LSpan.SetAttribute('http.status_code', Response.StatusCode);
+                LSpan.SetStatus('Success');
                 Exit;
               except
                 on E: Exception do
                 begin
                   Inc(Attempt);
                   if Attempt > Retries then
+                  begin
+                    LSpan.SetStatus('Error', E.Message);
                     raise;
+                  end;
                   Sleep(Trunc(Power(2, Attempt) * 100));
                 end;
               end;
@@ -697,6 +708,7 @@ begin
             end;
           end;
         finally
+          LSpan.Finish;
           if AOwnsBody and Assigned(ABody) then
             ABody.Free;
         end;

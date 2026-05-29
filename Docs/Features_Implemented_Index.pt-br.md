@@ -629,4 +629,29 @@ O framework fornece uma implementação nativa e sem dependências da especifica
 
 ---
 
-*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: April 23, 2026).*
+## 📊 19. Dext Observability Suite & Telemetry (S23 — S27) (`Sources\Core\Base`, `Sources\Dashboard`)
+
+O framework inclui uma suíte de observabilidade premium, de alta performance e assíncrona, para coleta, armazenamento e visualização de logs estruturados, spans distribuídos, métricas do sistema e profiling de chamadas de banco de dados e conexões de rede externas.
+
+### 19.1 Tracing Distribuído & Logging Estruturado (S24)
+- **Ring Buffer Assíncrono** — Pipeline de logs estruturados e spans armazenados em ring buffer de alta performance na memória (limite de 1000 itens) para evitar gargalos de I/O em threads de execução HTTP/ORM.
+- **Persistência Assíncrona** — Thread de background dedicada (`TDashboardSaveTimer`) que descarrega periodicamente os logs para `telemetry.json` a cada 30 segundos de forma não-bloqueante.
+- **Visualização Gantt Hierárquica** — O Dashboard renderiza em tempo real a árvore de spans sob o contexto de trace pai (`TraceId`/`SpanId`), permitindo analisar tempos de resposta e gargalos de processamento de forma sequencial.
+
+### 19.2 Métricas de Sistema & Throughput (S25)
+- **RED Metrics & Performance** — Gráficos em tempo real no Dashboard monitorando HTTP RPS (Requisições por Segundo), SQL QPS (Queries por Segundo), HTTP Errors e Latência média de processamento.
+- **System Health Monitor** — Coleta e amostragem de dados do sistema operacional: uso de CPU (%), consumo de memória física (Working Set em MB), contagem de threads ativas no processo e conexões de banco ativas.
+- **Persistência Não-Bloqueante** — Métricas serializadas em buffer circular e gravadas a cada 30s em `metrics.json` via timer assíncrono.
+
+### 19.3 Profiler de Banco de Dados & Outbound HTTP (S27)
+- **Auto-Instrumentação FireDAC** — Interceptação automática nas camadas do driver de banco de dados (`Dext.Entity.Drivers.FireDAC.pas`). Captura comandos SQL (`db.statement`), serialização de parâmetros de queries (`db.params`), elapsed time de execução do comando e captura automática de exceções nativas.
+- **Auto-Instrumentação Outbound HTTP** — Interceptação de chamadas de rede no cliente REST (`Dext.Net.RestClient.pas`), capturando URL de destino, método HTTP, tempos de resposta de rede, códigos de status e tratamento de falhas.
+- **Context Inspector Drawer** — Painel deslizante no Dashboard que abre ao clicar em caixas de spans na árvore. Exibe a query SQL formatada, os parâmetros do banco estruturados, cURL pronto para cópia da chamada HTTP, e metadados adicionais.
+
+### 19.4 Streamable Sessions & HTMX (S23)
+- **IStreamableSessionManager** — Gerenciador de canais SSE com limpeza de sessões expiradas (Garbage Collector a cada 60s expulsando sessões inativas após 30 minutos).
+- **HTMX Fragment Swap** — Endpoints que expõem fragmentos HTML dinâmicos (como `/sidecar/fragments/metrics`) permitindo atualização visual direta no DOM em tempo real via HTMX sem escrever código JavaScript.
+
+---
+
+*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: May 28, 2026).*

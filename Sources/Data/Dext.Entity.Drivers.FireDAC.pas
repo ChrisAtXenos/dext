@@ -176,9 +176,12 @@ implementation
 
 uses
   System.SyncObjs,
+  System.JSON,
   FireDAC.ConsoleUI.Wait,
   Dext.Core.Reflection,
-  Dext.Telemetry.Metrics;
+  Dext.Telemetry.Metrics,
+  Dext.Logging.Tracing,
+  Dext.Telemetry.Context;
 
 var
   GActiveDbConnections: Integer = 0;
@@ -838,19 +841,40 @@ begin
 end;
 
 function TFireDACCommand.ExecuteNonQuery: Integer;
+var
+  LSpan: TSpan;
+  LParamObj: TJSONObject;
+  i: Integer;
 begin
   LogSqlCommand(FQuery.SQL.Text, FQuery.Params);
+  LSpan := TTracer.BeginSpan('SQL Exec', 'SQL');
+  LSpan.SetAttribute('db.statement', FQuery.SQL.Text);
+  if (FQuery.Params <> nil) and (FQuery.Params.Count > 0) then
+  begin
+    LParamObj := TJSONObject.Create;
+    try
+      for i := 0 to FQuery.Params.Count - 1 do
+        LParamObj.AddPair(FQuery.Params[i].Name, VarToStr(FQuery.Params[i].Value));
+      LSpan.SetAttribute('db.params', LParamObj.ToString);
+    finally
+      LParamObj.Free;
+    end;
+  end;
+
   try
     FQuery.ExecSQL;
     Result := FQuery.RowsAffected;
+    LSpan.SetStatus('Success');
   except
     on E: Exception do
     begin
+      LSpan.SetStatus('Error', E.Message);
       if Assigned(FOnLog) then
         FOnLog('  ❌ Error: ' + E.Message);
       raise;
     end;
   end;
+  LSpan.Finish;
 end;
 
 function TFireDACCommand.ExecuteQuery: IDbReader;
@@ -858,9 +882,25 @@ var
   Q: TFDQuery;
   i: Integer;
   Src, Dest: TFDParam;
+  LSpan: TSpan;
+  LParamObj: TJSONObject;
 begin
   // Create a new Query for the Reader to allow independent iteration
   Q := TFDQuery.Create(nil);
+  LSpan := TTracer.BeginSpan('SQL Query', 'SQL');
+  LSpan.SetAttribute('db.statement', FQuery.SQL.Text);
+  if (FQuery.Params <> nil) and (FQuery.Params.Count > 0) then
+  begin
+    LParamObj := TJSONObject.Create;
+    try
+      for i := 0 to FQuery.Params.Count - 1 do
+        LParamObj.AddPair(FQuery.Params[i].Name, VarToStr(FQuery.Params[i].Value));
+      LSpan.SetAttribute('db.params', LParamObj.ToString);
+    finally
+      LParamObj.Free;
+    end;
+  end;
+
   try
     Q.Connection := FConnection;
     Q.SQL.Text := FQuery.SQL.Text;
@@ -881,20 +921,41 @@ begin
     
     Q.Open;
     Result := TFireDACReader.Create(Q, True); // Reader now owns this new query
+    LSpan.SetStatus('Success');
   except
     on E: Exception do
     begin
-       if Assigned(FOnLog) then
-         FOnLog(Format('ERROR executing SQL: %s', [E.Message]));
-       Q.Free;
-       raise;
+      LSpan.SetStatus('Error', E.Message);
+      if Assigned(FOnLog) then
+        FOnLog(Format('ERROR executing SQL: %s', [E.Message]));
+      Q.Free;
+      raise;
     end;
   end;
+  LSpan.Finish;
 end;
 
 function TFireDACCommand.ExecuteScalar: TValue;
+var
+  LSpan: TSpan;
+  LParamObj: TJSONObject;
+  i: Integer;
 begin
   LogSqlCommand(FQuery.SQL.Text, FQuery.Params);
+  LSpan := TTracer.BeginSpan('SQL Scalar', 'SQL');
+  LSpan.SetAttribute('db.statement', FQuery.SQL.Text);
+  if (FQuery.Params <> nil) and (FQuery.Params.Count > 0) then
+  begin
+    LParamObj := TJSONObject.Create;
+    try
+      for i := 0 to FQuery.Params.Count - 1 do
+        LParamObj.AddPair(FQuery.Params[i].Name, VarToStr(FQuery.Params[i].Value));
+      LSpan.SetAttribute('db.params', LParamObj.ToString);
+    finally
+      LParamObj.Free;
+    end;
+  end;
+
   try
     FQuery.Open;
     try
@@ -902,17 +963,20 @@ begin
         Result := FireDACFieldToTValue(FQuery.Fields[0])
       else
         Result := TValue.Empty;
+      LSpan.SetStatus('Success');
     finally
       FQuery.Close;
     end;
   except
     on E: Exception do
     begin
+      LSpan.SetStatus('Error', E.Message);
       if Assigned(FOnLog) then
         FOnLog('  ❌ Error: ' + E.Message);
       raise;
     end;
   end;
+  LSpan.Finish;
 end;
 
 procedure TFireDACCommand.SetSQL(const ASQL: string);

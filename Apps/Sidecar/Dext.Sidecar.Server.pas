@@ -22,7 +22,8 @@ uses
   Dext.Web.Hubs.Extensions,
   Dext.WebHost,
   Dext.Dashboard.Routes,
-  Dext.Sidecar.LogStreamer;
+  Dext.Sidecar.LogStreamer,
+  Dext.Sidecar.TestInsight;
 
 
 type
@@ -31,6 +32,7 @@ type
     FHost: IWebHost;
     FPort: Integer;
     FRunning: Boolean;
+    FTestInsightServer: TTestInsightCompatServer;
   public
     constructor Create(APort: Integer = 3030);
     destructor Destroy; override;
@@ -71,6 +73,10 @@ procedure TSidecarServer.Start;
 begin
   if FRunning then Exit;
   FRunning := True;
+
+  // Start TestInsight compatibility server on port 8102
+  FTestInsightServer := TTestInsightCompatServer.Create(8102);
+  FTestInsightServer.Start;
 
   // Build the host in the main thread
   // Using Start (non-blocking) allows us to run on Main Thread without freezing UI
@@ -128,6 +134,16 @@ var
   WebHost: IWebHost;
 begin
   if not FRunning then Exit;
+
+  // Signal the SSE and background threads to stop immediately
+  TDashboardRoutes.StopServer;
+
+  if FTestInsightServer <> nil then
+  begin
+    FTestInsightServer.Stop;
+    FTestInsightServer.Free;
+    FTestInsightServer := nil;
+  end;
   
   // 1. Capture local reference and clear field
   WebHost := FHost;

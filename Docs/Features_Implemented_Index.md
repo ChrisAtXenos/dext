@@ -629,4 +629,29 @@ The framework provides a native, zero-dependency implementation of the **MCP 202
 
 ---
 
-*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: April 23, 2026).*
+## 📊 19. Dext Observability Suite & Telemetry (S23 — S27) (`Sources\Core\Base`, `Sources\Dashboard`)
+
+The framework embeds a premium, high-performance, asynchronous observability suite designed to gather, persist, and visualize structured logs, distributed spans, system health metrics, and detailed database query and external network profiling.
+
+### 19.1 Distributed Tracing & Structured Logging (S24)
+- **Asynchronous Ring Buffer** — Log entries and spans are collected into a high-performance in-memory ring buffer (capped at 1000 items), eliminating disk I/O bottlenecks in critical request-handling threads.
+- **Asynchronous Persistence** — A dedicated background worker (`TDashboardSaveTimer`) periodically flushes traces to `telemetry.json` every 30 seconds in a non-blocking manner.
+- **Hierarchical Gantt Tree** — The Dashboard renders visual span nodes nested under their parent trace contexts (`TraceId`/`SpanId`) in real time, making latency and processing bottlenecks simple to analyze.
+
+### 19.2 System Metrics & Throughput (S25)
+- **RED Metrics Dashboard** — Real-time visual graphs in the Dashboard tracking HTTP RPS (Requests per Second), SQL QPS (Queries per Second), HTTP Errors, and average latency.
+- **System Health Monitor** — Operating system resource sampling: CPU usage (%), physical memory (Working Set in MB), active thread count, and active DB connections.
+- **Non-Blocking Persistence** — Serialized metrics are appended to a ring buffer and written to `metrics.json` every 30s via the async background timer.
+
+### 19.3 Database & Outbound HTTP Profiler (S27)
+- **FireDAC Auto-Instrumentation** — Zero-coupling interception inside the DB driver layers (`Dext.Entity.Drivers.FireDAC.pas`), automatically capturing raw SQL queries (`db.statement`), query parameters (`db.params`), query elapsed execution times, and routing database exceptions.
+- **Outbound HTTP Auto-Instrumentation** — Network call interception inside the Rest Client (`Dext.Net.RestClient.pas`), capturing target URLs, HTTP methods, response elapsed timings, HTTP status codes, and exceptions.
+- **Context Inspector Drawer** — A sliding overlay panel in the Dashboard triggered by clicking any span node in the tree. Displays pretty-printed SQL statements, structured query parameters, copied cURL commands, and generic metadata tags.
+
+### 19.4 Streamable Sessions & HTMX (S23)
+- **IStreamableSessionManager** — SSE channel manager with automatic garbage collection (runs every 60s, evicting idle sessions after 30 minutes).
+- **HTMX Fragment Swap** — Endpoints serving dynamic HTML fragments (e.g. `/sidecar/fragments/metrics`), allowing live DOM updates via HTMX without writing any client-side JavaScript.
+
+---
+
+*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: May 28, 2026).*

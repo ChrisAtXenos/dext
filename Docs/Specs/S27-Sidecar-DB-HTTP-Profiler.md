@@ -35,3 +35,8 @@ Esta especificação detalha o sistema de profiling especializado para interaç�
 
 ---
 **Meta:** Dar visibilidade total sobre o que acontece "debaixo do capô" nas camadas de integração da aplicação.
+
+## 4. Status da Implementação (Maio 2026)
+*   **Auto-Instrumentação de I/O:** Interceptação automática de sentenças SQL e parâmetros na camada do FireDAC, e chamadas HTTP de saída no Rest Client, transmitidas de forma assíncrona como spans.
+*   **Context Inspector Drawer:** Painel deslizante interativo no Dashboard exibindo código SQL limpo, parâmetros estruturados (suportando variações db.params, db.param e dh.param), cURL da chamada HTTP pronto para cópia e listagem de erros.
+*   **Estabilidade de Processo:** Implementado o encerramento gracioso via sinalização `StopServer` nos endpoints de SSE, eliminando qualquer travamento de threads Indy no shutdown.

@@ -24,11 +24,11 @@ ID | Title | Status | Goal
 **S20** | [Fluent REST Evolution](S20-Fluent-Rest-Evolution.md) | 📝 Draft | Enhanced TRestClient factories and native record/array payload support.
 **S21** | [Soft Delete: Timestamp-based Audit](S21-SoftDelete-Timestamp-Audit.md) | 📝 Draft | Soft Delete based on nullable timestamps for audit trails.
 **S22** | [Prop and Nullable Convergence](S22-Prop-Nullable-Convergence.md) | 📝 Draft | Convergence of Smart Properties and Nullable wrappers.
-**S23** | [HTTP Streamable Sessions & HTMX](S23-Http-Streamable-HTMX.md) | 🟡 Implementing | Native HTMX fragment rendering and Streamable Sessions.
+**S23** | [HTTP Streamable Sessions & HTMX](S23-Http-Streamable-HTMX.md) | ✅ Finalized | Native HTMX fragment rendering and Streamable Sessions.
 **S24** | [Live Logging & Tracing](S24-Sidecar-Logging-Tracing.md) | ✅ Finalized | Distributed tracing and observability suite for logs/spans.
-**S25** | [Metrics & Health Monitoring](S25-Sidecar-Metrics-Health.md) | 🟡 Implementing | RED metrics, system performance and runtime health dashboards.
+**S25** | [Metrics & Health Monitoring](S25-Sidecar-Metrics-Health.md) | ✅ Finalized | RED metrics, system performance and runtime health dashboards.
 **S26** | [Interactive Test Runner](S26-Sidecar-Test-Runner.md) | 🟡 Implementing | Reactive unit test runner with live SSE streaming updates.
-**S27** | [Database & HTTP Profiler](S27-Sidecar-DB-HTTP-Profiler.md) | 🟡 Implementing | Capturing database queries (SQL) and Rest Client outbound calls.
+**S27** | [Database & HTTP Profiler](S27-Sidecar-DB-HTTP-Profiler.md) | ✅ Finalized | Capturing database queries (SQL) and Rest Client outbound calls.
 **S28** | [Conditional Query Parameters](S28-Conditional-Query-Parameters.md) | ✅ Finalized | Fluent chaining of dynamic/optional query parameters in TRestRequest builder.
 **S29** | [SIMD and Fast Integer-to-String Conversion](S29-Simd-Fast-Itoa.md) | 📝 Proposed | Zero-allocation division-free integer formatting for high-speed JSON APIs.
 ---
