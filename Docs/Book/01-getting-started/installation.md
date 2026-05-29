@@ -46,6 +46,8 @@ This allows the IDE to find the source code for debugging and "Ctrl+Click" navig
 
 ```text
 $(DEXT)
+$(DEXT)\AI
+$(DEXT)\AI\MCP
 $(DEXT)\Core
 $(DEXT)\Core\Base
 $(DEXT)\Core\Interception
@@ -53,6 +55,7 @@ $(DEXT)\Core\Json
 $(DEXT)\Dashboard
 $(DEXT)\Data
 $(DEXT)\Debug
+$(DEXT)\Design
 $(DEXT)\Events
 $(DEXT)\Hosting
 $(DEXT)\Hosting\CLI
