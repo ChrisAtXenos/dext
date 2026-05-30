@@ -129,6 +129,7 @@ uses
 procedure TMetricsTelemetryObserver.OnEvent(const AEvent: TTelemetryEvent);
 var
   StatusCodeStr: string;
+  LVal: TJSONValue;
 begin
   if AEvent.Category = 'HTTP' then
   begin
@@ -137,9 +138,17 @@ begin
     
     if AEvent.Data <> nil then
     begin
-      StatusCodeStr := AEvent.Data.GetValue<string>('StatusCode');
-      if StatusCodeStr = '' then
-        StatusCodeStr := AEvent.Data.GetValue<string>('status');
+      LVal := AEvent.Data.GetValue('StatusCode');
+      if LVal <> nil then
+        StatusCodeStr := LVal.Value
+      else
+      begin
+        LVal := AEvent.Data.GetValue('status');
+        if LVal <> nil then
+          StatusCodeStr := LVal.Value
+        else
+          StatusCodeStr := '';
+      end;
       
       if StatusCodeStr.StartsWith('4') or StatusCodeStr.StartsWith('5') then
         TMetrics.Increment('http.errors');
@@ -226,11 +235,16 @@ end;
 procedure TLoggingTelemetryObserver.OnEvent(const AEvent: TTelemetryEvent);
 var
   SqlCmd: string;
+  LVal, LMethodVal, LPathVal, LStatusVal: TJSONValue;
+  LMethod, LPath, LStatus: string;
 begin
   if AEvent.Category = 'SQL' then
   begin
-    SqlCmd := AEvent.Data.GetValue<string>('sql');
-    if SqlCmd = '' then SqlCmd := AEvent.Name;
+    LVal := AEvent.Data.GetValue('sql');
+    if LVal <> nil then
+      SqlCmd := LVal.Value
+    else
+      SqlCmd := AEvent.Name;
     
     FLogger.Info( 
       Format('[SQL] Executed in %dms (%s affected): %s', [
@@ -241,11 +255,19 @@ begin
   end
   else if AEvent.Category = 'HTTP' then
   begin
+    LMethodVal := AEvent.Data.GetValue('Method');
+    LPathVal := AEvent.Data.GetValue('Path');
+    LStatusVal := AEvent.Data.GetValue('StatusCode');
+    
+    LMethod := ''; if LMethodVal <> nil then LMethod := LMethodVal.Value;
+    LPath := ''; if LPathVal <> nil then LPath := LPathVal.Value;
+    LStatus := ''; if LStatusVal <> nil then LStatus := LStatusVal.Value;
+
     FLogger.Info(
       Format('[HTTP] %s %s - %s (%dms)', [
-        AEvent.Data.GetValue<string>('Method'),
-        AEvent.Data.GetValue<string>('Path'),
-        AEvent.Data.GetValue<string>('StatusCode'),
+        LMethod,
+        LPath,
+        LStatus,
         AEvent.DurationMs
       ]));
   end

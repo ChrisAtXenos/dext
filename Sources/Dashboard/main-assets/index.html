@@ -368,6 +368,10 @@ Content-Type: application/json
                 <button class="btn btn-t" onclick="testsRunFailed()"><span
                         class="ms material-symbols-outlined">replay</span><span data-i18n="rerun_failed">Rerun Failed</span></button>
                 <div class="http-sep"></div>
+                <select id="tests-pj-select" class="hd-select" onchange="discoverTestProject(this.value)">
+                    <option value="" data-i18n="select_test_project">Select Test Project...</option>
+                </select>
+                <div class="http-sep"></div>
                 <select id="tests-group-by" class="hd-select" onchange="testsChangeGroupBy(this.value)">
                     <option value="hierarchy" data-i18n="group_hierarchy">Group by: Hierarchy</option>
                     <option value="outcome" data-i18n="group_outcome">Group by: Outcome</option>

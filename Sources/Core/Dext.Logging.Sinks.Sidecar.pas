@@ -271,8 +271,9 @@ end;
 procedure TSidecarTelemetryObserver.OnEvent(const AEvent: TTelemetryEvent);
 var
   JO: TJSONObject;
-  Payload: TStringStream;
+  JsonStr: string;
   TraceIdVal, SpanIdVal, AppName: string;
+  LUrl: string;
 begin
   TraceIdVal := AEvent.TraceId;
   SpanIdVal := AEvent.SpanId;
@@ -299,20 +300,36 @@ begin
     JO.AddPair('parentId', AEvent.ParentId);
     JO.AddPair('app', AppName);
     
-    Payload := TStringStream.Create(JO.ToJSON, TEncoding.UTF8);
-    try
-      try
-        FClient.Post(FUrl, Payload);
-        SafeWriteLn('>> [SidecarTelemetry] Span sent: ' + AEvent.Name);
-      except
-        on E: Exception do SafeWriteLn('>> [SidecarTelemetry] Failed: ' + E.Message);
-      end;
-    finally
-      Payload.Free;
-    end;
+    JsonStr := JO.ToJSON;
   finally
     JO.Free;
   end;
+
+  LUrl := FUrl;
+  TThread.CreateAnonymousThread(procedure
+    var
+      LClient: THTTPClient;
+      LPayload: TStringStream;
+    begin
+      LClient := THTTPClient.Create;
+      try
+        LClient.ContentType := 'application/json';
+        LClient.ConnectionTimeout := 1000;
+        LClient.ResponseTimeout := 2000;
+        LPayload := TStringStream.Create(JsonStr, TEncoding.UTF8);
+        try
+          try
+            LClient.Post(LUrl, LPayload);
+          except
+            // Silent fail in background thread
+          end;
+        finally
+          LPayload.Free;
+        end;
+      finally
+        LClient.Free;
+      end;
+    end).Start;
 end;
 
 { TSidecarMetricsExporter }

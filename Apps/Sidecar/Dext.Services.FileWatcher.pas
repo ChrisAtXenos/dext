@@ -103,7 +103,7 @@ begin
         if WaitResult = WAIT_OBJECT_0 then
         begin
           // Change detected
-          Synchronize(HandleChange);
+          Queue(HandleChange);
           ResetEvent(FOverlapped.hEvent);
         end
         else if WaitResult = WAIT_OBJECT_0 + 1 then

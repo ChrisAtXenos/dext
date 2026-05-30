@@ -23,7 +23,7 @@ uses
   Dext.WebHost,
   Dext.Dashboard.Routes,
   Dext.Sidecar.LogStreamer,
-  Dext.Sidecar.TestInsight;
+  Dext.Sidecar.TestCompat;
 
 
 type
@@ -32,7 +32,7 @@ type
     FHost: IWebHost;
     FPort: Integer;
     FRunning: Boolean;
-    FTestInsightServer: TTestInsightCompatServer;
+    FTestInsightServer: TTestCompatServer;
   public
     constructor Create(APort: Integer = 3030);
     destructor Destroy; override;
@@ -75,7 +75,7 @@ begin
   FRunning := True;
 
   // Start TestInsight compatibility server on port 8102
-  FTestInsightServer := TTestInsightCompatServer.Create(8102);
+  FTestInsightServer := TTestCompatServer.Create(8102);
   FTestInsightServer.Start;
 
   // Build the host in the main thread
@@ -137,7 +137,11 @@ begin
 
   // Signal the SSE and background threads to stop immediately
   TDashboardRoutes.StopServer;
+  
+  // 1. First, shutdown Hub connections (SSE loops need to exit before Indy stops)
+  THubExtensions.ShutdownHubs;
 
+  // 2. Stop and free compatibility server
   if FTestInsightServer <> nil then
   begin
     FTestInsightServer.Stop;
@@ -145,14 +149,11 @@ begin
     FTestInsightServer := nil;
   end;
   
-  // 1. Capture local reference and clear field
+  // 3. Capture local reference and clear field
   WebHost := FHost;
   FHost := nil;
   
-  // 2. First, shutdown Hub connections (SSE loops need to exit before Indy stops)
-  THubExtensions.ShutdownHubs;
-  
-  // 3. Signal stop on the local reference
+  // 4. Signal stop on the local reference
   // This now triggers StopApplication inside TDextApplication
   if WebHost <> nil then
   begin
@@ -164,7 +165,7 @@ begin
     end;
   end;
   
-  // 4. Finally release the interface
+  // 5. Finally release the interface
   WebHost := nil;
   FRunning := False;
 end;
