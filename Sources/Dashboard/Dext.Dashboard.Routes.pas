@@ -1,4 +1,4 @@
-﻿unit Dext.Dashboard.Routes;
+unit Dext.Dashboard.Routes;
 
 interface
 
@@ -654,16 +654,22 @@ begin
             ProjObj := TDextJson.Provider.CreateArray;
             TestsObj := TDextJson.Provider.CreateArray;
 
+            // Collect base dirs from the received project paths to auto-discover siblings Tests/
+            var BaseDirs := TStringList.Create;
+            BaseDirs.Duplicates := dupIgnore;
+            BaseDirs.Sorted := True;
+
             for I := 0 to JArr.GetCount - 1 do
             begin
               Path := JArr.GetString(I);
               if FileExists(Path) then
               begin
                 ProjObj.Add(TPath.GetFileNameWithoutExtension(Path));
-                
-                // If it starts with Test or ends with Tests, treat it as a test project
+                BaseDirs.Add(TPath.GetDirectoryName(Path));
+
+                // If the project name itself contains 'Test', treat it as a test project
                 var Name := TPath.GetFileNameWithoutExtension(Path);
-                 if Name.Contains('Test') then
+                if Name.Contains('Test') then
                 begin
                   TestObj := TDextJson.Provider.CreateObject;
                   TestObj.SetString('name', Name);
@@ -672,6 +678,41 @@ begin
                 end;
               end;
             end;
+
+            // Auto-discover test projects: look for a Tests/ directory sibling to the group base dirs
+            try
+              var SeenPaths := TStringList.Create;
+              SeenPaths.Duplicates := dupIgnore;
+              SeenPaths.Sorted := True;
+              try
+                for var Dir in BaseDirs do
+                begin
+                  var TestsDir := TPath.Combine(TPath.GetDirectoryName(Dir), 'Tests');
+                  if TDirectory.Exists(TestsDir) then
+                  begin
+                    // Search recursively for *.dproj files containing 'Test' in name
+                    var FoundFiles := TDirectory.GetFiles(TestsDir, '*.dproj', TSearchOption.soAllDirectories);
+                    for var TestProjPath in FoundFiles do
+                    begin
+                      var ProjName := TPath.GetFileNameWithoutExtension(TestProjPath);
+                      if ProjName.Contains('Test') and (SeenPaths.IndexOf(TestProjPath) < 0) then
+                      begin
+                        SeenPaths.Add(TestProjPath);
+                        TestObj := TDextJson.Provider.CreateObject;
+                        TestObj.SetString('name', ProjName);
+                        TestObj.SetString('path', TestProjPath);
+                        TestsObj.Add(TestObj);
+                      end;
+                    end;
+                  end;
+                end;
+              finally
+                SeenPaths.Free;
+              end;
+            except
+              // Swallow auto-discovery errors — not critical
+            end;
+            BaseDirs.Free;
 
             ResJson := TDextJson.Provider.CreateObject;
             ResJson.SetArray('projects', ProjObj);

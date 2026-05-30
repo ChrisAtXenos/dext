@@ -46,7 +46,8 @@ async function load() {
         envList(cfg.environments || []); act(t("data_loaded"), t("just_now"), t("done"));
 
         applyI18n(); // Initial translation
-        document.getElementById("lang-label").textContent = currentLang.toUpperCase();
+        var langLabel = document.getElementById("lang-label");
+        if (langLabel) langLabel.textContent = currentLang.toUpperCase();
 
         // Restore active project if exists
         var savedPj = localStorage.getItem("activeProject");
@@ -195,9 +196,11 @@ function handleSseEvent(eventName, data) {
 
             // Populate Dropdowns
             populateSelect("header-pj-select", res.projects, "activeProject");
-            populateSelect("tests-pj-select", res.tests, "activeTestProject");
+            // NOTE: tests-pj-select is handled exclusively by updateTestProjectsDropdown
             populateSelect("http-file-select", res.httpFiles, "activeHttpFile");
-            
+
+            // Clear stale test suite on new workspace sync, then rediscover all projects
+            testSuite = {};
             updateTestProjectsDropdown(res);
         } catch(e) {
             console.error("Error processing workspace sync SSE event:", e);
@@ -1107,10 +1110,21 @@ async function testsRunSelected(runCoverage) {
         if (!r.ok) {
             tree.innerHTML = `<div style="padding:20px;color:var(--error)">Execution failed: ${await r.text()}</div>`;
         } else {
-            if (runCoverage) {
+            var runResult = await r.json();
+            // Surface any per-project errors (e.g. executable not found)
+            var errors = [];
+            if (runResult.results) {
+                runResult.results.forEach(function(res) {
+                    if (res.error) errors.push(res.error);
+                });
+            }
+            if (errors.length > 0) {
+                tree.innerHTML = `<div style="padding:20px;color:var(--error)"><b>Runner errors:</b><ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul><span style="font-size:11px;color:var(--on-surface-v)">Make sure you built the test project(s) before running.</span></div>`;
+            } else if (runCoverage) {
                 // Fetch coverage detail shortly after run completes
                 setTimeout(fetchAndRenderCoverageDetails, 3000);
             }
+            // On success the test results will arrive via SSE events (run_start / test_complete / run_complete)
         }
     } catch(e) {
         tree.innerHTML = `<div style="padding:20px;color:var(--error)">Execution error: ${e.message}</div>`;
@@ -1363,10 +1377,11 @@ async function refreshWorkspace() {
 
         // Populate Dropdowns
         populateSelect("header-pj-select", res.projects, "activeProject");
-        populateSelect("tests-pj-select", res.tests, "activeTestProject");
+        // NOTE: tests-pj-select is handled exclusively by updateTestProjectsDropdown
         populateSelect("http-file-select", res.httpFiles, "activeHttpFile");
-        
-        // Spec S26: Hook to discover all test projects automatically
+
+        // Clear stale test suite before rediscovery, then populate test dropdown & discover all
+        testSuite = {};
         updateTestProjectsDropdown(res);
 
     } catch (e) {
