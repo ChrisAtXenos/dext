@@ -129,7 +129,7 @@ Should(FullUrl).Contain('sort=name');
 This guarantees absolute stability for automated CI/CD runners.
 
 ### 5.2. Test Coverage
-A comprehensive unit test was added in `TWebFeaturesTests.TestConditionalQueryParams` inside [Dext.Web.Features.Tests.pas](file:///C:/dev/Dext/DextRepository/Tests/Web/Dext.Web.Features.Tests.pas), covering all edge cases:
+A comprehensive unit test was added in `TWebFeaturesTests.TestConditionalQueryParams` inside [Dext.Web.Features.Tests.pas](../../Tests/Web/Dext.Web.Features.Tests.pas), covering all edge cases:
 - Spaces/Blank characters (`'   '`) skipped.
 - Empty strings (`''`) skipped.
 - Default fallbacks selected correctly.

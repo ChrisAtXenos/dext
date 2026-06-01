@@ -10,11 +10,23 @@
 ---
 
 > [!IMPORTANT]
-> O Dext Framework está atualmente em **Versão 1 Release Candidate (RC1)**.
+> O Dext Framework está atualmente em **Versão 1 Release Candidate (RC2)**.
 
 O **Dext Framework** é um ecossistema nativo e integrado para o desenvolvimento em Delphi.
 
 Ele une Injeção de Dependência, ORM, Web Pipeline e Testes em uma arquitetura única de altíssima performance. Desenvolvido para eliminar a necessidade de conectar bibliotecas isoladas e reduzir drasticamente o código *boilerplate*, o Dext resolve a complexidade da infraestrutura base para que a sua equipe escreva estritamente a regra de negócio.
+
+## Modernização do Delphi & Paridade com o .NET
+
+O Dext foi construído para fechar o abismo de percepção e arquitetura entre o Delphi e plataformas modernas como o .NET Core. Se a sua equipe está considerando migrar um sistema legado VCL/FMX para outra stack moderna devido à falta de padrões corporativos modernos, o Dext oferece uma alternativa nativa completa sem o custo, risco e tempo de reescrever todo o seu código do zero.
+
+Oferecemos paridade funcional completa com os padrões do ASP.NET Core e Entity Framework Core, aproveitando as vantagens da compilação nativa (sem JIT, sem cold starts e com baixíssimo consumo de memória).
+
+Explore nossos guias detalhados de comparação e capacidades:
+*   [**Dext vs .NET: Uma Comparação de Arquitetura**](Docs/Comparison/Dext_vs_DotNet_Narrative.pt-br.md) — Como o Dext une padrões modernos com compilação nativa.
+*   [**Matriz de Paridade Recurso por Recurso**](Docs/Comparison/Feature_Comparison_Dext_vs_DotNet.pt-br.md) — Mais de 60 recursos comparados diretamente entre o ASP.NET/EF Core e o Dext.
+*   [**Referência Completa de Recursos do ORM**](Docs/Comparison/Dext_ORM_Capabilities.pt-br.md) — DbContext, Change Tracking, colunas JSON e estratégias Lazy/Eager.
+*   [**Guia de Licenciamento Corporativo**](Docs/Comparison/Open_Source_Licensing_Enterprise.pt-br.md) — Por que o Dext é 100% gratuito e seguro para uso comercial sob a Licença Apache 2.0.
 
 ## Onde Usar?
 

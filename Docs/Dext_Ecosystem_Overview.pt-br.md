@@ -79,10 +79,11 @@ O sistema `Prop<T>` é a inovação mais significativa do Dext — uma **DSL flu
 
 ```pascal
 TUser = class
-  FAge: IntType;      // Alias para Prop<Integer>
-  FName: StringType;  // Alias para Prop<string>
+  property Age: IntType ...;      // Alias para Prop<Integer>
+  property Name: StringType ...;  // Alias para Prop<string>
 end;
 
+var U := Prototype.Entity<TUser>;
 // Query com compilação estática e IntelliSense
 var Users := DbContext.Users
   .Where((U.Age > 18) and (U.Name.StartsWith('Ce')))
@@ -202,6 +203,24 @@ O que diferencia o Dext de soluções isoladas é a **integração de ponta a po
 | **HTMX → View Engine → ORM** | Flyweight Iterators streamam queries do ORM direto para templates; HTMX auto-detection suprime layouts | Full-stack SSR com O(1) memória e zero JavaScript |
 
 ---
+## 📦 Inovações no Dext.ORM: Multi-Mapping e Command Pattern
+
+O Dext.ORM não se limita a emular o Entity Framework; ele resolve dores históricas de acesso a dados com soluções de alta performance inspiradas em micro-mappers (como o Dapper) e padrões arquiteturais avançados.
+
+### 1. Multi-Mapping Sem Boilerplate (Split-free)
+Diferente do Dapper (.NET), que exige a declaração de strings mágicas de divisão (`splitOn: 'Id'`) para mapear joins planos para grafos de objetos, o Dext realiza **roteamento de caminhos baseado em convenção**:
+* **Varredura de Colunas**: Ao encontrar colunas com separadores `_` ou `.` (ex: `Product_Name` ou `Product.Price`), o hidratador reconhece a intenção de aninhamento.
+* **Auto-Instanciação Recursiva**: Se o objeto aninhado (`Product: TProduct`) estiver marcado com `[Nested]` e for `nil`, o framework o aloca dinamicamente em tempo de execução via `TActivator` de forma preguiçosa.
+* **Profundidade Infinita**: O hidratador do Dext percorre caminhos de qualquer profundidade (ex: `Order_Customer_Address_City`) de forma recursiva automática.
+* **Performance O(1)**: O mapeamento ignora *setters* lentos e injeta os valores diretamente nos offsets de memória física dos campos de suporte (`FFields`), eliminando alocações de heap intermediárias.
+
+### 2. Stored Procedures como Command/CQRS Pattern
+Executar stored procedures com múltiplos parâmetros de entrada/saída ou múltiplos datasets em ORMs tradicionais é uma fonte constante de vazamentos de conexão e código de baixo nível. O Dext transforma procedures em classes de **Command fortemente tipadas**:
+* **Classe de Contrato**: O desenvolvedor declara uma classe representando a procedure (ex: `TGetTopProducts`), anotando parâmetros de entrada e saída com `[DbParam]`.
+* **Auto-Hidratação de Projeções**: Conjuntos de dados retornados são hidratados automaticamente em coleções (ex: `Results: IList<TProduct>`) expostas na própria classe.
+* **Isolamento de Banco**: Toda a complexidade de criar objetos de parâmetros do ADO.NET/FireDAC, associar tipos de dados físicos e abrir/fechar cursores é abstraída pelo Dext. O desenvolvedor apenas instancia o comando, define as propriedades de entrada e executa `Db.Execute(Command)`.
+
+---
 
 ## 🖼️ TEntityDataSet: A Ponte Mágica entre ORM e Design-Time UI
 
@@ -249,8 +268,7 @@ O **Database as API** é a demonstração definitiva de como o ecossistema integ
 ### O Que o Desenvolvedor Escreve
 
 ```pascal
-[DataApi]  // ← Isso é tudo.
-[Table]
+[Table, DataApi]  // ← Isso é tudo.
 TProduct = class
   [PK, AutoInc] property Id: Integer;
   property Name: string;
@@ -280,7 +298,7 @@ Uma linha → 5 endpoints REST (GET list, GET by id, POST, PUT, DELETE)
 
 | Subsistema | O Que Faz no DataApi |
 |---|---|
-| **RTTI / Reflection ** | `TDataApi.MapAll` escaneia atributos `[DataApi]` via `TReflection.Context.GetTypes`. `ResolvePropertyName` converte snake_case→PascalCase via `GetHandlerBySnakeCase` |
+| **RTTI / Reflection** | `TDataApi.MapAll` escaneia atributos `[DataApi]` via `TReflection.Context.GetTypes`. `ResolvePropertyName` converte snake_case→PascalCase via `GetHandlerBySnakeCase` |
 | **DI Container** | `GetDbContext` resolve `TDbContext` do scope da request — cada request HTTP tem sua própria instância |
 | **ORM (TDbContext)** | `DataSet(ClassInfo)` retorna `IDbSet` dinâmico. `Add`, `Update`, `Remove`, `FindObject`, `ListObjects` |
 | **Specifications (AST)** | Filtros da QueryString geram `IExpression` via `TStringExpressionParser.Parse` — a **mesma AST** usada por `Prop<T>` |
@@ -397,6 +415,13 @@ O Dext DataApi adota uma estratégia de segregação de responsabilidade implíc
 - **Read (GET)**: Pipeline ultra-rápido de *Direct-to-JSON Streaming*, enviando dados do `IDbReader` direto para o socket com consumo de memória O(1).
 - **Write (POST/PUT)**: Pipeline focado em segurança de domínio, com hidratação completa da entidade, rodando regras de negócio e validações antes da persistência.
 
+### 8. Licenciamento Apache 2.0 (Segurança e Conformidade Snyk)
+A governabilidade e segurança jurídica são requisitos fundamentais em projetos de nível corporativo. A escolha de licença do Dext é um elemento central de sua arquitetura de conformidade:
+* **Conformidade em Pipelines CI/CD**: O Dext é 100% livre de dependências virais GPL ou AGPL. Ele passa sem restrições em ferramentas de auditoria e segurança como o **Snyk** ou **Black Duck** integradas em pipelines pós-commit.
+* **Garantia de Patentes (Patent Peace)**: A licença Apache 2.0 concede explicitamente aos usuários direitos mundiais e irrevogáveis sobre qualquer patente detida pelos colaboradores que possa cobrir o código do Dext.
+* **Retaliação de Patentes**: Blindagem jurídica contra trolls de patentes. Caso qualquer usuário processe judicialmente outro alegando violação de patente sobre o Dext, a sua licença de uso do framework é terminada imediatamente.
+* **Isolamento de Outras Licenças**: A dependência do *Delphi Cross Sockets (DCS)* — que possui licença **LGPL** — é opcional e totalmente isolada do core. O Dext roda de forma 100% permissiva sobre o Indy ou WebBroker nativos, garantindo que o seu executável comercial permaneça estritamente proprietário e imune a contaminações de licenças Share-Alike.
+
 ### 5. Infrastructure Flywheel — Velocidade Exponencial de Features
 A maturidade da infraestrutura cria um **efeito flywheel**: cada nova feature compõe de engines existentes, acelerando dramaticamente o desenvolvimento.
 
@@ -409,9 +434,9 @@ Engine Original                  →  Reuso Emergente
 Specification (ORM queries)      →  DataApi (URL filtering — grátis)
                                  →  In-Memory Evaluator (zero código extra)
 Reflection Cache (JSON)          →  ORM + Validation + Model Binding + EntityDataSet
-TByteSpan (zero-allocation)      →  JSON Reader + EntityDataSet + Redis RESP3 (~80% pronto)
-TConnectionPool (REST Client)    →  Redis Client (mesmo padrão)
-TAsyncTask (async/await)         →  REST Client + Redis + Background Services
+TByteSpan (zero-allocation)      →  JSON Reader + EntityDataSet + [Roadmap] Redis RESP3
+TConnectionPool (REST Client)    →  [Roadmap] Redis Client (mesmo padrão)
+TAsyncTask (async/await)         →  REST Client + [Roadmap] Redis + Background Services
 ```
 
 **Resultado prático**: Na análise de viabilidade do Redis Client, ~80% da infraestrutura já existia — `TByteSpan`, `TAsyncTask`, `TConnectionPool`, `ICancellationToken`. O único código genuinamente novo é o protocolo RESP3.

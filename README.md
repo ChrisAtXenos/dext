@@ -10,11 +10,23 @@
 ---
 
 > [!IMPORTANT]
-> Dext Framework is currently in **Version 1 Release Candidate (RC1)**.
+> Dext Framework is currently in **Version 1 Release Candidate (RC2)**.
 
 **Dext Framework** is a native and integrated ecosystem for Delphi development.
 
 It brings together Dependency Injection, ORM, Web Pipeline, and Testing into a single, high-performance architecture. Designed to eliminate the need for connecting isolated libraries and to drastically reduce boilerplate code, Dext handles the infrastructure complexity so your team can focus strictly on business logic.
+
+## Delphi Modernization & .NET Parity
+
+Dext was built to bridge the perception and architectural gap between Delphi and modern platforms like .NET Core. If your team is considering migrating a legacy VCL/FMX system to another modern stack due to the lack of modern enterprise patterns, Dext offers a complete native alternative without the cost, risk, and time of rewriting your entire codebase.
+
+We provide full functional parity with modern ASP.NET Core & Entity Framework Core patterns, while leveraging native compilation (no JIT, zero cold starts, and minimal memory footprint).
+
+Explore our detailed comparison and capability references:
+*   [**Dext vs .NET Architectural Narrative**](Docs/Comparison/Dext_vs_DotNet_Narrative.md) — How Dext bridges the backend gap with native compilation.
+*   [**Feature-by-Feature Parity Matrix**](Docs/Comparison/Feature_Comparison_Dext_vs_DotNet.md) — Over 60+ features compared directly between ASP.NET/EF Core and Dext.
+*   [**Complete ORM Capabilities Reference**](Docs/Comparison/Dext_ORM_Capabilities.md) — DbContext, Change Tracking, JSON columns, and Lazy/Eager strategies.
+*   [**Enterprise Licensing Guide**](Docs/Comparison/Open_Source_Licensing_Enterprise.md) — Why Dext is completely free, secure, and ready for commercial use under Apache 2.0.
 
 ## Where to Use?
 

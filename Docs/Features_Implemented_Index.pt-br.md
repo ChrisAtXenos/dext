@@ -218,8 +218,8 @@ O Dext foi desenhado para alavancar recursos modernos da linguagem Object Pascal
 
 ### 3.7 Real-time & Caching
 - **SSE (Server-Sent Events)** — Streaming unidirecional de eventos.
-- **Hubs (SignalR-compatible)** — Grupos, targeting por usuário, broadcast via JSON.
-- **Caching** — In-Memory e Redis. **Health Checks** detalhados.
+- **SSE-based Messaging (SignalR roadmap)** — Broadcast básico de eventos via SSE. Suporte bidirecional robusto equivalente a SignalR (WebSockets/Hubs) planejado.
+- **Caching** — In-Memory. (Cliente Redis nativo de alta performance planejado e em desenvolvimento ativo, atualmente ~80% completo). **Health Checks** detalhados (com plano de expansão no roadmap).
 
 ### 3.8 API Documentation & Scaffolding
 - **OpenAPI / Swagger** — Geração automática de especificação.
@@ -310,7 +310,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - Evolução Code-First automatizada com snapshots cronológicos do modelo de dados.
 
 ### 4.6 Dialect Support (Poliglota)
-- PostgreSQL, SQL Server, MySQL, SQLite, Oracle, Firebird.
+- PostgreSQL, SQL Server, MySQL, SQLite, Oracle, Firebird, InterBase.
 - **Legacy Paging** — Envelopamento automático para `ROWNUM` em Oracle/SQL Server antigos.
 
 ### 4.7 Soft Delete (`[SoftDelete]`)
@@ -347,6 +347,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - Conversores automáticos para GUID, Enums, JSONB e UUID v7.
 - **Stored Procedures** — Execução declarativa via `[StoredProcedure]` e `[DbParam]`.
 - **Multi-Tenancy** — Banco Compartilhado (TenantId), Isolamento por Schema (`search_path`), Tenant per Database.
+- **Operações em Lote / Bulk** — APIs em lote de alta performance: `AddRange`, `UpdateRange`, e `RemoveRange` com suporte a coleções genéricas brutas (`TArray<T>`, `IEnumerable<T>`) para persistência em massa em uma única transação de contexto.
 
 ---
 
