@@ -190,6 +190,143 @@ The `TEntityDataSet` converts the ORM's object orientation (POCOs) into *DataSet
 
 ---
 
+## ⚡ Enterprise-Grade Power: Dext Goes Far Beyond the Basics
+
+Many frameworks only focus on simple CRUD solutions. Dext was engineered for complex, high-scale enterprise architectures. Take a look at advanced features that show the real power of our infrastructure:
+
+### 1. Database as API (REST CRUD Zero-Code)
+Generate a complete REST CRUD API directly from your domain entities with support for pagination, sorting, granular security, and OpenAPI/Swagger with just a single attribute:
+
+```pascal
+[Table, DataApi('/api/products')]
+TProduct = class
+private
+  FId: IntType;
+  [Required, MaxLength(100)]
+  FName: StringType;
+  FPrice: CurrencyType;
+public
+  [PK, AutoInc]
+  property Id: IntType read FId write FId;
+  property Name: StringType read FName write FName;
+  property Price: CurrencyType read FPrice write FPrice;
+end;
+
+// Granular security configuration and initialization in a single line:
+App.MapDataApis.Configure<TProduct>(
+  DataApiOptions.RequireAuth.RequireWriteRole(['admin'])
+);
+```
+
+### 2. Native MCP Server (Your Delphi App Ready for AIs)
+Dext is the first framework on the planet with native and integrated support for the **Model Context Protocol (MCP)**. Expose your enterprise system's logic and queries directly as tools for AI Agents (like Claude, Cursor, or Antigravity) to consume securely:
+
+```pascal
+type
+  [MCPTool('search_products', 'Search active products with price filters')]
+  [MCPParam('query', 'Product search query term')]
+  [MCPParam('maxPrice', 'Optional maximum price filter')]
+  TSearchProductsTool = class
+  public
+    function Execute(const AQuery: string; AMaxPrice: Currency): TList<TProduct>;
+  end;
+```
+
+### 3. Clean Architecture & Design-Time VCL
+Develop projects following Clean Architecture patterns, ensuring high decoupling and testability without losing the visual productivity of traditional RAD:
+
+*   **Design-Time Preview:** Connect the dataset visually inside the IDE, create static fields (TFields) dynamically, and preview live database records inside the IDE *without having to compile the project*.
+*   **Real Decoupling:** Remove direct database connections and SQL queries scattered across your UI screens, keeping your presentation layer highly focused while consuming pure entities under a clean architecture.
+
+<details>
+<summary><b>📸 See the Complete Design-Time Flow in Action (Scaffolding ➡️ Connection ➡️ Live Data)</b></summary>
+<br>
+
+To prove that modernization does not break the classic visual productivity of Delphi RAD, Dext integrates natively into the IDE ecosystem. Here is a step-by-step interactive walkthrough showing how to go from a physical database to live data in your form in seconds:
+
+#### 1. Entity Generation via Context Menu
+Say goodbye to manual mapping. Right-click on the form and access the integrated generation tool:
+<p align="center">
+  <img src="Docs/Images/dext-design-time-step1-menu.webp" alt="Step 1: Dext Context Menu" width="90%">
+</p>
+
+#### 2. Smart Table Selection
+Select which tables from your physical database you want to bring into your domain model:
+<p align="center">
+  <img src="Docs/Images/dext-design-time-step2-tables.webp" alt="Step 2: Table Selection" width="90%">
+</p>
+
+#### 3. Generated Code Preview
+Dext generates clean, elegant, strongly-typed Object Pascal units decorated with smart attributes:
+<p align="center">
+  <img src="Docs/Images/dext-design-time-step3-preview.webp" alt="Step 3: Generated Entity Code" width="90%">
+</p>
+
+#### 4. Visual Inspection of RTTI Properties
+Connect the `TEntityDataProvider` to your database. Dext scans your executable via RTTI and dynamically maps entity classes directly inside the IDE's Object Inspector:
+<p align="center">
+  <img src="Docs/Images/dext-design-time-step4-metadata.webp" alt="Step 4: Entity Metadata Editor" width="90%">
+</p>
+
+#### 5. Live Data at Design-Time
+Connect the `TEntityDataSet` to the provider, set the target class, and mark `Active = True`. Your DBGrid populates instantly with real database records *without needing to run the application*:
+<p align="center">
+  <img src="Docs/Images/dext-design-time-step5-active.webp" alt="Step 5: DBGrid with Live Data inside the IDE" width="90%">
+</p>
+
+</details>
+
+### 4. CQRS Stored Procedures
+Forget about manual parameter binding and manual SQL queries to run procedures. Dext manages complex procedures as strongly-typed, compile-time verified command objects:
+
+```pascal
+type
+  [StoredProcedure('ProcessFiscalNotes')]
+  TProcessNotesCommand = class
+  private
+    FStartDate: TDateTime;
+    FProcessedCount: Integer;
+  public
+    [DbParam('StartDate')]
+    property StartDate: TDateTime read FStartDate write FStartDate;
+    
+    [DbParam('ProcessedCount', pdOutput)]
+    property ProcessedCount: Integer read FProcessedCount write FProcessedCount;
+  end;
+```
+
+---
+
+## 📊 Visual Telemetry and Integrated Diagnostics
+
+Forget about configuring complex APM infrastructures (like Prometheus and Grafana) for local development. Dext includes a built-in **Visual Telemetry Dashboard** running natively and asynchronously.
+
+It collects (with zero thread impact and no blocking allocations) structured logs, complete physical SQL query profiling, HTTP response times, and detailed Gantt spans for ultra-fast debugging of network and database bottlenecks:
+
+<p align="center">
+  <img src="Docs/Images/dext-telemetry-live-split.jfif" alt="Real-Time Telemetry Integration with running VCL Application" width="90%">
+</p>
+
+<details>
+<summary><b>📸 See the Dashboard Overview and Detailed SQL Tracing (Spans)</b></summary>
+<br>
+
+#### Dashboard Overview (Métricas Panel & Real-Time Logs)
+Monitor throughput (RPS), average latency, CPU/Memory consumption, active DB connections, and system logs in a single unified screen:
+<p align="center">
+  <img src="Docs/Images/dext-telemetry-dashboard.jfif" alt="Dext Telemetry Dashboard Overview" width="90%">
+</p>
+
+#### Detailed SQL Query Tracing (Tracing & Spans)
+Analyze the ORM's internal execution flow in Gantt format, displaying exactly the generated SQL query, injected parameters, and response times of each physical transaction:
+<p align="center">
+  <img src="Docs/Images/dext-telemetry-sql-trace.jfif" alt="Dext ORM SQL Tracing & Spans" width="90%">
+</p>
+
+</details>
+
+---
+
 ## Core Features
 
 <p align="center">
