@@ -42,7 +42,7 @@ Concluí a estabilização do framework e a implementação da infraestrutura ba
 *   **Fase 2 (HTMX):** Iniciar a criação dos helpers para HTMX no `IHttpResponse` e validar a renderização de fragmentos HTML (parciais) no View Engine.
 *   **Teste no Sidecar:** Validar a recepção de telemetria no Dashboard atual usando a nova rota `/mcp/sse` (ou similar) como prova de conceito.
 
-O documento de tarefas [Task-S23-HTMX-Streaming.md](file:///C:/dev/Dext/DextRepository/Docs/Tasks/Task-S23-HTMX-Streaming.md) foi atualizado com o status atual.
+O documento de tarefas [Task-S23-HTMX-Streaming.md](Task-S23-HTMX-Streaming.md) foi atualizado com o status atual.
 
 Searched for "IdHTTP|IdContext|IdGlobal|IdTCP"
 Viewed Dext.MCP.Tools.pas:1-385

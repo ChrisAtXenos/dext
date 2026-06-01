@@ -45,6 +45,7 @@ Status | Task | Spec | Description
 - [ ] **OData Support**: Full OData query support.
 - [ ] **GraphQL**: Native layer for data graphs.
 - [ ] **Microservices Mesh**: Service discovery and native Load Balancing.
+- [ ] **DbContext Auto-Hydration**: [S30](Specs/S30-DbContext-AutoHydration.md) RTTI automatic repository hydration and fluent DbOptions builder records.
 
 ---
 
@@ -86,6 +87,7 @@ Status | Tarefa | Spec | Descrição
 - [ ] **Suporte a OData**: Suporte completo a queries OData.
 - [ ] **GraphQL**: Camada nativa para exposição de grafos de dados.
 - [ ] **Microservices Mesh**: Service discovery e Load Balancing nativo.
+- [ ] **Auto-Hidratação de DbContext**: [S30](Specs/S30-DbContext-AutoHydration.md) Hidratação RTTI automática de repositórios e records fluent builders de DbOptions.
 
 - HTTP Server nativo IOCP, EPOLL, Kqueue
 - UI Nativo com Skia
