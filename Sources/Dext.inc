@@ -121,7 +121,8 @@
   {.$DEFINE DEXT_ENABLE_DB_DB2}         // IBM DB2
   {.$DEFINE DEXT_ENABLE_DB_DS}          // DataSnap
   {.$DEFINE DEXT_ENABLE_DB_INFX}        // Informix
-  {.$DEFINE DEXT_ENABLE_DB_MONGODB}     // MongoDB             {.$DEFINE DEXT_ENABLE_DB_MSACC}       // MS Access
+  {.$DEFINE DEXT_ENABLE_DB_MONGODB}     // MongoDB
+  {.$DEFINE DEXT_ENABLE_DB_MSACC}       // MS Access
   {.$DEFINE DEXT_ENABLE_DB_TERADATA}    // Teradata
 {$ENDIF}
 
@@ -129,4 +130,4 @@
 // Note: Requires TestInsight.Client.pas to be in the Delphi Library Path.
 {.$DEFINE DEXT_TESTINSIGHT}
 
-{$ENDIF}
+{$ENDIF} // close {$IFNDEF DEXT_INC}

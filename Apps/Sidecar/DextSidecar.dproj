@@ -1,4 +1,4 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{E9B39002-C716-4357-9C1C-7F479C937EFE}</ProjectGuid>
         <MainSource>DextSidecar.dpr</MainSource>
@@ -51,13 +51,6 @@
         <VerInfo_Locale>1046</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\..\External\DelphiAST\Source\SimpleParser;..\..\External\DelphiAST\Source;..\..\Sources\Dashboard;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-
-
-
-
-
-
-
         <DCC_ExeOutput>..\..\Output</DCC_ExeOutput>
         <DCC_DcuOutput>..\..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
         <PreBuildEvent><![CDATA[powershell -NoProfile -ExecutionPolicy Bypass -File "$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1" -OutputPath "..\..\Output\$(ProductVersion)_$(Platform)_$(Config)"

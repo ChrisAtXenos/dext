@@ -212,6 +212,7 @@ $(PreBuildEvent)]]></PreBuildEvent>
         <DCCReference Include="Core\Base\Dext.Logging.Tracing.pas"/>
         <DCCReference Include="Core\Dext.Threading.Sync.pas"/>
         <DCCReference Include="Core\Base\Dext.Telemetry.Metrics.pas"/>
+        <None Include="Dext.inc"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
