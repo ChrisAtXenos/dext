@@ -5,10 +5,12 @@ interface
 uses
   System.SysUtils,
   System.Rtti,
+  System.DateUtils,
   Dext.Testing.Attributes,
   Dext.Assertions,
   Dext.Json,
-  Dext.Json.Types;
+  Dext.Json.Types,
+  Dext.Types.Nullable;
 
 type
   TMyRecord = record
@@ -33,6 +35,26 @@ type
   TFooListRec = record
     id: integer;
     fooList: TArray<string>;
+  end;
+
+  TLoginResponseRepro = record
+    Token: string;
+    usuarioid: Integer;
+    usuarionome: string;
+    executorid: Integer;
+    expiresin: Integer;
+  end;
+
+  TOrdemServicoPendenteRepro = record
+  public
+    codigo:       Integer;
+    clienteNome:  string;
+    solicitacao:  string;
+    solicitante:  string;
+    dataPrevista: Nullable<TDateTime>;
+    tipo:         string;
+    situacao:     string;
+    executorNome: string;
   end;
 
   // -------------------------------------------------------------------------
@@ -122,6 +144,20 @@ type
     [Test('#127 - Deserialize array of strings with field name ending in List')]
     procedure TestFooList;
   end;
+
+  [TestFixture('JSON Regression - Bug Repro: Case Insensitive and TArray')]
+  TJsonBugReproTests = class
+  public
+    [Test('Case insensitive record deserialization')]
+    procedure TestCaseInsensitiveRecord;
+
+    [Test('Root array deserialization to TArray of records')]
+    procedure TestRootArrayOfRecords;
+
+    [Test('Root array deserialization to TArray of records with SnakeCase settings')]
+    procedure TestRootArrayOfRecordsSnakeCase;
+  end;
+
 
 implementation
 
@@ -353,4 +389,63 @@ begin
   Should(FooRec.fooList[2]).Be('c');
 end;
 
+{ TJsonBugReproTests }
+
+procedure TJsonBugReproTests.TestCaseInsensitiveRecord;
+var
+  LJson: string;
+  LData: TLoginResponseRepro;
+begin
+  LJson := '{"token":"my-token","usuarioId":12,"usuarioNome":"Samuel","executorId":31656,"expiresIn":1440}';
+  
+  LData := TDextJson.Deserialize<TLoginResponseRepro>(LJson, TJsonSettings.Default.CaseInsensitive);
+
+  Should(LData.Token).Be('my-token');
+  Should(LData.usuarioid).Be(12);
+  Should(LData.usuarionome).Be('Samuel');
+  Should(LData.executorid).Be(31656);
+  Should(LData.expiresin).Be(1440);
+end;
+
+procedure TJsonBugReproTests.TestRootArrayOfRecords;
+var
+  LJson: string;
+  LArray: TArray<TOrdemServicoPendenteRepro>;
+begin
+  LJson := '[{"codigo":1,"clienteNome":"John Doe","solicitacao":"Test OS","solicitante":"Alice","dataPrevista":"2026-06-03T12:00:00","tipo":"Preventiva","situacao":"Aberta","executorNome":"Bob"}]';
+
+  LArray := TDextJson.Deserialize<TArray<TOrdemServicoPendenteRepro>>(LJson);
+
+  Should(Length(LArray)).Be(1);
+  Should(LArray[0].codigo).Be(1);
+  Should(LArray[0].clienteNome).Be('John Doe');
+  Should(LArray[0].solicitacao).Be('Test OS');
+  Should(LArray[0].solicitante).Be('Alice');
+  ShouldDate(LArray[0].dataPrevista).Be(EncodeDateTime(2026, 6, 3, 12, 0, 0, 0));
+  Should(LArray[0].tipo).Be('Preventiva');
+  Should(LArray[0].situacao).Be('Aberta');
+  Should(LArray[0].executorNome).Be('Bob');
+end;
+
+procedure TJsonBugReproTests.TestRootArrayOfRecordsSnakeCase;
+var
+  LJson: string;
+  LArray: TArray<TOrdemServicoPendenteRepro>;
+begin
+  LJson := '[{"codigo":1,"cliente_nome":"John Doe","solicitacao":"Test OS","solicitante":"Alice","data_prevista":"2026-06-03T12:00:00","tipo":"Preventiva","situacao":"Aberta","executor_nome":"Bob"}]';
+
+  LArray := TDextJson.Deserialize<TArray<TOrdemServicoPendenteRepro>>(LJson, TJsonSettings.Default.SnakeCase);
+
+  Should(Length(LArray)).Be(1);
+  Should(LArray[0].codigo).Be(1);
+  Should(LArray[0].clienteNome).Be('John Doe');
+  Should(LArray[0].solicitacao).Be('Test OS');
+  Should(LArray[0].solicitante).Be('Alice');
+  ShouldDate(LArray[0].dataPrevista).Be(EncodeDateTime(2026, 6, 3, 12, 0, 0, 0));
+  Should(LArray[0].tipo).Be('Preventiva');
+  Should(LArray[0].situacao).Be('Aberta');
+  Should(LArray[0].executorNome).Be('Bob');
+end;
+
 end.
+

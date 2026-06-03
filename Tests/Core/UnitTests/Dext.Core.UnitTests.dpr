@@ -1,4 +1,4 @@
-﻿program Dext.Core.UnitTests;
+program Dext.Core.UnitTests;
 
 {$IFNDEF TESTINSIGHT}
   {$APPTYPE CONSOLE}
@@ -45,6 +45,7 @@ begin
         TJsonIssue127RegressionTests,
         TJsonRecordPropertiesTests,
         TJsonRegressionTests,
+        TJsonBugReproTests,
         TTelemetryTests,
         TUtf8SerializerCurrencyTests
       ]));

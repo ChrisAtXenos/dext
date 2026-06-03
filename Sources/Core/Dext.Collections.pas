@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -44,7 +44,7 @@ type
   TCollectionNotification = (cnAdded, cnRemoved, cnExtracted);
 
   IObjectList = Dext.Collections.Base.IObjectList;
-  
+
   {$M+}
   /// <summary>Generic interface for sequential lists with LINQ support.</summary>
   IList<T> = interface(Dext.Collections.Base.IEnumerable<T>)
@@ -217,14 +217,14 @@ type
     function GetInterfaceEnumerator: Dext.Collections.Base.IEnumerator<T>; override;
     /// <summary>Returns a pointer-based enumerator for maximum performance without object allocation.</summary>
     function GetEnumerator: TListEnumerator<T>; reintroduce; inline;
-    
+
     // IObjectList implementation
     function GetObjectItem(Index: Integer): TObject; virtual;
     procedure SetObjectItem(Index: Integer; Value: TObject); virtual;
     procedure AddObject(Value: TObject); virtual;
     function IndexOfObject(Value: TObject): Integer; virtual;
     procedure InsertObject(Index: Integer; Value: TObject); virtual;
-    
+
     function IObjectList.GetCount = GetCount;
     function IObjectList.GetItem = GetObjectItem;
     procedure IObjectList.SetItem = SetObjectItem;
@@ -453,7 +453,7 @@ var
 begin
   LCount := FCore.Count;
   LCapacity := FCore.Capacity;
-  
+
   if (LCount < LCapacity) and (not FIsManaged) then
   begin
     LData := FCore.Data;
@@ -510,7 +510,7 @@ begin
   LCount := FCore.Count;
   if LCount = 0 then Exit(-1);
   P := FCore.Data;
-  
+
   case FTypeKind of
     tkUString:
       for I := 0 to LCount - 1 do
@@ -650,7 +650,7 @@ begin
     begin
       if FOwnsObjects and FIsClass then
         Notify(Self, GetItem(Index), cnRemoved);
-        
+
       if Index < LCount - 1 then
       begin
         LData := FCore.Data;
@@ -997,3 +997,5 @@ begin
 end;
 
 end.
+
+

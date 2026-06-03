@@ -855,7 +855,7 @@ begin
     Node := AJson.GetNode(FieldName);
 
     // Case-insensitive fallback for records:
-    if (Node = nil) and (FSettings.FCaseInsensitive or FSettings.FSmartRecordMapping) then
+    if ((Node = nil) or Node.IsNull) and (FSettings.FCaseInsensitive or FSettings.FSmartRecordMapping) then
     begin
       for I := 0 to AJson.GetCount - 1 do
       begin
@@ -867,7 +867,7 @@ begin
       end;
     end;
 
-    if Node = nil then
+    if (Node = nil) or Node.IsNull then
       Continue;
 
     Val := TValue.Empty; // Reset for each field
