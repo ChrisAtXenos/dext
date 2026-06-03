@@ -32,3 +32,4 @@ node_modules/
 *.dsv
 test-results.xml
 /Sources/*.dext
+/scratch/**
