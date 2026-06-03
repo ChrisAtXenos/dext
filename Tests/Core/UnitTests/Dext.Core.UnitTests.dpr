@@ -47,7 +47,8 @@ begin
         TJsonRegressionTests,
         TJsonBugReproTests,
         TTelemetryTests,
-        TUtf8SerializerCurrencyTests
+        TUtf8SerializerCurrencyTests,
+        TEntityMappingWarningTests
       ]));
   except
     on E: Exception do

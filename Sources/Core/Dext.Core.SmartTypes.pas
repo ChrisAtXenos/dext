@@ -1089,6 +1089,14 @@ begin
   if IsQueryMode then
     Result := BooleanExpression.FromQuery(
       TUnaryExpression.Create(GetColumnName, uoIsNull))
+  else if TReflection.GetMetadata(TypeInfo(T)).IsNullable then
+  begin
+    var Meta := TReflection.GetMetadata(TypeInfo(T));
+    if Meta.HasValueField <> nil then
+      Result := BooleanExpression.FromRuntime(not Meta.HasValueField.GetValue(@FValue).AsBoolean)
+    else
+      Result := BooleanExpression.FromRuntime(False);
+  end
   else
     Result := BooleanExpression.FromRuntime(False);
 end;
@@ -1098,6 +1106,14 @@ begin
   if IsQueryMode then
     Result := BooleanExpression.FromQuery(
       TUnaryExpression.Create(GetColumnName, uoIsNotNull))
+  else if TReflection.GetMetadata(TypeInfo(T)).IsNullable then
+  begin
+    var Meta := TReflection.GetMetadata(TypeInfo(T));
+    if Meta.HasValueField <> nil then
+      Result := BooleanExpression.FromRuntime(Meta.HasValueField.GetValue(@FValue).AsBoolean)
+    else
+      Result := BooleanExpression.FromRuntime(True);
+  end
   else
     Result := BooleanExpression.FromRuntime(True);
 end;

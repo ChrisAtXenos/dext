@@ -254,4 +254,167 @@ Context.Users.Where((u.Age > 18) and (u.IsActive = True)).ToList;
 
 ---
 
+## Nullable Smart Properties
+
+When a database column is nullable **and** you need type-safe query expressions (filtering, ordering), combine both features with the `Prop<Nullable<T>>` composition.
+
+### Why not `Nullable<Prop<T>>`?
+
+The older pattern `Nullable<Prop<T>>` (a Nullable wrapping a Smart Property) has two silent problems:
+
+1. **OrderBy fails at runtime**: `Prop<T>.Asc` / `Desc` return an `IExpression` — but `Nullable<Prop<T>>` stores the inner value as a struct, breaking the expression metadata chain. `OrderBy` silently produces incorrect SQL or no ordering at all.
+2. **Type inference confusion**: Delphi's implicit operator resolution chains fail for nested generics like `Nullable<Prop<T>>`, making assignments inconsistent.
+
+The correct composition is `Prop<Nullable<T>>`:
+
+```pascal
+// ❌ DEPRECATED — do NOT use
+FScheduledAt: Nullable<Prop<TDateTime>>;
+
+// ✅ CORRECT — Smart Property of a Nullable value
+FScheduledAt: Prop<Nullable<TDateTime>>;
+```
+
+> [!CAUTION]
+> The framework emits a runtime warning when it detects `Nullable<Prop<T>>` in your entity:
+> ```
+> [Dext.Orm] WARNING: Field "TOrder.ScheduledAt" is declared as legacy "Nullable<Prop<T>>".
+> This pattern is deprecated and causes silent issues in query ordering (OrderBy).
+> Please change its declaration to "Prop<Nullable<TDateTime>>" for full type safety.
+> ```
+> Update any field showing this warning before the next major release.
+
+### Declaring a Nullable Smart Property
+
+```pascal
+uses
+  Dext.Types.Nullable,   // Nullable<T>
+  Dext.Core.SmartTypes;  // Prop<T> and aliases
+
+type
+  [Table('work_orders')]
+  TWorkOrder = class
+  private
+    FId:           IntType;                       // non-nullable
+    FClientName:   StringType;                    // non-nullable
+    FScheduledAt:  Prop<Nullable<TDateTime>>;     // nullable datetime
+    FAssigneeId:   Prop<Nullable<Integer>>;       // nullable FK
+  public
+    [PK, AutoInc]
+    property Id:          IntType                    read FId          write FId;
+    property ClientName:  StringType                 read FClientName  write FClientName;
+    property ScheduledAt: Prop<Nullable<TDateTime>>  read FScheduledAt write FScheduledAt;
+    property AssigneeId:  Prop<Nullable<Integer>>    read FAssigneeId  write FAssigneeId;
+  end;
+```
+
+### Reading and writing nullable values
+
+```pascal
+var Order: TWorkOrder;
+
+// Assign a concrete value (implicit conversion)
+Order.ScheduledAt := EncodeDate(2026, 12, 31);
+
+// Assign null explicitly
+Order.ScheduledAt := Nullable<TDateTime>.Null;
+
+// Check for null (runtime mode)
+if Order.ScheduledAt.IsNull then
+  WriteLn('Not scheduled yet');
+
+// Read the inner value safely
+if Order.ScheduledAt.Value.HasValue then
+  WriteLn('Scheduled: ', DateToStr(Order.ScheduledAt.Value.Value));
+
+// Or use the default shorthand
+var Date := Order.ScheduledAt.Value.GetValueOrDefault(Now);
+```
+
+### Querying with `IsNull` / `IsNotNull`
+
+```pascal
+var o := TWorkOrder.Props;
+
+// Orders with no scheduled date
+var Unscheduled := Context.WorkOrders
+  .Where(o.ScheduledAt.IsNull)
+  .ToList;
+
+// Orders already assigned
+var Assigned := Context.WorkOrders
+  .Where(o.AssigneeId.IsNotNull)
+  .ToList;
+```
+
+### Ordering by a nullable column
+
+`Prop<Nullable<T>>` fully supports `.Asc` and `.Desc`, producing correct SQL (`ORDER BY scheduled_at ASC`):
+
+```pascal
+var o := TWorkOrder.Props;
+
+// Nulls last (database default for ASC)
+var ByDate := Context.WorkOrders
+  .QueryAll
+  .OrderBy(o.ScheduledAt.Asc)
+  .ToList;
+
+// Descending — most recent first
+var Latest := Context.WorkOrders
+  .QueryAll
+  .OrderBy(o.ScheduledAt.Desc)
+  .ToList;
+```
+
+> [!WARNING]
+> `OrderBy` on `Nullable<Prop<T>>` (the deprecated pattern) produces **silent incorrect ordering** because the expression metadata is not preserved through the outer `Nullable<>` wrapper. This was the root motivation for the `Prop<Nullable<T>>` design.
+
+### Combining nullable and non-nullable filters
+
+```pascal
+var o := TWorkOrder.Props;
+
+var Results := Context.WorkOrders
+  .Where(
+    (o.ClientName.Contains('Acme')) and
+    (o.ScheduledAt.IsNotNull) and
+    (o.AssigneeId.IsNull)
+  )
+  .OrderBy(o.ScheduledAt.Asc)
+  .ToList;
+```
+
+### Migration guide: `Nullable<Prop<T>>` → `Prop<Nullable<T>>`
+
+If you have existing entities using the deprecated pattern, the change is mechanical:
+
+```pascal
+// Before (deprecated)
+type
+  TOrder = class
+  private
+    FDueDate: Nullable<DateTimeType>;    // Nullable<Prop<TDateTime>>
+    FNotes:   Nullable<StringType>;      // Nullable<Prop<string>>
+  public
+    property DueDate: Nullable<DateTimeType> read FDueDate write FDueDate;
+    property Notes:   Nullable<StringType>   read FNotes   write FNotes;
+  end;
+
+// After (correct)
+type
+  TOrder = class
+  private
+    FDueDate: Prop<Nullable<TDateTime>>;
+    FNotes:   Prop<Nullable<string>>;
+  public
+    property DueDate: Prop<Nullable<TDateTime>> read FDueDate write FDueDate;
+    property Notes:   Prop<Nullable<string>>    read FNotes   write FNotes;
+  end;
+```
+
+The call sites that read/write the values require **no changes**: implicit operators handle both assignment and comparison transparently.
+
+---
+
 [← Querying](querying.md) | [Next: Specifications →](specifications.md)

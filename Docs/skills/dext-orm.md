@@ -78,7 +78,10 @@ type
 
 ## 2. Nullable Columns
 
-Database columns can be `NULL`. Dext uses `Nullable<T>` to represent these values in Delphi.
+Database columns can be `NULL`. Dext provides two options to represent nullable values depending on whether you are using standard fields or Smart Properties:
+
+### 2.1. Standard Nullable Fields (`Nullable<T>`)
+Use `Nullable<T>` for standard columns where query-mode expression trees are not needed:
 
 ```pascal
 uses
@@ -97,6 +100,28 @@ type
 Ticket.AssigneeId := 10;                     // Implicit assign
 Ticket.AssigneeId := Nullable<Integer>.Null; // Set to NULL
 ```
+
+### 2.2. Nullable Smart Properties (`Prop<Nullable<T>>`)
+If you need **Smart Properties** for a nullable column (to query with `.Where` or `.OrderBy`), you **MUST** use composition: `Prop<Nullable<T>>`:
+
+```pascal
+type
+  TUser = class
+  private
+    FMiddleName: Prop<Nullable<string>>;
+  public
+    property MiddleName: Prop<Nullable<string>> read FMiddleName write FMiddleName;
+  end;
+
+// Usage & Querying
+var u := TUser.Props;
+var Results := Db.Users
+  .Where(u.MiddleName.IsNull)
+  .ToList;
+```
+
+> [!WARNING]
+> **NEVER** declare properties as `Nullable<Prop<T>>` (e.g., `Nullable<StringType>`). This legacy pattern is deprecated, triggers runtime warning logs, and causes query ordering (`OrderBy`) issues due to Delphi's limitations on nesting implicit operators. Always use `Prop<Nullable<T>>`.
 
 ## 3. Create a DbContext
 

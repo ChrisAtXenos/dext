@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -96,11 +96,9 @@ begin
 end;
 
 function IsNullable(TypeInfo: PTypeInfo): Boolean;
-const
-  PrefixString = 'Nullable<';
 begin
   Result := Assigned(TypeInfo) and (TypeInfo.Kind = tkRecord)
-    and StartsText(PrefixString, string(TypeInfo.Name));
+    and (System.StrUtils.ContainsText(string(TypeInfo.Name), 'Nullable<'));
 end;
 
 function GetUnderlyingType(TypeInfo: PTypeInfo): PTypeInfo;

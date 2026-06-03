@@ -346,12 +346,41 @@ var
   LFieldName: string;
   LInnerName: string;
   LInnerRtti: TRttiType;
+  TempType: TRttiType;
   ImplIntf: TRttiInterfaceType;
   ValProp: TRttiProperty;
   LElementName: string;
   LElementRtti: TRttiType;
   AddM: TRttiMethod;
   Intf: TRttiInterfaceType;
+  OuterName: string;
+
+  function CleanTypeName(const AName: string): string;
+  var
+    LTMark: Integer;
+    Prefix: string;
+    LastDot: Integer;
+  begin
+    LTMark := AName.IndexOf('<');
+    if LTMark >= 0 then
+    begin
+      Prefix := AName.Substring(0, LTMark);
+      LastDot := Prefix.LastIndexOf('.');
+      if LastDot >= 0 then
+        Result := Prefix.Substring(LastDot + 1) + AName.Substring(LTMark)
+      else
+        Result := AName;
+    end
+    else
+    begin
+      LastDot := AName.LastIndexOf('.');
+      if LastDot >= 0 then
+        Result := AName.Substring(LastDot + 1)
+      else
+        Result := AName;
+    end;
+  end;
+
 begin
   RttiType := TReflection.FContext.GetType(AType);
   IsSmartProp := False;
@@ -369,11 +398,15 @@ begin
 
   TypeName := RttiType.Name;
   NormalizedName := TReflection.NormalizeFieldName(TypeName);
-
-  // 1. Detect Smart Properties (Prop<T>, Nullable<T>, Proxy<T>)
   if (RttiType.TypeKind = tkRecord) then
   begin
-    IsNullable := TypeName.Contains('Nullable');
+    var CleanName := CleanTypeName(TypeName);
+    OuterName := CleanName;
+    LTMark := CleanName.IndexOf('<');
+    if LTMark > 0 then
+      OuterName := CleanName.Substring(0, LTMark);
+
+    IsNullable := OuterName.Contains('Nullable');
     IsSmartProp := RttiType.HasAttribute(SmartPropAttribute);
 
     for Field in RttiType.GetFields do
@@ -400,33 +433,54 @@ begin
     // Fallback for generic records without explicit attributes
     if not (IsSmartProp or IsLazy) then
     begin
-       if (TypeName.Contains('Prop<') or TypeName.Contains('Nullable<') or
-           TypeName.Contains('Proxy<') or TypeName.Contains('TProxy<')) then
+       if (OuterName.Contains('Prop') or OuterName.Contains('Nullable') or
+           OuterName.Contains('Proxy') or OuterName.Contains('TProxy')) then
        begin
          IsSmartProp := True;
          if ValueField = nil then ValueField := RttiType.GetField('FValue');
          if ValueField = nil then ValueField := RttiType.GetField('FProxy');
          if ValueField = nil then ValueField := RttiType.GetField('Value');
        end
-       else if TypeName.Contains('Lazy<') then
+       else if OuterName.Contains('Lazy') then
        begin
          IsLazy := True;
          if ValueField = nil then ValueField := RttiType.GetField('FInstance');
        end;
     end;
     
-    // Extraction of InnerType for generic records (Prop<T>, Lazy<T>, Nullable<T>)
-    if (InnerType = nil) or (string(InnerType.Name).Contains('ILazy')) then
-    begin
-      LTMark := TypeName.IndexOf('<');
-      if (LTMark > 0) and TypeName.EndsWith('>') then
-      begin
-        LInnerName := TypeName.Substring(LTMark + 1, TypeName.Length - LTMark - 2).Trim;
-        LInnerRtti := TReflection.FContext.FindType(LInnerName);
-        if LInnerRtti = nil then LInnerRtti := TReflection.FContext.FindType('System.' + LInnerName);
-        if LInnerRtti <> nil then InnerType := LInnerRtti.Handle;
-      end;
-    end;
+     // Extraction of InnerType for generic records (Prop<T>, Lazy<T>, Nullable<T>)
+     if (InnerType = nil) or (string(InnerType.Name).Contains('ILazy')) then
+     begin
+       LTMark := TypeName.IndexOf('<');
+       if (LTMark > 0) and TypeName.EndsWith('>') then
+       begin
+         LInnerName := TypeName.Substring(LTMark + 1, TypeName.Length - LTMark - 2).Trim;
+         var CleanedInner := CleanTypeName(LInnerName).Replace(' ', '');
+          
+         // First attempt exact find using LInnerName (which might have unit name namespaces)
+         LInnerRtti := TReflection.FContext.FindType(LInnerName);
+         if LInnerRtti = nil then
+           LInnerRtti := TReflection.FContext.FindType(CleanedInner);
+         if LInnerRtti = nil then
+           LInnerRtti := TReflection.FContext.FindType('System.' + CleanedInner);
+         if LInnerRtti = nil then
+         begin
+           for TempType in TReflection.FContext.GetTypes do
+           begin
+             var CleanedTempName := CleanTypeName(TempType.Name).Replace(' ', '');
+             var CleanedTempQual := CleanTypeName(TempType.QualifiedName).Replace(' ', '');
+             if SameText(CleanedTempName, CleanedInner) or
+                SameText(CleanedTempQual, CleanedInner) then
+             begin
+               LInnerRtti := TempType;
+               Break;
+             end;
+           end;
+         end;
+         if LInnerRtti <> nil then
+           InnerType := LInnerRtti.Handle;
+       end;
+     end;
 
     if (InnerType = nil) and (ValueField <> nil) and (ValueField.FieldType <> nil) then
       InnerType := ValueField.FieldType.Handle;

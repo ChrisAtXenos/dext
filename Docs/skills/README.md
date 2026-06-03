@@ -167,4 +167,4 @@ Skills are loaded dynamically when the agent needs them. The README is always lo
 11. **`Dext.Entity.Core`** must be in `uses` for `IDbSet<T>` generics to compile
 12. **`SetConsoleCharSet`** is REQUIRED in all console projects (test runners, CLI tools)
 13. **Uses Clause Order (CRITICAL)**: Due to Delphi's single class helper limitation, the `uses` order MUST always be: `Dext` → `Dext.Entity` → `Dext.Web`. The last one always wins and ensures Web methods (like `MapGet`, `AddWebStencils`) are visible.
-14. **Smart Properties**: For entities, always use **IntType**, **StringType**, **DoubleType**, and **BoolType** aliases (from `Dext.Core.SmartTypes`) instead of `Prop<T>`.
+14. **Smart Properties**: For entities, always use **IntType**, **StringType**, **DoubleType**, and **BoolType** aliases (from `Dext.Core.SmartTypes`) instead of `Prop<T>`. For **nullable columns**, always use composition: `Prop<Nullable<T>>` (e.g., `Prop<Nullable<Integer>>`) instead of legacy `Nullable<Prop<T>>` (e.g., `Nullable<StringType>`), which is deprecated, triggers warnings, and breaks query ordering (`OrderBy`).

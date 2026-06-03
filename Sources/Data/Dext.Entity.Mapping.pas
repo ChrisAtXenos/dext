@@ -448,7 +448,8 @@ type
 implementation
 
 uses
-  System.StrUtils;
+  System.StrUtils,
+  Dext.Utils;
 
 constructor TEntityMap.Create(AEntityType: PTypeInfo);
 begin
@@ -629,11 +630,37 @@ var
   BackingFld: TRttiField;
   Meta: TTypeMetadata;
   LTypeName: string;
+
+  function CleanTypeName(const AName: string): string;
+  var
+    LTMark: Integer;
+    Prefix: string;
+    LastDot: Integer;
+  begin
+    LTMark := AName.IndexOf('<');
+    if LTMark >= 0 then
+    begin
+      Prefix := AName.Substring(0, LTMark);
+      LastDot := Prefix.LastIndexOf('.');
+      if LastDot >= 0 then
+        Result := Prefix.Substring(LastDot + 1) + AName.Substring(LTMark)
+      else
+        Result := AName;
+    end
+    else
+    begin
+      LastDot := AName.LastIndexOf('.');
+      if LastDot >= 0 then
+        Result := AName.Substring(LastDot + 1)
+      else
+        Result := AName;
+    end;
+  end;
+
 begin
   Typ := TReflection.Context.GetType(FEntityType);
-    if Typ = nil then Exit;
-
-    for Attr in Typ.GetAttributes do
+  if Typ = nil then Exit;
+  for Attr in Typ.GetAttributes do
     begin
       if Attr is TableAttribute then
       begin
@@ -659,9 +686,20 @@ begin
       Metadata := TReflection.GetMetadata(Fld.FieldType.Handle);
       IsSmart := Metadata.IsSmartProp or Metadata.IsNullable or Metadata.IsLazy;
 
+      FldName := TReflection.NormalizeFieldName(Fld.Name);
+
       if IsSmart then
       begin
-        FldName := TReflection.NormalizeFieldName(Fld.Name);
+          
+        if Metadata.IsNullable and (Metadata.InnerType <> nil) and TReflection.IsSmartProp(Metadata.InnerType) then
+        begin
+          DebugLog(Format(
+            '[Dext.Orm] WARNING: Field "%s.%s" is declared as legacy "Nullable<Prop<T>>". ' +
+            'This pattern is deprecated and causes silent issues in query ordering (OrderBy). ' +
+            'Please change its declaration to "Prop<Nullable<%s>>" for full type safety.',
+            [Typ.Name, FldName, string(TReflection.GetMetadata(Metadata.InnerType).InnerType^.Name)]
+          ));
+        end;
           
         PropMap := GetOrAddProperty(FldName);
         PropMap.FieldOffset := -1; // Reset to avoid incorrect null detection for records
@@ -671,23 +709,57 @@ begin
         // Skip fast path for Lazy to force RTTI (which triggers Load)
         if not PropMap.IsLazy then
         begin
-          // CRITICAL: We separate NullFlag and MetadataOffset.
-          // TEntityDataSet uses FieldOffset to check for NULL via PBoolean (must be boolean).
-          // Prototype usage needs FInfo, which is an Interface (must NOT be treated as null flag).
-          if Metadata.HasValueField <> nil then
+          // S22 Composition support: Prop<Nullable<T>>
+          var InnerTypeInfo := Metadata.InnerType;
+          var IsInnerNullable := False;
+          if InnerTypeInfo <> nil then
           begin
-            if Metadata.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
-              PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset
-            else if Metadata.HasValueField.FieldType.TypeKind = tkInterface then
-              PropMap.MetadataOffset := Fld.Offset + Metadata.HasValueField.Offset;
+            var InnerCleanName := CleanTypeName(string(InnerTypeInfo.Name));
+            IsInnerNullable := InnerCleanName.Contains('Nullable');
           end;
-
-          if Metadata.ValueField <> nil then
+          
+          if IsInnerNullable then
           begin
-            PropMap.FieldValueOffset := Fld.Offset + Metadata.ValueField.Offset;
-            PropMap.PropertyType := Metadata.InnerType;
-            PropMap.DataType := TypeInfoToFieldType(Metadata.InnerType);
-            PropMap.IsEnum := (Metadata.InnerType <> nil) and (Metadata.InnerType.Kind = tkEnumeration) and (Metadata.InnerType <> TypeInfo(Boolean));
+            Meta := TReflection.GetMetadata(Metadata.InnerType);
+            if Metadata.ValueField <> nil then
+            begin
+              if Meta.HasValueField <> nil then
+              begin
+                if Meta.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
+                  PropMap.FieldOffset := Fld.Offset + Metadata.ValueField.Offset + Meta.HasValueField.Offset
+                else if Meta.HasValueField.FieldType.TypeKind = tkInterface then
+                  PropMap.MetadataOffset := Fld.Offset + Metadata.ValueField.Offset + Meta.HasValueField.Offset;
+              end;
+
+              if Meta.ValueField <> nil then
+              begin
+                PropMap.FieldValueOffset := Fld.Offset + Metadata.ValueField.Offset + Meta.ValueField.Offset;
+                PropMap.PropertyType := Meta.InnerType;
+                PropMap.DataType := TypeInfoToFieldType(Meta.InnerType);
+                PropMap.IsEnum := (Meta.InnerType <> nil) and (Meta.InnerType.Kind = tkEnumeration) and (Meta.InnerType <> TypeInfo(Boolean));
+              end;
+            end;
+          end
+          else
+          begin
+            // CRITICAL: We separate NullFlag and MetadataOffset.
+            // TEntityDataSet uses FieldOffset to check for NULL via PBoolean (must be boolean).
+            // Prototype usage needs FInfo, which is an Interface (must NOT be treated as null flag).
+            if Metadata.HasValueField <> nil then
+            begin
+              if Metadata.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
+                PropMap.FieldOffset := Fld.Offset + Metadata.HasValueField.Offset
+              else if Metadata.HasValueField.FieldType.TypeKind = tkInterface then
+                PropMap.MetadataOffset := Fld.Offset + Metadata.HasValueField.Offset;
+            end;
+
+            if Metadata.ValueField <> nil then
+            begin
+              PropMap.FieldValueOffset := Fld.Offset + Metadata.ValueField.Offset;
+              PropMap.PropertyType := Metadata.InnerType;
+              PropMap.DataType := TypeInfoToFieldType(Metadata.InnerType);
+              PropMap.IsEnum := (Metadata.InnerType <> nil) and (Metadata.InnerType.Kind = tkEnumeration) and (Metadata.InnerType <> TypeInfo(Boolean));
+            end;
           end;
         end;
         
@@ -741,7 +813,7 @@ begin
           // Note: We MUST NOT overwrite offsets for SmartProps (Nullable/Lazy) already detected in the Fields loop.
           if (not PropMap.IsLazy) and ((NativeInt(LPropInfo.GetProc) and $FF000000) = $FF000000) then
           begin
-            if PropMap.FieldValueOffset = 0 then
+            if PropMap.FieldValueOffset <= 0 then
               PropMap.FieldValueOffset := NativeInt(LPropInfo.GetProc) and $00FFFFFF;
           end
           else
@@ -755,6 +827,43 @@ begin
              ((NativeInt(LPropInfo.SetProc) and $FF000000) <> $FF000000) then
           begin
              PropMap.FieldValueOffset := 0;
+          end;
+        end;
+      end;
+
+      // S22: For Prop<Nullable<T>> properties accessed via direct field accessor,
+      // the TRttiInstanceProperty block above set FieldValueOffset to the raw offset
+      // of the entire Prop<Nullable<T>> record. We must now decompose it into proper
+      // composition offsets: FieldOffset (null flag) and FieldValueOffset (inner T value).
+      if (not PropMap.IsLazy) and (PropMap.FieldValueOffset > 0) and
+         TReflection.IsSmartProp(Prop.PropertyType.Handle) then
+      begin
+        var PropMeta := TReflection.GetMetadata(Prop.PropertyType.Handle);
+        if PropMeta.IsSmartProp and (PropMeta.InnerType <> nil) then
+        begin
+          var InnerCleanName := CleanTypeName(string(PropMeta.InnerType.Name));
+          if InnerCleanName.Contains('Nullable') then
+          begin
+            // This is Prop<Nullable<T>> - decompose composition offsets
+            var InnerMeta2 := TReflection.GetMetadata(PropMeta.InnerType);
+            if (PropMeta.ValueField <> nil) and InnerMeta2.IsNullable then
+            begin
+              var BaseOffset := PropMap.FieldValueOffset; // raw offset of the Prop<Nullable<T>> field
+              if InnerMeta2.HasValueField <> nil then
+              begin
+                if InnerMeta2.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
+                  PropMap.FieldOffset := BaseOffset + PropMeta.ValueField.Offset + InnerMeta2.HasValueField.Offset
+                else if InnerMeta2.HasValueField.FieldType.TypeKind = tkInterface then
+                  PropMap.MetadataOffset := BaseOffset + PropMeta.ValueField.Offset + InnerMeta2.HasValueField.Offset;
+              end;
+              if InnerMeta2.ValueField <> nil then
+              begin
+                PropMap.FieldValueOffset := BaseOffset + PropMeta.ValueField.Offset + InnerMeta2.ValueField.Offset;
+                PropMap.PropertyType := InnerMeta2.InnerType;
+                PropMap.DataType := TypeInfoToFieldType(InnerMeta2.InnerType);
+                PropMap.IsEnum := (InnerMeta2.InnerType <> nil) and (InnerMeta2.InnerType.Kind = tkEnumeration) and (InnerMeta2.InnerType <> TypeInfo(Boolean));
+              end;
+            end;
           end;
         end;
       end;
@@ -792,25 +901,69 @@ begin
            if TReflection.IsSmartProp(BackingFld.FieldType.Handle) then
            begin
              Meta := TReflection.GetMetadata(BackingFld.FieldType.Handle);
-                if Meta.IsSmartProp then
-                begin
-                  // Detect Lazy
-                  if Meta.RttiType.Name.Contains('Lazy<') then
-                    PropMap.IsLazy := True;
+                 if Meta.IsSmartProp then
+                 begin
+                   // Detect Lazy
+                    if Meta.RttiType.Name.Contains('Lazy<') then
+                      PropMap.IsLazy := True;
 
                   // Lazy types store an interface (ILazy), not the value T directly in the record.
                   // We MUST NOT set FieldValueOffset for them if we want to support direct memory access for T.
                   // Instead, we skip direct offset mapping so the engine falls back to RTTI (which handles ILazy).
                   if not PropMap.IsLazy then
                   begin
-                    PropMap.FieldValueOffset := BackingFld.Offset + Meta.ValueField.Offset;
+                    // S22 Composition support: Prop<Nullable<T>> backing field
+                    var BackingInnerType := Meta.InnerType;
+                    var IsBackingInnerNullable := False;
+                    if BackingInnerType <> nil then
+                    begin
+                      var BackingCleanName := CleanTypeName(string(BackingInnerType.Name));
+                      IsBackingInnerNullable := BackingCleanName.Contains('Nullable');
+                    end;
+                    
+                    if IsBackingInnerNullable then
+                    begin
+                      var InnerMeta := TReflection.GetMetadata(Meta.InnerType);
+                      if Meta.ValueField <> nil then
+                      begin
+                        if InnerMeta.HasValueField <> nil then
+                        begin
+                          if InnerMeta.HasValueField.FieldType.Handle = TypeInfo(Boolean) then
+                            PropMap.FieldOffset := BackingFld.Offset + Meta.ValueField.Offset + InnerMeta.HasValueField.Offset
+                          else if InnerMeta.HasValueField.FieldType.TypeKind = tkInterface then
+                            PropMap.MetadataOffset := BackingFld.Offset + Meta.ValueField.Offset + InnerMeta.HasValueField.Offset;
+                        end;
 
-                    // Only use FieldOffset if it's a Boolean (real null flag)
-                    if (Meta.HasValueField <> nil) and (Meta.HasValueField.FieldType.Handle = TypeInfo(Boolean)) then
-                      PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
+                        if InnerMeta.ValueField <> nil then
+                        begin
+                          PropMap.FieldValueOffset := BackingFld.Offset + Meta.ValueField.Offset + InnerMeta.ValueField.Offset;
+                          PropMap.PropertyType := InnerMeta.InnerType;
+                          PropMap.DataType := TypeInfoToFieldType(InnerMeta.InnerType);
+                          PropMap.IsEnum := (InnerMeta.InnerType <> nil) and (InnerMeta.InnerType.Kind = tkEnumeration) and (InnerMeta.InnerType <> TypeInfo(Boolean));
+                        end;
+                      end;
+                    end
+                    else
+                    begin
+                      PropMap.FieldValueOffset := BackingFld.Offset + Meta.ValueField.Offset;
+
+                      // Only use FieldOffset if it's a Boolean (real null flag)
+                      if (Meta.HasValueField <> nil) and (Meta.HasValueField.FieldType.Handle = TypeInfo(Boolean)) then
+                        PropMap.FieldOffset := BackingFld.Offset + Meta.HasValueField.Offset;
+                    end;
                   end;
                   
-                  PropMap.PropertyType := Meta.InnerType;
+                  var BackingInnerCheckType := Meta.InnerType;
+                  var IsBackingInnerCheckNullable := False;
+                  if BackingInnerCheckType <> nil then
+                  begin
+                    var BackingInnerCheckClean := CleanTypeName(string(BackingInnerCheckType.Name));
+                    IsBackingInnerCheckNullable := BackingInnerCheckClean.Contains('Nullable');
+                  end;
+                  
+                  if not IsBackingInnerCheckNullable then
+                    PropMap.PropertyType := Meta.InnerType;
+                    
                   // Update FieldOffset if not yet set
                   if PropMap.FieldValueOffset <= 0 then
                     PropMap.FieldValueOffset := BackingFld.Offset;

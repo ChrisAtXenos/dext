@@ -6,11 +6,16 @@ uses
   System.SysUtils,
   System.Rtti,
   System.DateUtils,
+  Data.DB,
   Dext.Testing.Attributes,
   Dext.Assertions,
   Dext.Json,
   Dext.Json.Types,
-  Dext.Types.Nullable;
+  Dext.Types.Nullable,
+  Dext.Core.SmartTypes,
+  Dext.Entity.Mapping,
+  Dext.Entity.Attributes,
+  Dext.Utils;
 
 type
   TMyRecord = record
@@ -158,6 +163,33 @@ type
     procedure TestRootArrayOfRecordsSnakeCase;
   end;
 
+  [Table('legacy_entity')]
+  TMyLegacyEntity = class
+  private
+    FId: IntType;
+    FNullableSmartField: Nullable<StringType>;
+  public
+    property Id: IntType read FId write FId;
+    property NullableSmartField: Nullable<StringType> read FNullableSmartField write FNullableSmartField;
+  end;
+
+  TMyModernEntity = class
+  private
+    FId: IntType;
+    FNullableSmartField: Prop<Nullable<Integer>>;
+  public
+    property Id: IntType read FId write FId;
+    property NullableSmartField: Prop<Nullable<Integer>> read FNullableSmartField write FNullableSmartField;
+  end;
+
+  [TestFixture('Entity Mapping - Nullable Smart Property Warnings')]
+  TEntityMappingWarningTests = class
+  public
+    [Test('Should detect Nullable<Prop<T>> and output warning message')]
+    procedure TestLegacyNullablePropWarning;
+    [Test('Should map Prop<Nullable<T>> correctly')]
+    procedure TestModernPropNullableMapping;
+  end;
 
 implementation
 
@@ -445,6 +477,42 @@ begin
   Should(LArray[0].tipo).Be('Preventiva');
   Should(LArray[0].situacao).Be('Aberta');
   Should(LArray[0].executorNome).Be('Bob');
+end;
+
+{ TEntityMappingWarningTests }
+
+procedure TEntityMappingWarningTests.TestLegacyNullablePropWarning;
+var
+  LMap: TEntityMap;
+begin
+  LMap := TEntityMap.Create(TypeInfo(TMyLegacyEntity));
+  try
+    Should(LMap).NotBeNil;
+  finally
+    LMap.Free;
+  end;
+end;
+
+procedure TEntityMappingWarningTests.TestModernPropNullableMapping;
+var
+  LMap: TEntityMap;
+  PropMap: TPropertyMap;
+begin
+  // TEntityMap stores properties by Prop.Name (RTTI), which is PascalCase.
+  // The dictionary is case-insensitive, so 'NullableSmartField' is the canonical key.
+  LMap := TEntityMap.Create(TypeInfo(TMyModernEntity));
+  try
+    Should(LMap.Properties.TryGetValue('NullableSmartField', PropMap)).BeTrue;
+    // Prop<Nullable<Integer>> must map to the inner Integer type, not the wrapper
+    Should(PropMap.PropertyType = TypeInfo(Integer)).BeTrue;
+    Should(Integer(PropMap.DataType)).Be(Integer(ftInteger));
+    // FieldOffset  = offset of FHasValue (null flag Boolean) inside the composed record
+    // FieldValueOffset = offset of FValue (Integer) inside the composed record
+    Should(PropMap.FieldOffset).BeGreaterThan(0);
+    Should(PropMap.FieldValueOffset).BeGreaterThan(0);
+  finally
+    LMap.Free;
+  end;
 end;
 
 end.

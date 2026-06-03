@@ -201,7 +201,9 @@ var All := Context.Tasks.IgnoreQueryFilters.ToList; // Active + Deleted
 
 ## Nullable Columns
 
-Use `Nullable<T>` for nullable database columns:
+### Plain nullable values — `Nullable<T>`
+
+Use `Nullable<T>` when the column is nullable but you **do not need** type-safe query expressions on it:
 
 ```pascal
 uses
@@ -238,8 +240,43 @@ var AssignId := Ticket.AssigneeId.GetValueOrDefault(0);
 Ticket.AssigneeId := Nullable<Integer>.Null;
 ```
 
+### Nullable Smart Properties — `Prop<Nullable<T>>`
+
+When you need both nullability **and** type-safe query expressions (`.Where`, `.OrderBy`), use the `Prop<Nullable<T>>` composition:
+
+```pascal
+type
+  [Table('work_orders')]
+  TWorkOrder = class
+  private
+    FClientName:  StringType;                   // non-nullable smart property
+    FScheduledAt: Prop<Nullable<TDateTime>>;    // nullable smart property
+    FAssigneeId:  Prop<Nullable<Integer>>;      // nullable smart property
+  public
+    property ClientName:  StringType                   read FClientName  write FClientName;
+    property ScheduledAt: Prop<Nullable<TDateTime>>    read FScheduledAt write FScheduledAt;
+    property AssigneeId:  Prop<Nullable<Integer>>      read FAssigneeId  write FAssigneeId;
+  end;
+```
+
+This enables filtering and ordering on nullable columns:
+
+```pascal
+var o := TWorkOrder.Props;
+
+// Filter
+var Unscheduled := Context.WorkOrders.Where(o.ScheduledAt.IsNull).ToList;
+
+// Order
+var ByDate := Context.WorkOrders.QueryAll.OrderBy(o.ScheduledAt.Asc).ToList;
+```
+
+> [!IMPORTANT]
+> **Do not** use `Nullable<Prop<T>>` (reversed nesting). This is a deprecated pattern that breaks `OrderBy` silently. The framework warns you at startup if it detects it.  
+> See the full guide → [Smart Properties: Nullable Smart Properties](smart-properties.md#nullable-smart-properties)
+
 > [!WARNING]
-> **`NavType<T>` does NOT exist in Dext!** Always use `Nullable<T>`.
+> **`NavType<T>` does NOT exist in Dext!** Always use `Nullable<T>` or `Prop<Nullable<T>>`.
 
 ## Change Tracking
 
