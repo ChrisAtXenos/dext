@@ -23,7 +23,7 @@ ID | Title | Status | Goal
 **S19** | [FluentQuery Join Evolution](S19-FluentQuery-Join-Evolution.md) | ✅ Finalized | Unified DSL for complex SQL Joins via Managed Records.
 **S20** | [Fluent REST Evolution](S20-Fluent-Rest-Evolution.md) | 📝 Draft | Enhanced TRestClient factories and native record/array payload support.
 **S21** | [Soft Delete: Timestamp-based Audit](S21-SoftDelete-Timestamp-Audit.md) | 📝 Draft | Soft Delete based on nullable timestamps for audit trails.
-**S22** | [Prop and Nullable Convergence](S22-Prop-Nullable-Convergence.md) | 📝 Draft | Convergence of Smart Properties and Nullable wrappers.
+**S22** | [Prop and Nullable Convergence](S22-Prop-Nullable-Convergence.md) | ✅ Finalized | Convergence of Smart Properties and Nullable wrappers.
 **S23** | [HTTP Streamable Sessions & HTMX](S23-Http-Streamable-HTMX.md) | ✅ Finalized | Native HTMX fragment rendering and Streamable Sessions.
 **S24** | [Live Logging & Tracing](S24-Sidecar-Logging-Tracing.md) | ✅ Finalized | Distributed tracing and observability suite for logs/spans.
 **S25** | [Metrics & Health Monitoring](S25-Sidecar-Metrics-Health.md) | ✅ Finalized | RED metrics, system performance and runtime health dashboards.

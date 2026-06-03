@@ -1,6 +1,6 @@
 # S22: Prop<T> and Nullable<T> Convergence
 
-**Status**: Draft
+**Status**: Finalized
 **Authors**: Cesar Romero, Antigravity
 **Date**: 2026-05-14
 **Related Issues**: #PropNullableInterop
