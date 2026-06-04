@@ -124,6 +124,7 @@
         <DCCReference Include="Dext.Entity.SnakeCaseFk.Tests.pas"/>
         <DCCReference Include="Dext.Entity.FormatSettings.Tests.pas"/>
         <DCCReference Include="Dext.Entity.SoftDelete.Tests.pas"/>
+        <DCCReference Include="Dext.Entity.Validation.Tests.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

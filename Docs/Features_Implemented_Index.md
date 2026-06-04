@@ -63,6 +63,17 @@ Dext was designed to leverage modern Object Pascal features while maintaining a 
   - **Dext UTF-8 (Low-Level Streaming)** — Surgical tool for Big Data. Zero-allocation sequential processing of massive volumes (GBs) with constant memory footprint.
 - **TUtf8JsonSerializer** (`Dext.Json.Utf8.Serializer`) — Zero-allocation record serializer. Operates directly on `TByteSpan` (raw UTF-8) without intermediate `string` conversion. `TJsonRecordInfo` caching per `PTypeInfo` to eliminate RTTI overhead in hot-paths. `ToUtf8JSON` in the `DextJsonDataObjects` driver for native UTF-8 output.
 
+### 1.4b AutoMapper Engine (`Dext.Mapper`)
+- **TMapper** — Static facade and central registry for object-to-object mapping using Delphi RTTI.
+- **Fluent Mapping Configuration** — `TTypeMapConfig<TSource, TDest>` record supporting custom mappings using fluent notation:
+  - `ForMember(DestName, MapFunc)` — Define custom mapping functions mapping source to target values.
+  - `Ignore(DestName)` — Prevent copying specific properties.
+- **Instance Mapping** — `TMapper.Map<TSource, TDest>(Source)` returns a newly instantiated mapped destination class.
+- **In-Place Mapping** — `TMapper.Map<TSource, TDest>(Source, Dest)` maps source properties onto an existing destination object reference.
+- **Collection Mapping** — `TMapper.MapList<TSource, TDest>(SourceList)` maps lists and generic collections automatically.
+- **Record Mapping** — Maps matching fields and properties between classes and records.
+- **Default Value Optimization** — Support for mapping only non-default values using the `AOnlyNonDefault` parameter to avoid overwriting initialized destination values.
+
 ### 1.5 Configuration System (`Dext.Configuration.Core`)
 - **TDextConfiguration (Fluent Builder)** — `.AddJsonFile(path)`, `.AddYamlFile(path)`, `.AddEnvironmentVariables(prefix)`, `.AddCommandLine`, `.AddInMemoryCollection`.
 - **TConfigurationRoot** — Multi-provider aggregator with LIFO precedence (last registered wins). Implements `IConfiguration`.
@@ -288,12 +299,14 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 - **SaveChanges** — Persists all tracked changes in a transaction.
 - **Fluent Connection Setup & Pooling Auto-Detection** — Connection builders (`UsePostgreSQL`, `UseFirebird`, etc.) support automatic parameter extraction and synchronization with property setters, resolving empty-options/pooling bugs.
 - **ConnectionDefName Support (FireDAC)** — Direct support for FireDAC connection definition names (`UseConnectionDef`). Automatically queries `FDManager.ConnectionDefs` to resolve the database dialect, driver ID, and pooling configuration dynamically.
+- **Shadow Properties Support** — Declares columns (like `TenantId`, `CreatedAt`, `IsDeleted`) in database mappings that are tracked and saved without needing to be exposed as physical fields in class declarations.
 
 ### 4.2 Query Engine (LINQ-like)
 - Fluent queries with **Projection (Select)**, **Paging** (`Skip`/`Take`), and **Aggregates** (`Count`, `Sum`, `Max`, `Min`, `Average`).
 - **SQL Cache** — Reuse of generated SQL commands for repeated queries.
 - **Pessimistic Locking** — `FOR UPDATE` for concurrency control.
 - **Multi-Mapping** (Dapper-style) — Recursive hydration via `[Nested]` attribute.
+- **Fluent Validation Integration** — Integrates with validation engine inside `SaveChanges` to run automatic object verification before executing commits.
 
 ### 4.3 Specification Pattern (`Dext.Specifications`)
 - **Fluent Specification Builder** — `Where`, `OrderBy`, `Include`, `Take`, `Skip` for decoupled and reusable business rules.
@@ -305,6 +318,7 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 - **One-to-One**, **One-to-Many**, **Many-to-Many**.
 - **Lazy Loading** via Proxy Objects (transparent interception).
 - **Eager Loading** — `Include`/`ThenInclude` for graph pre-loading.
+- **Split Queries Loading** — Collection navigation properties loaded via dedicated SQL queries using `IN` bounds parameters to avoid cartesian join explosion.
 
 ### 4.5 Migrations System
 - Automated Code-First evolution with chronological database model snapshots.
@@ -496,10 +510,14 @@ Fluent API based on the `Should(Value)` pattern.
 ## ✅ 9. Dext Validation Engine (`Dext.Validation`)
 
 - **Attribute-Based Validation** — RTTI decorators: `[Required]`, `[StringLength(min, max)]`, `[Range(min, max)]`, `[RegularExpression(pattern)]`, `[EmailAddress]`, `[Url]`.
+- **Fluent Validation API** — Strongly-typed validation base class `TAbstractValidator<T>` implementing `IValidator<T>` as a modern C# FluentValidation-like alternative.
+- **Fluent Rule Builder** — Memory-efficient record `TValidationRuleBuilder<T>` that avoids heap allocations while building chained validation rules (`Required`, `Length`, `Range`, `EmailAddress`, `Matches`, `MatchesPattern`, `Must`, `When`).
+- **Smart Property Integration** — Concrete `RuleFor` overloads for standard `Prop<T>` smart properties (e.g., `Prop<string>`, `Prop<Integer>`, `Prop<Boolean>`, etc.) to automatically extract property names from Prototype ghost entities without magic strings or compiler casting issues.
+- **Pattern Registry** — `TValidationPatterns` registry mapping keys to locale-specific regular expressions (e.g. Pt-BR or En-US phone numbers and zipcodes).
 - **TValidator** — Non-generic helper: `Validate(obj)` returns `TValidationResult` with a list of `TValidationError` (field + message).
 - **TValidator\<T\>** — Typed generic version.
 - **Custom Validators** — Inherit from `ValidationAttribute` for custom business rules.
-- **Web Integration** — Automatic model validation in the Model Binding pipeline.
+- **Web Integration** — Automatic resolution of registered validators (`IValidator<T>`) from the Dependency Injection (DI) container inside the web model binding pipeline (`THandlerInvoker.Validate`), raising `TWebValidationException` to yield structured error JSON/HTMX payloads.
 
 ---
 

@@ -31,7 +31,8 @@ uses
   Dext.Entity.Migrations.Tests in 'Dext.Entity.Migrations.Tests.pas',
   Dext.Entity.SnakeCaseFk.Tests in 'Dext.Entity.SnakeCaseFk.Tests.pas',
   Dext.Entity.FormatSettings.Tests in 'Dext.Entity.FormatSettings.Tests.pas',
-  Dext.Entity.SoftDelete.Tests in 'Dext.Entity.SoftDelete.Tests.pas';
+  Dext.Entity.SoftDelete.Tests in 'Dext.Entity.SoftDelete.Tests.pas',
+  Dext.Entity.Validation.Tests in 'Dext.Entity.Validation.Tests.pas';
 
 begin
   {$IFDEF TESTINSIGHT}
@@ -40,7 +41,7 @@ begin
   SetConsoleCharSet();
   try
     SafeWriteLn;
-    SafeWriteLn('ðŸ§ª Dext Entity Unit Tests');
+    SafeWriteLn('🧪 Dext Entity Unit Tests');
     SafeWriteLn('=========================');
     SafeWriteLn;
 
@@ -76,7 +77,8 @@ begin
         TMigrationTests,
         TEntityFormatSettingsTests,
         TSoftDeleteUnitTests,
-        TSoftDeleteIntegrationTests
+        TSoftDeleteIntegrationTests,
+        TEntityValidationTests
       ]));
   except
     on E: Exception do

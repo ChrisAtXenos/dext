@@ -168,8 +168,10 @@ begin
   EntityMap := TModelBuilder.Instance.GetMap(ATypeInfo);
   if EntityMap <> nil then
   begin
+    Writeln('EntityMap found for: ', Typ.Name, ' properties count: ', EntityMap.Properties.Count);
     for PropMap in EntityMap.Properties.Values do
     begin
+      Writeln('  Property: ', PropMap.PropertyName, ' MetadataOffset: ', PropMap.MetadataOffset);
       // 1. Inject IPropInfo (Metadata for SQL generation)
       // CRITICAL: We use MetadataOffset (FInfo interface) instead of FieldOffset (Boolean flag).
       if PropMap.MetadataOffset <> -1 then

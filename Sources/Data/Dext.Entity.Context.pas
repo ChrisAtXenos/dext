@@ -337,9 +337,12 @@ type
 implementation
 
 uses
+  System.IOUtils,
   Dext.Utils,
   Dext.Validation,
-  Dext.Entity.Validator;
+  Dext.Entity.Validator,
+  Dext.DI.Core,
+  Dext.DI.Interfaces;
 
 { Helper Functions }
 
@@ -1027,6 +1030,11 @@ var
   Item: TObject;
   Deletes: IList<TObject>;
   Span: TSpan;
+  Meta: TTypeMetadata;
+  ValidatorIntf: IInterface;
+  DIProvider: IServiceProvider;
+  Validator: IValidator;
+  ValRes: TValidationResult;
 begin
   Span := TTracer.BeginSpan('DbContext.SaveChanges', 'SQL');
   ApplyTenantConfig(False);
@@ -1055,14 +1063,38 @@ begin
                  TenantAware.TenantId := FTenantProvider.Tenant.Id;
               end;
             end;
-              
  
             // Validate Entity
             Map := nil;
             if FModelBuilder <> nil then
               Map := FModelBuilder.GetMap(Entity.ClassInfo);
               
-            TEntityValidator.Validate(Entity, Map);
+            Meta := TReflection.GetMetadata(Entity.ClassInfo);
+            ValidatorIntf := nil;
+            if Meta.ValidatorInterfaceType <> nil then
+            begin
+              DIProvider := TDextServices.DefaultProvider;
+              if DIProvider <> nil then
+              begin
+                try
+                  ValidatorIntf := DIProvider.GetServiceAsInterface(TServiceType.FromInterface(Meta.ValidatorInterfaceType));
+                except
+                end;
+              end;
+            end;
+            
+            if (ValidatorIntf <> nil) and Supports(ValidatorIntf, IValidator, Validator) then
+            begin
+              ValRes := Validator.ValidateInstance(TValue.From<TObject>(Entity));
+              try
+                if not ValRes.IsValid then
+                  raise EValidationException.Create('Validation failed: ' + ValRes.Errors[0].ErrorMessage);
+              finally
+                ValRes.Free;
+              end;
+            end
+            else
+              TEntityValidator.Validate(Entity, Map);
  
             AddedGroups[Entity.ClassInfo].Add(Entity);
          end;
@@ -1091,12 +1123,38 @@ begin
        begin
          Entity := Pair.Key;
          
-         // Validate Entity
-         Map := nil;
-         if FModelBuilder <> nil then
-           Map := FModelBuilder.GetMap(Entity.ClassInfo);
-           
-         TEntityValidator.Validate(Entity, Map);
+          // Validate Entity
+          Map := nil;
+          if FModelBuilder <> nil then
+            Map := FModelBuilder.GetMap(Entity.ClassInfo);
+            
+          Meta := TReflection.GetMetadata(Entity.ClassInfo);
+          ValidatorIntf := nil;
+          if Meta.ValidatorInterfaceType <> nil then
+          begin
+            DIProvider := TDextServices.DefaultProvider;
+            if DIProvider <> nil then
+            begin
+              try
+                ValidatorIntf := DIProvider.GetServiceAsInterface(TServiceType.FromInterface(Meta.ValidatorInterfaceType));
+              except
+              end;
+            end;
+          end;
+          
+          Validator := nil;
+          if (ValidatorIntf <> nil) and Supports(ValidatorIntf, IValidator, Validator) then
+          begin
+            ValRes := Validator.ValidateInstance(TValue.From<TObject>(Entity));
+            try
+              if not ValRes.IsValid then
+                raise EValidationException.Create('Validation failed: ' + ValRes.Errors[0].ErrorMessage);
+            finally
+              ValRes.Free;
+            end;
+          end
+          else
+            TEntityValidator.Validate(Entity, Map);
  
          DbSet := DataSet(Entity.ClassInfo);
          DbSet.PersistUpdate(Entity);

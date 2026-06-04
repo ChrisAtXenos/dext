@@ -18,6 +18,7 @@ Pacotes de instruções focados para escrever código **Dext** (framework modern
 | **dext-testing** | `dext-testing.md` | Testes de unidade, `Mock<T>`, assertions fluentes (`Should`), `[TestFixture]`, testes de snapshot |
 | **dext-collections** | `dext-collections.md` | `IList<T>`, `TCollections`, operações LINQ, semântica de ownership, `IChannel<T>` |
 | **dext-api-features** | `dext-api-features.md` | Middleware, CORS, rate limiting, cache de resposta, health checks, OpenAPI/Swagger, arquivos estáticos, compressão |
+| **dext-validation** | `dext-validation.md` | Validação baseada em atributos, TAbstractValidator<T>, validação fortemente tipada com Prop<T>, registro de padrões, auto-validação no model binding |
 | **dext-background** | `dext-background.md` | Workers em segundo plano (`IHostedService`), configuração (`IConfiguration`, padrão Options), tarefas assíncronas (`TAsyncTask`) |
 | **dext-networking** | `dext-networking.md` | Cliente REST (`TRestClient`), requisições HTTP assíncronas, respostas tipadas, provedores de autenticação, pool de conexões |
 | **dext-realtime** | `dext-realtime.md` | Hubs (`THub`), mensagens em tempo real compatíveis com SignalR, grupos, `IHubContext<T>` |
@@ -106,6 +107,14 @@ As habilidades são carregadas dinamicamente quando o agente precisa delas. O RE
 - Adicionar middleware (CORS, rate limiting, compressão, arquivos estáticos)
 - Configurar a documentação OpenAPI/Swagger
 - Configurar health checks, cache de respostas
+
+**Carregue `dext-validation`** quando:
+
+- Escrever atributos de validação (`[Required]`, `[StringLength]`, `[Range]`, etc.)
+- Criar validadores de model customizados com `TAbstractValidator<T>` e `RuleFor`
+- Mapear validações fortemente tipadas via `Prototype.Entity<T>` e smart properties
+- Registrar padrões de expressões regulares localizados em `TValidationPatterns`
+- Configurar a auto-validação no pipeline de model binding Web
 
 **Carregue `dext-background`** quando:
 

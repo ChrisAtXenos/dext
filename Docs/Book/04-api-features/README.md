@@ -11,6 +11,7 @@ Essential features for building production-ready APIs.
 5. [CORS](cors.md) - Cross-origin resource sharing
 6. [Response Caching](cache.md) - Cache headers & strategies
 7. [Health Checks](health-checks.md) - Monitoring endpoints
+8. [Validation](validation.md) - Dynamic & type-safe request validation
 
 ## Quick Examples
 

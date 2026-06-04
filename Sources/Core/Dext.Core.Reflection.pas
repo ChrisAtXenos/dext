@@ -60,6 +60,10 @@ type
   ///   Resolves whether the type is a Smart Property (Prop, Nullable, Lazy) and identifies the encapsulated inner type.
   /// </summary>
   TTypeMetadata = class
+  private
+    FValidatorInterfaceType: PTypeInfo;
+    FValidatorReady: Integer;
+    function GetValidatorInterfaceType: PTypeInfo;
   public
     /// <summary>Encapsulated base type (e.g., T from Prop of T).</summary>
     InnerType: PTypeInfo;
@@ -86,6 +90,7 @@ type
     constructor Create;
     procedure Initialize(AType: PTypeInfo);
     destructor Destroy; override;
+    property ValidatorInterfaceType: PTypeInfo read GetValidatorInterfaceType;
   private
     FHandlers: IDictionary<string, IPropertyHandler>;
     FSnakeMap: IDictionary<string, IPropertyHandler>;
@@ -335,6 +340,8 @@ constructor TTypeMetadata.Create;
 begin
   inherited Create;
   FLock := TMREWSync.Create;
+  FValidatorReady := 0;
+  FValidatorInterfaceType := nil;
 end;
 
 procedure TTypeMetadata.Initialize(AType: PTypeInfo);
@@ -573,6 +580,55 @@ begin
       end;
     end;
   end;
+
+end;
+
+function TTypeMetadata.GetValidatorInterfaceType: PTypeInfo;
+var
+  LNormName: string;
+  LFullName: string;
+  LType: TRttiType;
+begin
+  if FValidatorReady = 0 then
+  begin
+    FLock.BeginWrite;
+    try
+      if FValidatorReady = 0 then
+      begin
+        FValidatorInterfaceType := nil;
+        if RttiType <> nil then
+        begin
+          // Delphi RTTI exposes generic interfaces with the full type name including
+          // the 'T' prefix (e.g. 'IValidator<TValidatedEntity>').
+          // NormalizedName strips the T prefix (e.g. 'ValidatedEntity').
+          // We match both to be safe.
+          LNormName := NormalizedName;  // 'ValidatedEntity'
+          LFullName := RttiType.Name;   // 'TValidatedEntity'
+
+          for LType in TReflection.FContext.GetTypes do
+          begin
+            // Matching logic: only interfaces that start with 'IValidator'
+            if (LType is TRttiInterfaceType) and LType.Name.StartsWith('IValidator') then
+            begin
+              // Match by full RTTI name ('TValidatedEntity') OR normalized ('ValidatedEntity')
+              if LType.Name.EndsWith('<' + LFullName + '>') or
+                 LType.Name.EndsWith('<' + LNormName + '>') or
+                 LType.Name.EndsWith('.' + LFullName + '>') or
+                 LType.Name.EndsWith('.' + LNormName + '>') then
+              begin
+                FValidatorInterfaceType := LType.Handle;
+                Break;
+              end;
+            end;
+          end;
+        end;
+        TInterlocked.Exchange(FValidatorReady, 1);
+      end;
+    finally
+      FLock.EndWrite;
+    end;
+  end;
+  Result := FValidatorInterfaceType;
 end;
 
 destructor TTypeMetadata.Destroy;

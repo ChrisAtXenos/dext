@@ -116,7 +116,8 @@ uses
   ,Dext.Entity.Attributes
   {$ENDIF}
   ,Dext.Validation
-  ,Dext.Core.Reflection;
+  ,Dext.Core.Reflection
+  ,Dext.DI.Interfaces;
 
 { THandlerInvoker }
 
@@ -163,7 +164,22 @@ begin
   if (AValue.Kind <> tkRecord) and (AValue.Kind <> tkClass) then Exit(True);
   if (AValue.Kind = tkClass) and (AValue.AsObject = nil) then Exit(True);
 
-  ValidationResult := TValidator.Validate(AValue);
+  var Meta := TReflection.GetMetadata(AValue.TypeInfo);
+  var ValidatorIntf: IInterface := nil;
+  if (Meta.ValidatorInterfaceType <> nil) and (FContext.Services <> nil) then
+  begin
+    try
+      ValidatorIntf := FContext.Services.GetServiceAsInterface(TServiceType.FromInterface(Meta.ValidatorInterfaceType));
+    except
+      // DI resolution failed
+    end;
+  end;
+
+  var Validator: IValidator;
+  if (ValidatorIntf <> nil) and Supports(ValidatorIntf, IValidator, Validator) then
+    ValidationResult := Validator.ValidateInstance(AValue)
+  else
+    ValidationResult := TValidator.Validate(AValue);
   try
     if not ValidationResult.IsValid then
     begin

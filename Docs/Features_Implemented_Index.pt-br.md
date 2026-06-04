@@ -63,6 +63,17 @@ O Dext foi desenhado para alavancar recursos modernos da linguagem Object Pascal
   - **Dext UTF-8 (Low-Level Streaming)** — Ferramenta cirúrgica para Big Data. Processamento sequencial zero-allocation de volumes massivos (GBs) com footprint de memória constante.
 - **TUtf8JsonSerializer** (`Dext.Json.Utf8.Serializer`) — Serializador zero-allocation para records. Opera diretamente sobre `TByteSpan` (UTF-8 raw) sem conversão intermediária para `string`. Cache de `TJsonRecordInfo` por `PTypeInfo` para eliminar overhead RTTI em hot-paths. `ToUtf8JSON` no driver `DextJsonDataObjects` para output UTF-8 nativo.
 
+### 1.4b Motor AutoMapper (`Dext.Mapper`)
+- **TMapper** — Fachada estática e registro centralizado para mapeamento objeto a objeto usando RTTI Delphi.
+- **Configuração de Mapeamento Fluente** — Record `TTypeMapConfig<TSource, TDest>` com suporte a mapeamentos customizados via sintaxe fluente:
+  - `ForMember(DestName, MapFunc)` — Define funções de mapeamento customizadas para converter valores da origem para o destino.
+  - `Ignore(DestName)` — Evita a cópia de propriedades específicas.
+- **Mapeamento de Instância** — `TMapper.Map<TSource, TDest>(Source)` instancia e retorna uma nova classe de destino mapeada.
+- **Mapeamento Em-Lugar** — `TMapper.Map<TSource, TDest>(Source, Dest)` mapeia as propriedades da origem sobre uma referência de objeto de destino existente.
+- **Mapeamento de Coleções** — `TMapper.MapList<TSource, TDest>(SourceList)` mapeia listas e coleções genéricas automaticamente.
+- **Mapeamento de Records** — Copia campos e propriedades equivalentes entre classes e records.
+- **Otimização de Valores Padrão** — Parâmetro `AOnlyNonDefault` para mapear apenas valores não-padrão (evitando sobrescrever valores previamente inicializados no destino).
+
 ### 1.5 Configuration System (`Dext.Configuration.Core`)
 - **TDextConfiguration (Fluent Builder)** — `.AddJsonFile(path)`, `.AddYamlFile(path)`, `.AddEnvironmentVariables(prefix)`, `.AddCommandLine`, `.AddInMemoryCollection`.
 - **TConfigurationRoot** — Agregador multi-provider com precedência LIFO (último provider registrado vence). Implementa `IConfiguration`.
@@ -288,12 +299,14 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **SaveChanges** — Persiste todas as mudanças rastreadas em uma transação.
 - **Fluent Connection Setup & Pooling Auto-Detection** — Construtores de conexão fluente (`UsePostgreSQL`, `UseFirebird`, etc.) com sincronização e extração automática de parâmetros via setters de propriedade, eliminando bugs de opções vazias ou pooling desconfigurado.
 - **Suporte a ConnectionDefName (FireDAC)** — Suporte nativo para definições de conexão registradas no FireDAC (`UseConnectionDef`). Resolve dinamicamente o dialeto, driver ID e status de pooling consultando o `FDManager.ConnectionDefs` global do FireDAC.
+- **Suporte a Shadow Properties (Propriedades de Sombra)** — Permite mapear colunas do banco (ex: `TenantId`, `CreatedAt`, `IsDeleted`) que são processadas e persistidas sem precisar declará-las como campos ou propriedades físicas na classe.
 
 ### 4.2 Query Engine (LINQ-like)
 - Query fluída com **Projeção (Select)**, **Paging** (`Skip`/`Take`), **Aggregates** (`Count`, `Sum`, `Max`, `Min`, `Average`).
 - **SQL Cache** — Reaproveitamento de comandos SQL gerados para queries repetidas.
 - **Pessimistic Locking** — `FOR UPDATE` para controle de concorrência.
 - **Multi-Mapping** (estilo Dapper) — Recursive hydration via atributo `[Nested]`.
+- **Integração com Validação Fluente** — Verificação automática de entidades no `SaveChanges` antes da execução das transações físicas no banco de dados.
 
 ### 4.3 Specification Pattern (`Dext.Specifications`)
 - **Fluent Specification Builder** — `Where`, `OrderBy`, `Include`, `Take`, `Skip` para regras de negócio desacopladas e reutilizáveis.
@@ -305,6 +318,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **One-to-One**, **One-to-Many**, **Many-to-Many**.
 - **Lazy Loading** via Proxy Objects (interceptação transparente).
 - **Eager Loading** — `Include`/`ThenInclude` para pré-carregamento de grafos.
+- **Split Queries Loading (Carregamento Dividido)** — Resolução otimizada de coleções aninhadas via consultas SQL adicionais isoladas usando cláusulas `IN` com IDs parametrizados, evitando explosão cartesiana de JOINS.
 
 ### 4.5 Migrations System
 - Evolução Code-First automatizada com snapshots cronológicos do modelo de dados.
@@ -496,10 +510,14 @@ API fluente baseada no padrão `Should(Value)`.
 ## ✅ 9. Dext Validation Engine (`Dext.Validation`)
 
 - **Attribute-Based Validation** — Decoradores RTTI: `[Required]`, `[StringLength(min, max)]`, `[Range(min, max)]`, `[RegularExpression(pattern)]`, `[EmailAddress]`, `[Url]`.
+- **Fluent Validation API** — Classe base de validação fortemente tipada `TAbstractValidator<T>` que implementa `IValidator<T>` como uma alternativa moderna ao FluentValidation do C#.
+- **Fluent Rule Builder** — Record `TValidationRuleBuilder<T>` extremamente eficiente em memória que evita alocações na heap ao construir regras de validação encadeadas (`Required`, `Length`, `Range`, `EmailAddress`, `Matches`, `MatchesPattern`, `Must`, `When`).
+- **Integração com Smart Properties** — Sobrecargas concretas de `RuleFor` para propriedades inteligentes padrão `Prop<T>` (ex: `Prop<string>`, `Prop<Integer>`, `Prop<Boolean>`, etc.) para extrair automaticamente nomes de propriedade a partir de entidades fantasmas de protótipo (`Prototype.Entity<T>`) sem magic strings ou problemas de coerção implícita de tipos.
+- **Pattern Registry** — Registro `TValidationPatterns` mapeando chaves para expressões regulares específicas de localização (ex: telefone e CEP para Pt-BR ou En-US).
 - **TValidator** — Helper não-genérico: `Validate(obj)` retorna `TValidationResult` com lista de `TValidationError` (campo + mensagem).
 - **TValidator\<T\>** — Versão genérica tipada.
 - **Custom Validators** — Herança de `ValidationAttribute` para regras de negócio customizadas.
-- **Integração Web** — Validação automática de models no Model Binding pipeline.
+- **Integração Web** — Resolução automática de validadores registrados (`IValidator<T>`) a partir do container de Injeção de Dependências (DI) dentro do pipeline de model binding Web (`THandlerInvoker.Validate`), gerando exceções `TWebValidationException` que retornam payloads JSON/HTMX de erro estruturados.
 
 ---
 

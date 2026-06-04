@@ -11,6 +11,7 @@ Recursos essenciais para construir APIs prontas para produção.
 5. [CORS](cors.md) - Cross-origin resource sharing
 6. [Response Caching](cache.md) - Cabeçalhos e estratégias de cache
 7. [Health Checks](health-checks.md) - Endpoints de monitoramento
+8. [Validação](validacao.md) - Validação dinâmica e fortemente tipada de requisições
 
 ## Exemplos Rápidos
 

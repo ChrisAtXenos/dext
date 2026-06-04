@@ -414,6 +414,10 @@ type
   TValidator = Dext.Validation.TValidator;
   // IValidator<T> = Dext.Validation.IValidator<T>;
   // TValidator<T> = Dext.Validation.TValidator<T>;
+  // IValidationRule<T> = Dext.Validation.IValidationRule<T>;
+  // TValidationRule<T> = Dext.Validation.TValidationRule<T>;
+  // TValidationRuleBuilder<T> = Dext.Validation.TValidationRuleBuilder<T>;
+  // TAbstractValidator<T> = Dext.Validation.TAbstractValidator<T>;
 
   // Dext.Yaml
   EYamlException = Dext.Yaml.EYamlException;

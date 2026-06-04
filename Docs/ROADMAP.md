@@ -27,6 +27,8 @@ Status | Task | Spec | Description
 ✅ | **Advanced Template Engine** | [S12](Specs/S12-Template-Engine-Advanced.md) | Phases 1-6 complete: layouts, partials, inheritance, AST cache, smart positions, @encoded, and high-performance TDataSet/Streaming iterators.
 ✅ | **Schema Migrations** | [S11](Specs/S11-Migration-Finalization.md) | Attribute-based renaming detection and CLI automation.
 ✅ | **Prop & Nullable Convergence** | [S22](Specs/S22-Prop-Nullable-Convergence.md) | Interoperability between Smart Properties and Nullable values via composition.
+✅ | **DbContext Auto-Hydration** | [S30](Specs/S30-DbContext-AutoHydration.md) | Eliminate generic IDbSet boilerplate getters.
+✅ | **Fluent Validation API** | [S31](Specs/S31-Validation.md) | Strong-typed fluent validation engine integrated with Prop<T> and Web model binding.
 🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Initial visual tool for Migrations inside the IDE.
 🔴 | **Dext Studio (Expert)**| [S15](Specs/S15-Dext-Studio-IDE-Expert.md) | Visual IDE Expert for schema mapping and continuous syncing via YAML.
 🟡 | **Production Middleware** | - | SPA Fallback, Forwarded Headers, and Resilience.
@@ -46,7 +48,10 @@ Status | Task | Spec | Description
 - [ ] **OData Support**: Full OData query support.
 - [ ] **GraphQL**: Native layer for data graphs.
 - [ ] **Microservices Mesh**: Service discovery and native Load Balancing.
-- [ ] **DbContext Auto-Hydration**: [S30](Specs/S30-DbContext-AutoHydration.md) RTTI automatic repository hydration and fluent DbOptions builder records.
+- [ ] **Resilience Pipeline**: [S32](Specs/S32-Resilience-Pipeline.md) Polly-style transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) for generic I/O.
+- [ ] **Persistent Background Jobs**: [S33](Specs/S33-Background-Jobs.md) Out-of-process scheduled/recurring background tasks with database/Redis persistence.
+- [ ] **Dynamic Query Filters**: [S34](Specs/S34-Dynamic-Query-Filters.md) Bypassing global query filters (soft-delete, multi-tenancy) dynamically.
+- [ ] **APM Log Sinks**: [S35](Specs/S35-APM-Log-Sinks.md) Batch-oriented asynchronous logger sinks for Seq, Elasticsearch, and APM platforms.
 
 ---
 
@@ -70,6 +75,8 @@ Status | Tarefa | Spec | Descrição
 ✅ | **Motor de Templates Avançado** | [S12](Specs/S12-Template-Engine-Advanced.md) | Fases 1-6 completas: layouts, partials, herança, cache de AST, posições inteligentes, @encoded e iteradores TDataSet/Streaming de alta performance.
 ✅ | **Migrations de Schema** | [S11](Specs/S11-Migration-Finalization.md) | Detecção de renomeação por atributos e automação CLI.
 ✅ | **Convergência Prop/Nullable** | [S22](Specs/S22-Prop-Nullable-Convergence.md) | Interoperabilidade entre Smart Properties e valores Nullable via composição.
+✅ | **Auto-Hidratação de DbContext** | [S30](Specs/S30-DbContext-AutoHydration.md) | Eliminar boilerplate getters de IDbSet genéricos.
+✅ | **API de Validação Fluent** | [S31](Specs/S31-Validation.md) | Motor de validação fluente fortemente tipado com suporte a Prop<T> e model binding Web.
 🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Ferramenta visual inicial para Migrations na IDE.
 🔴 | **Dext Studio (Expert)**| [S15](Specs/S15-Dext-Studio-IDE-Expert.md) | Expert visual na IDE para mapeamento de schema e sync contínuo via YAML.
 🟡 | **Middleware Pack** | - | SPA Fallback, Forwarded Headers e Resiliência.
@@ -89,7 +96,10 @@ Status | Tarefa | Spec | Descrição
 - [ ] **Suporte a OData**: Suporte completo a queries OData.
 - [ ] **GraphQL**: Camada nativa para exposição de grafos de dados.
 - [ ] **Microservices Mesh**: Service discovery e Load Balancing nativo.
-- [ ] **Auto-Hidratação de DbContext**: [S30](Specs/S30-DbContext-AutoHydration.md) Hidratação RTTI automática de repositórios e records fluent builders de DbOptions.
+- [ ] **Resilience Pipeline (Resiliência)**: [S32](Specs/S32-Resilience-Pipeline.md) Tratamento de falhas estilo Polly (Retry, Circuit Breaker, Fallback, Timeout) genérico para I/O.
+- [ ] **Persistent Background Jobs**: [S33](Specs/S33-Background-Jobs.md) Processamento de tarefas em background agendadas/recorrentes fora do processo com persistência em BD/Redis.
+- [ ] **Filtros Dinâmicos de Query**: [S34](Specs/S34-Dynamic-Query-Filters.md) Bypassar filtros de query globais (soft-delete, multi-tenancy) dinamicamente.
+- [ ] **Sinks de Log APM (Structured)**: [S35](Specs/S35-APM-Log-Sinks.md) Envio assíncrono em lotes para APMs externos (Seq, Elasticsearch, Datadog).
 
 - HTTP Server nativo IOCP, EPOLL, Kqueue
 - UI Nativo com Skia

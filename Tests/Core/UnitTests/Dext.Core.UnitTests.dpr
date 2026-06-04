@@ -1,4 +1,4 @@
-program Dext.Core.UnitTests;
+﻿program Dext.Core.UnitTests;
 
 {$IFNDEF TESTINSIGHT}
   {$APPTYPE CONSOLE}

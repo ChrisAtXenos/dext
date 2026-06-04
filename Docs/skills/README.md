@@ -18,6 +18,7 @@ Focused instruction packages for writing correct, idiomatic **Dext** (Delphi mod
 | **dext-testing** | `dext-testing.md` | Unit tests, `Mock<T>`, fluent assertions (`Should`), `[TestFixture]`, snapshot testing |
 | **dext-collections** | `dext-collections.md` | `IList<T>`, `TCollections`, LINQ operations, ownership semantics, `IChannel<T>` |
 | **dext-api-features** | `dext-api-features.md` | Middleware, CORS, rate limiting, response caching, health checks, OpenAPI/Swagger, static files, compression |
+| **dext-validation** | `dext-validation.md` | Attribute-based validation, TAbstractValidator<T>, strongly-typed smart property validation, regex patterns, model binding auto-validation |
 | **dext-background** | `dext-background.md` | Background workers (`IHostedService`), configuration (`IConfiguration`, Options pattern), async tasks (`TAsyncTask`) |
 | **dext-networking** | `dext-networking.md` | REST client (`TRestClient`), async HTTP requests, typed responses, auth providers, connection pooling |
 | **dext-realtime** | `dext-realtime.md` | Hubs (`THub`), SignalR-compatible real-time messaging, groups, `IHubContext<T>` |
@@ -106,6 +107,14 @@ Skills are loaded dynamically when the agent needs them. The README is always lo
 - Adding middleware (CORS, rate limiting, compression, static files)
 - Configuring OpenAPI/Swagger documentation
 - Setting up health checks, response caching
+
+**Load `dext-validation`** when:
+
+- Writing validation attributes (`[Required]`, `[StringLength]`, `[Range]`, etc.)
+- Creating custom model validators with `TAbstractValidator<T>` and `RuleFor`
+- Mapping type-safe validations via `Prototype.Entity<T>` smart properties
+- Registering locale patterns with `TValidationPatterns`
+- Setting up auto-validation in the web model binding pipeline
 
 **Load `dext-background`** when:
 
