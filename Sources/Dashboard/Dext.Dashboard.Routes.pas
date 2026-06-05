@@ -1,4 +1,4 @@
-unit Dext.Dashboard.Routes;
+﻿unit Dext.Dashboard.Routes;
 
 interface
 
@@ -49,7 +49,6 @@ type
     constructor Create(IntervalMs: Integer = 30000);
   end;
 
-
 type
   /// <summary>
   ///   Configures routes and endpoints for the Dext Dashboard.
@@ -81,10 +80,11 @@ var
 implementation
 
 uses
-  Dext.Web.Indy, // Access to TDextIndyHttpContext
   IdContext,     // Access to TIdContext
   IdGlobal,      // Access to ToBytes/IndyTextEncoding_UTF8
-  Dext.Sidecar.TestCompat;
+  Dext.Sidecar.TestCompat,
+  Dext.Utils,
+  Dext.Web.Indy; // Access to TDextIndyHttpContext
 
 var
   FSSEClients: IList<IHttpContext>;
@@ -472,17 +472,17 @@ begin
   App.MapGet('/api/workspace/scan',
     procedure(Ctx: IHttpContext)
     var
-       ScanPath: string;
-       Projects, Tests, HttpFiles, Docs: IDextJsonArray;
-       Files: TArray<string>;
-       F: string;
-       FinalObj: IDextJsonObject;
-       Res: IResult;
-       TestFiles: TArray<string>;
-       Name: string;
-       Found: Boolean;
-       I: Integer;
-       TestObj: IDextJsonObject;
+      ScanPath: string;
+      Projects, Tests, HttpFiles, Docs: IDextJsonArray;
+      Files: TArray<string>;
+      F: string;
+      FinalObj: IDextJsonObject;
+      Res: IResult;
+      TestFiles: TArray<string>;
+      Name: string;
+      Found: Boolean;
+      I: Integer;
+      TestObj: IDextJsonObject;
     begin
        if not Ctx.Request.Query.TryGetValue('path', ScanPath) then
          ScanPath := '';
