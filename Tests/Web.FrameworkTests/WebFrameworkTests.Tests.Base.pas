@@ -1,4 +1,4 @@
-﻿unit WebFrameworkTests.Tests.Base;
+unit WebFrameworkTests.Tests.Base;
 
 interface
 
@@ -51,6 +51,8 @@ begin
   inherited;
   FPort := 0; // Dynamic port support (S08)
   FClient := THttpClient.Create;
+  FClient.ConnectionTimeout := 1000;
+  FClient.ResponseTimeout := 1000;
   Setup;
 end;
 
@@ -71,7 +73,7 @@ var
 begin
   WriteLn('🔧 Setting up test...');
   Builder := TDextWebHost.CreateDefaultBuilder
-    .UseUrls('http://localhost:' + FPort.ToString);
+    .UseUrls('http://127.0.0.1:' + FPort.ToString);
     
   ConfigureHost(Builder);
   
@@ -100,10 +102,15 @@ begin
   FServerThread.FreeOnTerminate := False;
   FServerThread.Start;
   
-  // Wait for the thread to reach HostRef.Start and for the server to bind
-  // Since Start is non-blocking but synchronous in activation:
-  TThread.Sleep(50); 
-  if (FHost <> nil) and (FPort = 0) then
+  // Wait for the server port to be assigned (in case of dynamic port 0)
+  Retries := 0;
+  while (FHost <> nil) and (FHost.Port = 0) and (Retries < 50) and (FServerError = '') do
+  begin
+    TThread.Sleep(100);
+    Inc(Retries);
+  end;
+
+  if (FHost <> nil) then
     FPort := FHost.Port;
 
   // Robust wait for server to start
@@ -157,7 +164,7 @@ end;
 
 function TBaseTest.GetBaseUrl: string;
 begin
-  Result := Format('http://localhost:%d', [FPort]);
+  Result := Format('http://127.0.0.1:%d', [FPort]);
 end;
 
 procedure TBaseTest.Log(const Msg: string);

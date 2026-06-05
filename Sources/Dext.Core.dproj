@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{42BED2E0-CA2D-4F52-BF35-9F9008B226A5}</ProjectGuid>
         <MainSource>Dext.Core.dpk</MainSource>
@@ -212,6 +212,10 @@ $(PreBuildEvent)]]></PreBuildEvent>
         <DCCReference Include="Core\Base\Dext.Logging.Tracing.pas"/>
         <DCCReference Include="Core\Dext.Threading.Sync.pas"/>
         <DCCReference Include="Core\Base\Dext.Telemetry.Metrics.pas"/>
+        <DCCReference Include="Core\Dext.BackgroundJobs.Intf.pas"/>
+        <DCCReference Include="Core\Dext.BackgroundJobs.Storage.InMemory.pas"/>
+        <DCCReference Include="Core\Dext.BackgroundJobs.Config.pas"/>
+        <DCCReference Include="Core\Dext.BackgroundJobs.Server.pas"/>
         <None Include="Dext.inc"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

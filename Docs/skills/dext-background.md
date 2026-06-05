@@ -181,7 +181,61 @@ export Database__ConnectionString=postgresql://...
 
 Environment variables take precedence over file config when added last in the builder chain.
 
-> **Never commit secrets to source control.** Use environment variables for passwords and API keys in production.
+---
+
+## Persistent Background Jobs
+
+Persistent Background Jobs allow you to enqueue out-of-process, scheduled, or delayed tasks that survive application crashes and restarts. The engine automatically serializes the job parameters and saves them to a persistent datastore (such as SQLite or In-Memory).
+
+> [!IMPORTANT]
+> The SQLite storage provider (`TSqliteJobStorage`) resides in the **`Dext.EF.Core`** package to keep **`Dext.Core`** clean of database dependencies (like FireDAC). If you configure your application to use the `"SQLite"` provider, ensure your application references the `Dext.EF.Core` package.
+
+### Configuration in `appsettings.json`
+```json
+{
+  "Dext": {
+    "BackgroundJobs": {
+      "Storage": {
+        "Provider": "SQLite", // "SQLite" or "InMemory"
+        "ConnectionString": "DataSource=dext_jobs.db"
+      },
+      "Server": {
+        "WorkerCount": 4,
+        "PollIntervalInSeconds": 5
+      }
+    }
+  }
+}
+```
+
+### Registration
+```pascal
+uses
+  Dext.DI.Interfaces,
+  Dext.BackgroundJobs.Config;
+
+procedure ConfigureServices(const Services: IServiceCollection);
+begin
+  Services.AddTransient<TEmailService>;
+  Services.AddBackgroundJobs; // Register background jobs storage & server client
+end;
+```
+
+### Usage
+```pascal
+uses
+  System.TimeSpan,
+  Dext.BackgroundJobs.Intf;
+
+// 1. Initialize once at startup (after resolving IJobClient)
+TDextJobs.Initialize(ServiceProvider.GetRequiredService<IJobClient>);
+
+// 2. Enqueue immediately (Fire-and-Forget)
+var JobId1 := TDextJobs.Enqueue<TEmailService>('SendWelcomeEmail', ['user@example.com', 123]);
+
+// 3. Schedule with delay
+var JobId2 := TDextJobs.Schedule<TEmailService>('SendWelcomeEmail', ['user@example.com', 123], TTimeSpan.FromHours(1));
+```
 
 ---
 

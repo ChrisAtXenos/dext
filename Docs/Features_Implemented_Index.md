@@ -164,6 +164,14 @@ Dext was designed to leverage modern Object Pascal features while maintaining a 
 - **Timeout Policy** (`TTimeoutPolicy`) — Throws `ETimeoutException` when operations exceed set duration limits using cooperative task cancellation and asynchronous futures.
 - **RestClient Integration** — `TRestClient` natively integrates with the resilience engine, enabling backwards-compatible `.Retry()` and `.Timeout()` methods, plus custom pipeline configuration.
 
+### 1.18 Persistent Background Jobs (`Dext.BackgroundJobs.*`)
+- **`IJobStorage`** — Decoupled storage abstraction supporting multiple providers.
+- **`IJobClient` / `TDextJobs`** — Thread-safe enqueueing client and static utility facade (`TDextJobs.Enqueue<T>`, `TDextJobs.Schedule<T>`).
+- **`TInMemoryJobStorage`** — Memory-only job storage provider designed for rapid local testing.
+- **`TSqliteJobStorage`** — SQLite database job persistence provider using FireDAC, supporting automated schema creation and transactional safety.
+- **`TJobServer` / `TBackgroundJobsService`** — Robust multi-threaded background worker engine running as an `IHostedService` (`TBackgroundService`), polling, locking, executing, and monitoring jobs.
+- **`TJobSerializer`** — RTTI-based method parameter serializer using Dext JSON DOM to serialize and deserialize class method parameters (`TValue` arrays).
+
 ---
 
 ## 📚 2. Dext Collections Library (`Sources\Core`)

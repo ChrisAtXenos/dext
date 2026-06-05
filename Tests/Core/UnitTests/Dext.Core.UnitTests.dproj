@@ -150,6 +150,8 @@
         <DCCReference Include="Dext.Json.RecordProperties.Tests.pas"/>
         <DCCReference Include="Dext.Validation.Fluent.Tests.pas"/>
         <DCCReference Include="Dext.Resilience.Tests.pas"/>
+        <DCCReference Include="Dext.BackgroundJobs.Tests.pas"/>
+        <DCCReference Include="..\..\..\Sources\Data\Dext.BackgroundJobs.Storage.Sqlite.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

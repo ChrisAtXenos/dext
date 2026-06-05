@@ -13,6 +13,7 @@ Deep dives into infrastructure and advanced patterns.
 7. [Diagnostics & Debugging](diagnostics-debugging.md) - Zero-allocation stack traces and async symbols
 8. [Serialization & Globalization](serialization-globalization.md) - Handling locales and JSON formats
 9. [Resilience Pipeline](resilience.md) - Polly-style fault handling (Retry, Circuit Breaker, Fallback, Timeout)
+10. [Persistent Background Jobs](background-jobs.md) - Out-of-process scheduled/delayed tasks
 
 ## Quick Examples
 

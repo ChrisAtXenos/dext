@@ -1,6 +1,8 @@
 # S33 — Persistent Background Jobs (Hangfire-style)
 
-This architectural specification details the design of a persistent background job processor for Dext, enabling out-of-process, resilient asynchronous task execution (delayed, scheduled, recurring) with automatic persistence.
+**Status:** ✅ Finalized
+**Phase:** Wave 2
+**Implementation:** Implemented in `Dext.Core` (`Dext.BackgroundJobs.Intf/Config/Server/InMemory`) and `Dext.EF.Core` (`Dext.BackgroundJobs.Storage.Sqlite`)
 
 ---
 
@@ -12,16 +14,21 @@ A **Persistent Background Job** engine solves this by serializing job payloads (
 
 ---
 
-## 2. Architectural Design
+## 2. Architectural Design & Storage Adaptability
 
 The background jobs ecosystem relies on three main components:
 
 ```
-[Web/Client App] ➔ Enqueue ➔ [Database / Redis] ➔ Poll ➔ [Job Worker Pool]
+[Web/Client App] ➔ Enqueue ➔ [Job Storage (SQLite/Postgres/Redis)] ➔ Poll ➔ [Job Worker Pool]
 ```
 
 ### 1. The Job Storage (`IJobStorage`)
-An abstraction for the persistent state.
+An abstraction for the persistent state, allowing modular implementations.
+* **Provedores Suportados**:
+  * `TSqliteJobStorage`: Default local engine using SQLite (no separate services required, ideal for single-instance, lightweight setups).
+  * `TPostgreSqlJobStorage`: For robust SQL-based environments requiring concurrency and scalability.
+  * `TInMemoryJobStorage`: Memory-only fallback, useful for local testing.
+  * `TRedisJobStorage`: Deferred provider, to be implemented when Dext's modern Redis client is prioritized.
 * **Metadata stored**: Job Type, Method Name, Parameter Payloads (JSON), State (Enqueued, Processing, Succeeded, Failed), Attempt Count, Retry Log, Queue Name.
 
 ### 2. The Job Client (`IJobClient`)
@@ -43,11 +50,34 @@ An active background thread pool running inside `IHostedService` that polls the 
 
 ---
 
-## 3. Worker Concurrency & Lock Management
+## 3. Configuration & Concurrency Management
 
-* **Distributed Locks**: To prevent duplicate runs in multi-instance environments, the server uses database-level pessimistic locks (e.g. `SELECT FOR UPDATE` or Redis distributed locks) when picking jobs.
-* **Greedy Invocation**: Jobs are resolved using the IoC container. Dependencies are scoped per job invocation to ensure clean context lifecycles.
-* **Automatic Retry**: If a job fails, the server schedules a retry with exponential backoff.
+All parameters are configurable via application settings files (e.g. `appsettings.json` or `applicationsettings.yml`).
+
+### Configuration Schema Example
+```json
+{
+  "Dext": {
+    "BackgroundJobs": {
+      "Storage": {
+        "Provider": "SQLite", // SQLite, PostgreSQL, Redis, InMemory
+        "ConnectionString": "DataSource=dext_jobs.db"
+      },
+      "Server": {
+        "DistributedLocksEnabled": false, // Set to true only in multi-node scale-out setups
+        "WorkerCount": 4,
+        "PollIntervalInSeconds": 5
+      }
+    }
+  }
+}
+```
+
+### Concurrency Modes
+* **Simple Non-Distributed Mode (`DistributedLocksEnabled: false`)**: 
+  Designed for single-instance applications. Concurrency is managed locally using lightweight thread coordination (e.g. `TCriticalSection` or `TMonitor`) and local database transactions to claim jobs.
+* **Distributed Mode (`DistributedLocksEnabled: true`)**: 
+  Designed for scale-out environments. The server uses database-level pessimistic locks (e.g. `SELECT FOR UPDATE SKIP LOCKED` in PostgreSQL) or distributed locks (e.g. Redlock in Redis) to prevent duplicate runs across instances.
 
 ---
 

@@ -11,6 +11,7 @@ Mergulhos profundos em infraestrutura e padrões avançados.
 5. [Diagnósticos e Debugging](diagnosticos-debugging.md) - Stack traces com alocação zero e símbolos assíncronos
 6. [Serialização e Globalização](serializacao-globalizacao.md) - Lidar com locales e formatos JSON
 7. [Pipeline de Resiliência](resiliencia.md) - Tratamento de falhas estilo Polly (Retry, Circuit Breaker, Fallback, Timeout)
+8. [Persistent Background Jobs](background-jobs.md) - Tarefas agendadas e atrasadas fora do processo principal
 
 ## Exemplos Rápidos
 

@@ -21,7 +21,9 @@ uses
   Dext.Json.Regression.Tests in 'Dext.Json.Regression.Tests.pas',
   Dext.Json.RecordProperties.Tests in 'Dext.Json.RecordProperties.Tests.pas',
   Dext.Resilience.Tests in 'Dext.Resilience.Tests.pas',
-  Dext.Validation.Fluent.Tests in 'Dext.Validation.Fluent.Tests.pas';
+  Dext.Validation.Fluent.Tests in 'Dext.Validation.Fluent.Tests.pas',
+  Dext.BackgroundJobs.Tests in 'Dext.BackgroundJobs.Tests.pas',
+  Dext.BackgroundJobs.Storage.Sqlite in '..\..\..\Sources\Data\Dext.BackgroundJobs.Storage.Sqlite.pas';
 
 begin
   {$IFDEF TESTINSIGHT}
@@ -52,7 +54,8 @@ begin
         TResilienceTests,
         TTelemetryTests,
         TUtf8SerializerCurrencyTests,
-        TValidationFluentTests
+        TValidationFluentTests,
+        TBackgroundJobsTests
       ]));
   except
     on E: Exception do

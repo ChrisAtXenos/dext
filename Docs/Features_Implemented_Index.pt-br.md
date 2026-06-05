@@ -164,6 +164,14 @@ O Dext foi desenhado para alavancar recursos modernos da linguagem Object Pascal
 - **Timeout Policy** (`TTimeoutPolicy`) — Lança `ETimeoutException` caso operações excedam a duração máxima permitida através de cancelamento cooperativo e futures assíncronas.
 - **RestClient Integration** — O `TRestClient` integra-se nativamente com o motor de resiliência, permitindo o uso retrocompatível dos métodos `.Retry()` e `.Timeout()`, além de configuração de pipelines customizados.
 
+### 1.18 Persistent Background Jobs (`Dext.BackgroundJobs.*`)
+- **`IJobStorage`** — Abstração de armazenamento desacoplada com suporte a múltiplos provedores.
+- **`IJobClient` / `TDextJobs`** — Cliente thread-safe para enfileiramento e fachada utilitária estática (`TDextJobs.Enqueue<T>`, `TDextJobs.Schedule<T>`).
+- **`TInMemoryJobStorage`** — Provedor de persistência em memória projetado para testes locais rápidos.
+- **`TSqliteJobStorage`** — Provedor de persistência baseado no SQLite via FireDAC, com criação automática de tabelas e transações ACID seguras.
+- **`TJobServer` / `TBackgroundJobsService`** — Motor de processamento multi-threaded em background executado como um `IHostedService` (`TBackgroundService`), realizando polling, travamento, execução e monitoramento de jobs.
+- **`TJobSerializer`** — Serializador e deserializador de argumentos de métodos (`TValue` arrays) via RTTI utilizando o DOM JSON do Dext.
+
 ---
 
 ## 📚 2. Dext Collections Library (`Sources\Core`)
@@ -681,4 +689,4 @@ O framework inclui uma suíte de observabilidade premium, de alta performance e 
 
 ---
 
-*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: May 28, 2026).*
+*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: Jun 05, 2026).*

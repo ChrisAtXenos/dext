@@ -1,0 +1,258 @@
+{***************************************************************************}
+{                                                                           }
+{           Dext Framework                                                  }
+{                                                                           }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0 (the "License"); }
+{           you may not use this file except in compliance with the License.}
+{           You may obtain a copy of the License at                         }
+{                                                                           }
+{               http://www.apache.org/licenses/LICENSE-2.0                  }
+{                                                                           }
+{           Unless required by applicable law or agreed to in writing,      }
+{           software distributed under the License is distributed on an     }
+{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
+{           either express or implied. See the License for the specific     }
+{           language governing permissions and limitations under the        }
+{           License.                                                        }
+{                                                                           }
+{***************************************************************************}
+
+unit Dext.BackgroundJobs.Config;
+
+interface
+
+uses
+  System.SysUtils,
+  System.Rtti,
+  System.JSON,
+  System.TimeSpan,
+  System.Generics.Collections,
+  Dext.DI.Interfaces,
+  Dext.BackgroundJobs.Intf;
+
+type
+  TJobStorageFactory = reference to function(const AConnectionString: string): TObject;
+
+  TJobStorageRegistry = class
+  private
+    class var FFactories: TDictionary<string, TJobStorageFactory>;
+  public
+    class constructor Create;
+    class destructor Destroy;
+    class procedure RegisterProvider(const AName: string; const AFactory: TJobStorageFactory);
+    class function CreateStorage(const AName: string; const AConnectionString: string): TObject;
+  end;
+
+  TBackgroundJobsOptions = class
+  public
+    Provider: string; // SQLite, InMemory
+    ConnectionString: string; // Database path for SQLite
+    WorkerCount: Integer;
+    PollIntervalInSeconds: Integer;
+    constructor Create;
+  end;
+
+  /// <summary>
+  ///   Converts TValue arrays to JSON arrays and vice versa.
+  /// </summary>
+  TJobParamSerializer = class
+  public
+    class function Serialize(const AParams: array of TValue): string;
+    class function Deserialize(const AJson: string): TArray<TValue>;
+  end;
+
+  TJobClient = class(TInterfacedObject, IJobClient)
+  private
+    FStorage: IJobStorage;
+  public
+    constructor Create(const AStorage: IJobStorage);
+    function Enqueue(const AJobType, AMethodName: string; const AParams: array of TValue; const AQueue: string = 'default'): string;
+    function Schedule(const AJobType, AMethodName: string; const AParams: array of TValue; const ADelay: TTimeSpan; const AQueue: string = 'default'): string;
+  end;
+
+  TDextBackgroundJobsServiceExtensions = class
+  public
+    class procedure AddBackgroundJobs(const Services: IServiceCollection; const AOptions: TBackgroundJobsOptions);
+  end;
+
+implementation
+
+uses
+  System.Generics.Defaults;
+
+class constructor TJobStorageRegistry.Create;
+begin
+end;
+
+class destructor TJobStorageRegistry.Destroy;
+begin
+  FFactories.Free;
+end;
+
+class procedure TJobStorageRegistry.RegisterProvider(const AName: string; const AFactory: TJobStorageFactory);
+begin
+  if not Assigned(FFactories) then
+  begin
+    FFactories := TDictionary<string, TJobStorageFactory>.Create;
+  end;
+  FFactories.AddOrSetValue(UpperCase(AName), AFactory);
+end;
+
+class function TJobStorageRegistry.CreateStorage(const AName: string; const AConnectionString: string): TObject;
+var
+  Factory: TJobStorageFactory;
+begin
+  if not Assigned(FFactories) or not FFactories.TryGetValue(UpperCase(AName), Factory) then
+    raise Exception.CreateFmt('Background Job Storage provider "%s" is not registered. Make sure the package containing it is loaded.', [AName]);
+  Result := Factory(AConnectionString);
+end;
+
+{ TBackgroundJobsOptions }
+
+constructor TBackgroundJobsOptions.Create;
+begin
+  inherited Create;
+  Provider := 'InMemory';
+  ConnectionString := '';
+  WorkerCount := 4;
+  PollIntervalInSeconds := 5;
+end;
+
+{ TJobParamSerializer }
+
+class function TJobParamSerializer.Serialize(const AParams: array of TValue): string;
+var
+  JArr: TJSONArray;
+  JObj: TJSONObject;
+  Val: TValue;
+begin
+  JArr := TJSONArray.Create;
+  try
+    for Val in AParams do
+    begin
+      JObj := TJSONObject.Create;
+      JObj.AddPair('Type', string(Val.TypeInfo.Name));
+      
+      case Val.Kind of
+        tkInteger, tkInt64:
+          JObj.AddPair('Value', TJSONNumber.Create(Val.AsInteger));
+        tkFloat:
+          JObj.AddPair('Value', TJSONNumber.Create(Val.AsExtended));
+        tkEnumeration:
+          if Val.TypeInfo = TypeInfo(Boolean) then
+            JObj.AddPair('Value', TJSONBool.Create(Val.AsBoolean))
+          else
+            JObj.AddPair('Value', TJSONNumber.Create(Val.AsOrdinal));
+        else
+          JObj.AddPair('Value', Val.AsString);
+      end;
+      
+      JArr.AddElement(JObj);
+    end;
+    Result := JArr.ToJSON;
+  finally
+    JArr.Free;
+  end;
+end;
+
+class function TJobParamSerializer.Deserialize(const AJson: string): TArray<TValue>;
+var
+  JArr: TJSONArray;
+  JObj: TJSONObject;
+  JVal: TJSONValue;
+  I: Integer;
+  TypeName: string;
+  ValObj: TJSONValue;
+begin
+  if AJson = '' then
+    Exit(nil);
+    
+  JVal := TJSONObject.ParseJSONValue(AJson);
+  if not Assigned(JVal) or (not (JVal is TJSONArray)) then
+  begin
+    JVal.Free;
+    Exit(nil);
+  end;
+  
+  JArr := JVal as TJSONArray;
+  try
+    SetLength(Result, JArr.Count);
+    for I := 0 to JArr.Count - 1 do
+    begin
+      JObj := JArr.Items[I] as TJSONObject;
+      TypeName := JObj.GetValue('Type').Value;
+      ValObj := JObj.GetValue('Value');
+      
+      if TypeName = 'Boolean' then
+        Result[I] := TValue.From<Boolean>((ValObj as TJSONBool).AsBoolean)
+      else if TypeName = 'Integer' then
+        Result[I] := TValue.From<Integer>((ValObj as TJSONNumber).AsInt64)
+      else if TypeName = 'Int64' then
+        Result[I] := TValue.From<Int64>((ValObj as TJSONNumber).AsInt64)
+      else if (TypeName = 'Double') or (TypeName = 'Extended') or (TypeName = 'Single') then
+        Result[I] := TValue.From<Double>((ValObj as TJSONNumber).AsDouble)
+      else
+        Result[I] := TValue.From<string>(ValObj.Value);
+    end;
+  finally
+    JArr.Free;
+  end;
+end;
+
+{ TJobClient }
+
+constructor TJobClient.Create(const AStorage: IJobStorage);
+begin
+  inherited Create;
+  FStorage := AStorage;
+end;
+
+// Enqueue
+function TJobClient.Enqueue(const AJobType, AMethodName: string; const AParams: array of TValue; const AQueue: string): string;
+begin
+  Result := FStorage.Enqueue(AJobType, AMethodName, TJobParamSerializer.Serialize(AParams), AQueue);
+end;
+
+// Schedule
+function TJobClient.Schedule(const AJobType, AMethodName: string; const AParams: array of TValue; const ADelay: TTimeSpan; const AQueue: string): string;
+begin
+  Result := FStorage.Schedule(AJobType, AMethodName, TJobParamSerializer.Serialize(AParams), AQueue, Now + ADelay.TotalDays);
+end;
+
+{ TDextBackgroundJobsServiceExtensions }
+
+class procedure TDextBackgroundJobsServiceExtensions.AddBackgroundJobs(
+  const Services: IServiceCollection; const AOptions: TBackgroundJobsOptions);
+begin
+  // Register options instance
+  Services.AddSingleton(TServiceType.FromClass(TBackgroundJobsOptions), AOptions);
+
+  // Register Storage dynamically resolved from registry
+  Services.AddSingleton(
+    TServiceType.FromInterface(TypeInfo(IJobStorage)),
+    TClass(nil),
+    function(Provider: IServiceProvider): TObject
+    begin
+      Result := TJobStorageRegistry.CreateStorage(AOptions.Provider, AOptions.ConnectionString);
+    end
+  );
+
+  // Register Client
+  Services.AddSingleton(
+    TServiceType.FromInterface(TypeInfo(IJobClient)),
+    TJobClient,
+    function(Provider: IServiceProvider): TObject
+    var
+      Storage: IJobStorage;
+      Intf: IInterface;
+    begin
+      Intf := Provider.GetServiceAsInterface(TypeInfo(IJobStorage));
+      Supports(Intf, IJobStorage, Storage);
+      Result := TJobClient.Create(Storage);
+    end
+  );
+end;
+
+end.
