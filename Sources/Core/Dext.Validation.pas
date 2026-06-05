@@ -35,7 +35,13 @@ uses
   Dext.Collections.Dict,
   Dext.Core.Reflection,
   System.RegularExpressions,
-  Dext.Core.SmartTypes;
+  Dext.Core.SmartTypes,
+  Dext.Specifications.Interfaces,
+  Dext.Specifications.Evaluator,
+  Dext.Specifications.Types;
+
+var
+  PrototypeFactory: TFunc<PTypeInfo, TObject> = nil;
 
 type
   /// <summary>
@@ -56,6 +62,7 @@ type
     
     procedure AddError(const AFieldName, AMessage: string);
     function GetErrors: TArray<TValidationError>;
+    function ErrorMessage(const ADelimiter: string = sLineBreak): string;
     
     property IsValid: Boolean read GetIsValid;
     property Errors: TArray<TValidationError> read GetErrors;
@@ -191,15 +198,23 @@ type
     function Must(const APredicate: TFunc<TValue, Boolean>): TValidationRuleBuilder<T>; overload;
     function Must(const APredicate: TFunc<T, TValue, Boolean>): TValidationRuleBuilder<T>; overload;
     function WithMessage(const AMessage: string): TValidationRuleBuilder<T>;
-    function When(const ACondition: TFunc<T, Boolean>): TValidationRuleBuilder<T>;
+    function When(const ACondition: TFunc<T, Boolean>): TValidationRuleBuilder<T>; overload;
+    function When(const ACondition: BooleanExpression): TValidationRuleBuilder<T>; overload;
   end;
 
   TAbstractValidator<T: class> = class(TInterfacedObject, IValidator<T>, IValidator)
   private
     FRules: IList<IValidationRule<T>>;
+    FModel: T;
+    function GetModel: T;
   protected
+    property Model: T read GetModel;
+    property M: T read GetModel;
+
     function RuleFor(const APropName: string): TValidationRuleBuilder<T>; overload;
     function RuleFor(const APropName: string; const ASelector: TFunc<T, TValue>): TValidationRuleBuilder<T>; overload;
+    function RuleFor(const APropName: string; const AExpression: BooleanExpression): TValidationRuleBuilder<T>; overload;
+    function RuleFor(const AExpression: BooleanExpression): TValidationRuleBuilder<T>; overload;
     function RuleFor(const AProperty: Prop<string>): TValidationRuleBuilder<T>; overload;
     function RuleFor(const AProperty: Prop<Integer>): TValidationRuleBuilder<T>; overload;
     function RuleFor(const AProperty: Prop<Int64>): TValidationRuleBuilder<T>; overload;
@@ -280,6 +295,19 @@ end;
 function TValidationResult.GetIsValid: Boolean;
 begin
   Result := FErrors.Count = 0;
+end;
+
+function TValidationResult.ErrorMessage(const ADelimiter: string): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to FErrors.Count - 1 do
+  begin
+    if I > 0 then
+      Result := Result + ADelimiter;
+    Result := Result + FErrors[I].ErrorMessage;
+  end;
 end;
 
 { RequiredAttribute }
@@ -637,17 +665,62 @@ begin
   Result := Self;
 end;
 
+function TValidationRuleBuilder<T>.When(const ACondition: BooleanExpression): TValidationRuleBuilder<T>;
+var
+  Expr: IExpression;
+  LRuntimeVal: Boolean;
+begin
+  Expr := ACondition.Expression;
+  LRuntimeVal := ACondition.RuntimeValue;
+  FRule.FCondition := function(AModel: T): Boolean
+    begin
+      if Expr <> nil then
+        Result := TExpressionEvaluator.Evaluate(Expr, AModel)
+      else
+        Result := LRuntimeVal;
+    end;
+  Result := Self;
+end;
+
 { TAbstractValidator<T> }
+
+function TAbstractValidator<T>.GetModel: T;
+var
+  Obj: TObject;
+begin
+  if FModel = nil then
+  begin
+    if not Assigned(PrototypeFactory) then
+      raise Exception.Create('Entity Prototype Factory is not registered. Make sure Dext.Entity package is loaded.');
+
+    try
+      Obj := PrototypeFactory(TypeInfo(T));
+      FModel := T(Pointer(@Obj)^);
+    except
+      on E: Exception do
+      begin
+        raise Exception.CreateFmt(
+          'Failed to retrieve type-safe validation Model helper for "%s". ' +
+          'Details: %s. ' +
+          'If this class does not use Smart Properties, please use the string-based/anonymous method RuleFor overloads.',
+          [TClass(T).ClassName, E.Message]);
+      end;
+    end;
+  end;
+  Result := FModel;
+end;
 
 constructor TAbstractValidator<T>.Create;
 begin
   inherited Create;
   FRules := TCollections.CreateList<IValidationRule<T>>;
+  FModel := nil;
 end;
 
 destructor TAbstractValidator<T>.Destroy;
 begin
   FRules := nil;
+  FModel := nil;
   inherited;
 end;
 
@@ -683,6 +756,49 @@ begin
   Rule := TValidationRule<T>.Create(APropName, ASelector);
   FRules.Add(Rule);
   Result := TValidationRuleBuilder<T>.Create(Rule);
+end;
+
+function TAbstractValidator<T>.RuleFor(const APropName: string; const AExpression: BooleanExpression): TValidationRuleBuilder<T>;
+var
+  Expr: IExpression;
+  LRuntimeVal: Boolean;
+begin
+  Expr := AExpression.Expression;
+  LRuntimeVal := AExpression.RuntimeValue;
+  Result := RuleFor(APropName,
+    function(AModel: T): TValue
+    begin
+      if Expr <> nil then
+        Result := TExpressionEvaluator.Evaluate(Expr, AModel)
+      else
+        Result := LRuntimeVal;
+    end);
+  Result.Must(function(Val: TValue): Boolean
+    begin
+      Result := Val.AsBoolean = True;
+    end);
+end;
+
+function TAbstractValidator<T>.RuleFor(const AExpression: BooleanExpression): TValidationRuleBuilder<T>;
+var
+  PropName: string;
+  Binary: TBinaryExpression;
+begin
+  PropName := '';
+  if AExpression.Expression <> nil then
+  begin
+    if AExpression.Expression is TBinaryExpression then
+    begin
+      Binary := TBinaryExpression(AExpression.Expression);
+      if Binary.Left is TPropertyExpression then
+        PropName := TPropertyExpression(Binary.Left).PropertyName;
+    end;
+  end;
+
+  if PropName = '' then
+    raise Exception.Create('Cannot extract property name from expression. Please specify property name using string or Prop overload.');
+
+  Result := RuleFor(PropName, AExpression);
 end;
 
 function TAbstractValidator<T>.RuleFor(const AProperty: Prop<string>): TValidationRuleBuilder<T>;

@@ -41,7 +41,7 @@ type
     FName: Prop<string>;
     FEmail: Prop<string>;
     FPhone: Prop<string>;
-  published
+  public
     [PK]
     property Id: Integer read FId write FId;
     property Name: Prop<string> read FName write FName;
@@ -50,6 +50,11 @@ type
   end;
 
   TSmartTestModelValidator = class(TAbstractValidator<TSmartTestModel>)
+  public
+    constructor Create; override;
+  end;
+
+  TSmartTestModelExpressionValidator = class(TAbstractValidator<TSmartTestModel>)
   public
     constructor Create; override;
   end;
@@ -77,6 +82,12 @@ type
     procedure Test_SmartProperty_Validation;
     [Test]
     procedure Test_PatternRegistry_Validation;
+    [Test]
+    procedure Test_SmartProperty_Expression_Validation;
+    [Test]
+    procedure Test_SmartProperty_When_Expression_Validation;
+    [Test]
+    procedure Test_ErrorMessage_Concatenation;
   end;
 
 implementation
@@ -120,6 +131,15 @@ begin
   RuleFor(m.Name).Required.Length(3, 50);
   RuleFor(m.Email).EmailAddress;
   RuleFor(m.Phone).MatchesPattern('Phone', 'pt-BR');
+end;
+
+{ TSmartTestModelExpressionValidator }
+
+constructor TSmartTestModelExpressionValidator.Create;
+begin
+  inherited Create;
+  RuleFor(Model.Name.Contains('Dext')).WithMessage('Name must contain Dext');
+  RuleFor(Model.Email).Required.When(Model.Name.StartsWith('Admin'));
 end;
 
 { TValidationFluentTests }
@@ -381,7 +401,6 @@ var
   Model: TSmartTestModel;
   Validator: TSmartTestModelValidator;
   Result: TValidationResult;
-  Error: TValidationError;
 begin
   Model := TSmartTestModel.Create;
   Validator := TSmartTestModelValidator.Create;
@@ -392,9 +411,6 @@ begin
 
     Result := Validator.Validate(Model);
     try
-      for Error in Result.Errors do
-        Writeln('  Error field: ', Error.FieldName, ' msg: ', Error.ErrorMessage);
-
       Should(Result.IsValid).BeFalse;
       Should.List<TValidationError>(Result.Errors).HaveCount(2);
     finally
@@ -411,13 +427,7 @@ var
   Model: TSmartTestModel;
   Validator: TSmartTestModelValidator;
   Result: TValidationResult;
-  m: TSmartTestModel;
 begin
-  m := Prototype.Entity<TSmartTestModel>;
-  Writeln('Name.Name: "', m.Name.Name, '"');
-  Writeln('Email.Name: "', m.Email.Name, '"');
-  Writeln('Phone.Name: "', m.Phone.Name, '"');
-
   Model := TSmartTestModel.Create;
   Validator := TSmartTestModelValidator.Create;
   try
@@ -438,6 +448,114 @@ begin
     Result := Validator.Validate(Model);
     try
       Should(Result.IsValid).BeTrue;
+    finally
+      Result.Free;
+    end;
+  finally
+    Validator.Free;
+    Model.Free;
+  end;
+end;
+
+procedure TValidationFluentTests.Test_SmartProperty_Expression_Validation;
+var
+  Model: TSmartTestModel;
+  Validator: TSmartTestModelExpressionValidator;
+  Result: TValidationResult;
+begin
+  Model := TSmartTestModel.Create;
+  Validator := TSmartTestModelExpressionValidator.Create;
+  try
+    Model.Name := 'Normal Name'; // Doesn't contain 'Dext'
+    Model.Email := '';
+    
+    Result := Validator.Validate(Model);
+    try
+      Should(Result.IsValid).BeFalse;
+      Should.List<TValidationError>(Result.Errors).HaveCount(1);
+      Should(Result.Errors[0].FieldName).Be('Name');
+      Should(Result.Errors[0].ErrorMessage).Be('Name must contain Dext');
+    finally
+      Result.Free;
+    end;
+
+    Model.Name := 'Special Dext User'; // Contains 'Dext'
+    Result := Validator.Validate(Model);
+    try
+      Should(Result.IsValid).BeTrue;
+    finally
+      Result.Free;
+    end;
+  finally
+    Validator.Free;
+    Model.Free;
+  end;
+end;
+
+procedure TValidationFluentTests.Test_SmartProperty_When_Expression_Validation;
+var
+  Model: TSmartTestModel;
+  Validator: TSmartTestModelExpressionValidator;
+  Result: TValidationResult;
+begin
+  Model := TSmartTestModel.Create;
+  Validator := TSmartTestModelExpressionValidator.Create;
+  try
+    // Name is 'Admin User' (starts with 'Admin', contains 'Dext' to pass the Name rule)
+    Model.Name := 'Admin User Dext';
+    Model.Email := ''; // Email is required because Name starts with 'Admin'
+    
+    Result := Validator.Validate(Model);
+    try
+      Should(Result.IsValid).BeFalse;
+      Should.List<TValidationError>(Result.Errors).HaveCount(1);
+      Should(Result.Errors[0].FieldName).Be('Email');
+    finally
+      Result.Free;
+    end;
+
+    // Set Email
+    Model.Email := 'admin@dext.com';
+    Result := Validator.Validate(Model);
+    try
+      Should(Result.IsValid).BeTrue;
+    finally
+      Result.Free;
+    end;
+  finally
+    Validator.Free;
+    Model.Free;
+  end;
+end;
+
+procedure TValidationFluentTests.Test_ErrorMessage_Concatenation;
+var
+  Model: TTestModel;
+  Validator: TTestModelValidator;
+  Result: TValidationResult;
+  ErrMsgs: string;
+begin
+  Model := TTestModel.Create;
+  Validator := TTestModelValidator.Create;
+  try
+    Model.Name := '';
+    Model.Email := 'invalid-email';
+    Model.Age := 10;
+    Model.Score := 50.0;
+    Model.Active := True;
+
+    Result := Validator.Validate(Model);
+    try
+      Should(Result.IsValid).BeFalse;
+
+      // Default delimiter (sLineBreak)
+      ErrMsgs := Result.ErrorMessage;
+      Should(ErrMsgs).Contain(sLineBreak);
+
+      // Custom delimiter ('; ')
+      ErrMsgs := Result.ErrorMessage('; ');
+      Should(ErrMsgs).Contain('; ');
+      Should(ErrMsgs).NotContain(sLineBreak);
     finally
       Result.Free;
     end;

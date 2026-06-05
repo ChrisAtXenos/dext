@@ -79,7 +79,8 @@ implementation
 uses
   Dext.Core.Reflection,
   Dext.Entity.Core,
-  Dext.Entity.Mapping;
+  Dext.Entity.Mapping,
+  Dext.Validation;
 
 { Prototype }
 
@@ -87,6 +88,11 @@ class constructor Prototype.Create;
 begin
   FCache := TCollections.CreateDictionary<PTypeInfo, TObject>;
   FStack := TCollections.CreateList<PTypeInfo>;
+
+  Dext.Validation.PrototypeFactory := function(ATypeInfo: PTypeInfo): TObject
+    begin
+      Result := Prototype.Entity(ATypeInfo);
+    end;
 end;
 
 class destructor Prototype.Destroy;
@@ -168,10 +174,8 @@ begin
   EntityMap := TModelBuilder.Instance.GetMap(ATypeInfo);
   if EntityMap <> nil then
   begin
-    Writeln('EntityMap found for: ', Typ.Name, ' properties count: ', EntityMap.Properties.Count);
     for PropMap in EntityMap.Properties.Values do
     begin
-      Writeln('  Property: ', PropMap.PropertyName, ' MetadataOffset: ', PropMap.MetadataOffset);
       // 1. Inject IPropInfo (Metadata for SQL generation)
       // CRITICAL: We use MetadataOffset (FInfo interface) instead of FieldOffset (Boolean flag).
       if PropMap.MetadataOffset <> -1 then

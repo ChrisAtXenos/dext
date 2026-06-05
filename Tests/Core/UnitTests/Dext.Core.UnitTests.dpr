@@ -19,7 +19,8 @@ uses
   Dext.Logging.Telemetry.Tests in 'Dext.Logging.Telemetry.Tests.pas',
   Dext.Json.Utf8.Serializer.Tests in 'Dext.Json.Utf8.Serializer.Tests.pas',
   Dext.Json.Regression.Tests in 'Dext.Json.Regression.Tests.pas',
-  Dext.Json.RecordProperties.Tests in 'Dext.Json.RecordProperties.Tests.pas';
+  Dext.Json.RecordProperties.Tests in 'Dext.Json.RecordProperties.Tests.pas',
+  Dext.Validation.Fluent.Tests in 'Dext.Validation.Fluent.Tests.pas';
 
 begin
   {$IFDEF TESTINSIGHT}
@@ -40,15 +41,16 @@ begin
       .RegisterFixtures([
         TConfigFeaturesTests,
         TConfigurationHashingTests,
+        TEntityMappingWarningTests,
+        TJsonBugReproTests,
         TJsonInterfaceListTests,
         TJsonIssue108RegressionTests,
         TJsonIssue127RegressionTests,
         TJsonRecordPropertiesTests,
         TJsonRegressionTests,
-        TJsonBugReproTests,
         TTelemetryTests,
         TUtf8SerializerCurrencyTests,
-        TEntityMappingWarningTests
+        TValidationFluentTests
       ]));
   except
     on E: Exception do
