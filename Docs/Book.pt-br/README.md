@@ -95,6 +95,7 @@
 - [Configuração](10-avancado/configuracao.md) - `IOptions<T>` (JSON, YAML)
 - [API Assíncrona](10-avancado/async-api.md) - `TAsyncTask`
 - [Serialização e Globalização](10-avancado/serializacao-globalizacao.md) ⭐ **NOVO** - Lidar com locales e formatos JSON
+- [Pipeline de Resiliência (S32)](10-avancado/resiliencia.md) ⭐ **NOVO** - Tratamento de falhas estilo Polly (Retry, Circuit Breaker, Fallback, Timeout)
 
 #### [11. Desktop UI (Dext.UI)](11-desktop-ui/README.md) ⭐ NOVO
 

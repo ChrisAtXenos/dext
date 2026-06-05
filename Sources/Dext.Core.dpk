@@ -79,6 +79,7 @@ contains
   Dext.Specifications.OrderBy in 'Core\Dext.Specifications.OrderBy.pas',
   Dext.Specifications.Types in 'Core\Dext.Specifications.Types.pas',
   Dext.Threading.Async in 'Core\Dext.Threading.Async.pas',
+  Dext.Resilience in 'Core\Dext.Resilience.pas',
   Dext.Validation in 'Core\Dext.Validation.pas',
   Dext.Core.DateUtils in 'Core\Base\Dext.Core.DateUtils.pas',
   Dext.Types.UUID in 'Core\Dext.Types.UUID.pas',

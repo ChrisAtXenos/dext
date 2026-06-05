@@ -33,7 +33,7 @@ ID | Title | Status | Goal
 **S29** | [SIMD and Fast Integer-to-String Conversion](S29-Simd-Fast-Itoa.md) | 📝 Proposed | Zero-allocation division-free integer formatting for high-speed JSON APIs.
 **S30** | [DbContext Auto-Hydration](S30-DbContext-AutoHydration.md) | ✅ Finalized | Eliminate generic IDbSet boilerplate getters.
 **S31** | [Fluent Validation API & Smart Property Integration](S31-Validation.md) | ✅ Finalized | Strong-typed fluent validation engine integrated with Prop<T> and Web model binding.
-**S32** | [Resilience Pipeline & Fault Handling](S32-Resilience-Pipeline.md) | 📝 Draft | Polly-style transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) for generic I/O.
+**S32** | [Resilience Pipeline & Fault Handling](S32-Resilience-Pipeline.md) | ✅ Finalized | Polly-style transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) for generic I/O.
 **S33** | [Persistent Background Jobs](S33-Background-Jobs.md) | 📝 Draft | Out-of-process scheduled/recurring background tasks with database/Redis persistence.
 **S34** | [Dynamic Query Filters](S34-Dynamic-Query-Filters.md) | 📝 Draft | Bypassing global query filters (soft-delete, multi-tenancy) dynamically.
 **S35** | [APM Log Sinks & Structured Logging Pipeline](S35-APM-Log-Sinks.md) | 📝 Draft | Batch-oriented asynchronous logger sinks for Seq, Elasticsearch, and APM platforms.

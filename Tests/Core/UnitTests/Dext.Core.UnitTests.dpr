@@ -1,4 +1,4 @@
-﻿program Dext.Core.UnitTests;
+program Dext.Core.UnitTests;
 
 {$IFNDEF TESTINSIGHT}
   {$APPTYPE CONSOLE}
@@ -20,6 +20,7 @@ uses
   Dext.Json.Utf8.Serializer.Tests in 'Dext.Json.Utf8.Serializer.Tests.pas',
   Dext.Json.Regression.Tests in 'Dext.Json.Regression.Tests.pas',
   Dext.Json.RecordProperties.Tests in 'Dext.Json.RecordProperties.Tests.pas',
+  Dext.Resilience.Tests in 'Dext.Resilience.Tests.pas',
   Dext.Validation.Fluent.Tests in 'Dext.Validation.Fluent.Tests.pas';
 
 begin
@@ -48,6 +49,7 @@ begin
         TJsonIssue127RegressionTests,
         TJsonRecordPropertiesTests,
         TJsonRegressionTests,
+        TResilienceTests,
         TTelemetryTests,
         TUtf8SerializerCurrencyTests,
         TValidationFluentTests

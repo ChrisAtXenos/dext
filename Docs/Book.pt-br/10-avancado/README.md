@@ -10,6 +10,7 @@ Mergulhos profundos em infraestrutura e padrões avançados.
 4. [API Assíncrona](async-api.md) - `TAsyncTask` e concorrência
 5. [Diagnósticos e Debugging](diagnosticos-debugging.md) - Stack traces com alocação zero e símbolos assíncronos
 6. [Serialização e Globalização](serializacao-globalizacao.md) - Lidar com locales e formatos JSON
+7. [Pipeline de Resiliência](resiliencia.md) - Tratamento de falhas estilo Polly (Retry, Circuit Breaker, Fallback, Timeout)
 
 ## Exemplos Rápidos
 

@@ -21,6 +21,7 @@ Focused instruction packages for writing correct, idiomatic **Dext** (Delphi mod
 | **dext-validation** | `dext-validation.md` | Attribute-based validation, TAbstractValidator<T>, strongly-typed smart property validation, regex patterns, model binding auto-validation |
 | **dext-background** | `dext-background.md` | Background workers (`IHostedService`), configuration (`IConfiguration`, Options pattern), async tasks (`TAsyncTask`) |
 | **dext-networking** | `dext-networking.md` | REST client (`TRestClient`), async HTTP requests, typed responses, auth providers, connection pooling |
+| **dext-resilience** | `dext-resilience.md` | Resilience Pipeline, Polly-style fault handling (Retry, Circuit Breaker, Fallback, Timeout) |
 | **dext-realtime** | `dext-realtime.md` | Hubs (`THub`), SignalR-compatible real-time messaging, groups, `IHubContext<T>` |
 | **dext-database-as-api** | `dext-database-as-api.md` | Zero-code CRUD REST API from ORM entities (`MapDataApi<T>`) |
 | **dext-desktop-ui** | `dext-desktop-ui.md` | VCL desktop apps, Navigator (Flutter-inspired), Magic Binding (declarative two-way), MVVM |
@@ -127,6 +128,11 @@ Skills are loaded dynamically when the agent needs them. The README is always lo
 - Making outbound HTTP requests to external APIs
 - Using `TRestClient` for REST calls
 - Needing async HTTP with typed deserialization
+
+**Load `dext-resilience`** when:
+
+- Setting up or tuning execution policies (Retry, Circuit Breaker, Fallback, Timeout)
+- Wrapping I/O operations (REST requests, DB execution) in resilience wrappers
 
 **Load `dext-realtime`** when:
 

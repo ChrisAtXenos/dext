@@ -1,5 +1,7 @@
 # S32 — Resilience Pipeline & Fault Handling (Polly-style)
 
+**Status: Finalized (Implemented)**
+
 This architectural specification details the design of a generic, thread-safe resilience pipeline for Dext, enabling modern transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) across any I/O operation (HTTP, Database, Filesystem).
 
 ---

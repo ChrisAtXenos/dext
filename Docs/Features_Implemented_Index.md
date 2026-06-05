@@ -156,6 +156,14 @@ Dext was designed to leverage modern Object Pascal features while maintaining a 
 - **TryParseISODateTime** — Robust ISO 8601 parser (`YYYY-MM-DDTHH:NN:SS.ZZZ`) with support for variations (separator `T` or space, optional milliseconds).
 - **TryParseCommonDate** — Multi-format parser: ISO 8601 → `dd/mm/yyyy` → `mm/dd/yyyy` → `yyyy/mm/dd` with automatic format detection.
 
+### 1.17 Resilience Pipeline (`Dext.Resilience`)
+- **IResiliencePipeline / TResiliencePipeline** — Fluent record wrapper and interface exposing Polly-style policies. Synchronous and asynchronous generic/non-generic execution support (`Execute<T>` and `Execute`).
+- **Retry Policy** (`TRetryPolicy`) — Handles transient failures with customizable retry count and backoff strategies (linear, exponential backoff with jitter).
+- **Circuit Breaker Policy** (`TCircuitBreakerPolicy`) — Implements `Closed`, `Open`, and `Half-Open` states, failing fast and throwing `ECircuitBrokenException` once failure thresholds are exceeded.
+- **Fallback Policy** (`TFallbackPolicy`) — Intercepts exceptions and returns fallback alternative values or executes fallback actions.
+- **Timeout Policy** (`TTimeoutPolicy`) — Throws `ETimeoutException` when operations exceed set duration limits using cooperative task cancellation and asynchronous futures.
+- **RestClient Integration** — `TRestClient` natively integrates with the resilience engine, enabling backwards-compatible `.Retry()` and `.Timeout()` methods, plus custom pipeline configuration.
+
 ---
 
 ## 📚 2. Dext Collections Library (`Sources\Core`)

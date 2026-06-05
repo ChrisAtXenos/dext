@@ -39,6 +39,7 @@ uses
   Dext.Http.Request,
   Dext.Net.Authentication,
   Dext.Net.ConnectionPool,
+  Dext.Resilience,
   Dext.Threading.Async,
   Dext.Threading.CancellationToken;
 
@@ -134,6 +135,8 @@ uses
     function Header(const AName, AValue: string): IRestClient;
     /// <summary>Defines the default Content-Type for requests.</summary>
     function ContentType(AValue: TDextContentType): IRestClient;
+    /// <summary>Attaches a custom resilience pipeline to the client.</summary>
+    function ResiliencePipeline(APipeline: IResiliencePipeline): IRestClient;
 
     // === ContentType shortcuts ===
     /// <summary>Sets Content-Type to application/json.</summary>
@@ -189,6 +192,7 @@ uses
     FAuthProvider: IAuthenticationProvider;
     FPool: TConnectionPool;
     FLock: TCriticalSection;
+    FResiliencePipeline: IResiliencePipeline;
     
     function GetFullUrl(const AEndpoint: string): string;
   public
@@ -202,6 +206,7 @@ uses
     function Auth(AProvider: IAuthenticationProvider): IRestClient;
     function Header(const AName, AValue: string): IRestClient;
     function ContentType(AValue: TDextContentType): IRestClient;
+    function ResiliencePipeline(APipeline: IResiliencePipeline): IRestClient;
     function ContentTypeJson: IRestClient;
     function ContentTypeXml: IRestClient;
     function ContentTypeForm: IRestClient;
@@ -260,6 +265,8 @@ uses
     function Header(const AName, AValue: string): TRestClient;
     /// <summary>Sets the default Content-Type for this client.</summary>
     function ContentType(AValue: TDextContentType): TRestClient;
+    /// <summary>Attaches a custom resilience pipeline to the client.</summary>
+    function ResiliencePipeline(APipeline: IResiliencePipeline): TRestClient;
 
     // === ContentType shortcuts ===
     /// <summary>Sets Content-Type to application/json.</summary>
@@ -498,6 +505,12 @@ begin
   Result := Self;
 end;
 
+function TRestClientImpl.ResiliencePipeline(APipeline: IResiliencePipeline): IRestClient;
+begin
+  FResiliencePipeline := APipeline;
+  Result := Self;
+end;
+
 function TRestClientImpl.ContentTypeJson: IRestClient;
 begin
   Result := ContentType(ctJson);
@@ -653,11 +666,9 @@ begin
     TFunc<IRestResponse>(
       function: IRestResponse
       var
-        HttpClient: THttpClient;
-        Response: IHTTPResponse;
-        Attempt: Integer;
         MethodStr: string;
         LSpan: TSpan;
+        LPipeline: IResiliencePipeline;
       begin
         case AMethod of
           hmGET:    MethodStr := 'GET';
@@ -675,36 +686,44 @@ begin
         LSpan.SetAttribute('http.method', MethodStr);
 
         try
-          Attempt := 0;
-          
-          while Attempt <= Retries do
-          begin
-            HttpClient := TConnectionPool(TRestClient.FSharedPool).Acquire;
-            try
-              HttpClient.ConnectionTimeout := Timeout;
-              HttpClient.SendTimeout := Timeout;
-              HttpClient.ResponseTimeout := Timeout;
+          try
+            LPipeline := FResiliencePipeline;
+            if not Assigned(LPipeline) then
+            begin
+              LPipeline := TResiliencePipelineImpl.Create;
+              if Retries > 0 then
+                LPipeline.AddRetry(Retries, 100);
+            end;
 
-              try
-                Response := HttpClient.Execute(MethodStr, Url, ABody, nil, Headers) as IHTTPResponse;
-                Result := TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream, Response.GetHeaders);
-                LSpan.SetAttribute('http.status_code', Response.StatusCode);
-                LSpan.SetStatus('Success');
-                Exit;
-              except
-                on E: Exception do
+            Result := LPipeline.Execute(
+              TFunc<TValue>(
+                function: TValue
+                var
+                  HttpClient: THttpClient;
+                  Response: IHTTPResponse;
                 begin
-                  Inc(Attempt);
-                  if Attempt > Retries then
-                  begin
-                    LSpan.SetStatus('Error', E.Message);
-                    raise;
+                  HttpClient := TConnectionPool(TRestClient.FSharedPool).Acquire;
+                  try
+                    HttpClient.ConnectionTimeout := Timeout;
+                    HttpClient.SendTimeout := Timeout;
+                    HttpClient.ResponseTimeout := Timeout;
+
+                    Response := HttpClient.Execute(MethodStr, Url, ABody, nil, Headers) as IHTTPResponse;
+                    Result := TValue.From<IRestResponse>(TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream, Response.GetHeaders));
+                    
+                    LSpan.SetAttribute('http.status_code', Response.StatusCode);
+                    LSpan.SetStatus('Success');
+                  finally
+                    TConnectionPool(TRestClient.FSharedPool).Release(HttpClient);
                   end;
-                  Sleep(Trunc(Power(2, Attempt) * 100));
-                end;
-              end;
-            finally
-              TConnectionPool(TRestClient.FSharedPool).Release(HttpClient);
+                end
+              )
+            ).AsType<IRestResponse>;
+          except
+            on E: Exception do
+            begin
+              LSpan.SetStatus('Error', E.Message);
+              raise;
             end;
           end;
         finally
@@ -779,6 +798,12 @@ end;
 function TRestClient.ContentType(AValue: TDextContentType): TRestClient;
 begin
   FInstance.ContentType(AValue);
+  Result := Self;
+end;
+
+function TRestClient.ResiliencePipeline(APipeline: IResiliencePipeline): TRestClient;
+begin
+  FInstance.ResiliencePipeline(APipeline);
   Result := Self;
 end;
 

@@ -11,6 +11,7 @@ uses
   Dext.Net.RestClient,
   Dext.Net.RestRequest,
   Dext.Net.Authentication,
+  Dext.Resilience,
   Dext.Web.Interfaces,
   Dext.WebHost,
   System.SyncObjs;

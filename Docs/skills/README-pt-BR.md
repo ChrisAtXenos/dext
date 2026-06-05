@@ -21,6 +21,7 @@ Pacotes de instruções focados para escrever código **Dext** (framework modern
 | **dext-validation** | `dext-validation.md` | Validação baseada em atributos, TAbstractValidator<T>, validação fortemente tipada com Prop<T>, registro de padrões, auto-validação no model binding |
 | **dext-background** | `dext-background.md` | Workers em segundo plano (`IHostedService`), configuração (`IConfiguration`, padrão Options), tarefas assíncronas (`TAsyncTask`) |
 | **dext-networking** | `dext-networking.md` | Cliente REST (`TRestClient`), requisições HTTP assíncronas, respostas tipadas, provedores de autenticação, pool de conexões |
+| **dext-resilience** | `dext-resilience.md` | Pipeline de Resiliência estilo Polly (Retry, Circuit Breaker, Fallback, Timeout) |
 | **dext-realtime** | `dext-realtime.md` | Hubs (`THub`), mensagens em tempo real compatíveis com SignalR, grupos, `IHubContext<T>` |
 | **dext-database-as-api** | `dext-database-as-api.md` | API REST CRUD instantânea de entidades ORM com zero código (`MapDataApi<T>`) |
 | **dext-desktop-ui** | `dext-desktop-ui.md` | Aplicativos desktop VCL, Navigator (inspirado no Flutter), Magic Binding (bidirecional, declarativo), MVVM |
@@ -127,6 +128,11 @@ As habilidades são carregadas dinamicamente quando o agente precisa delas. O RE
 - Fazer requisições HTTP de saída para APIs externas
 - Usar `TRestClient` para chamadas REST
 - Precisar de chamadas HTTP assíncronas com desserialização tipada
+
+**Carregue `dext-resilience`** quando:
+
+- Configurar ou ajustar políticas de execução (Retry, Circuit Breaker, Fallback, Timeout)
+- Envolver operações de I/O (requisições REST, execução de BD) em wrappers de resiliência
 
 **Carregue `dext-realtime`** quando:
 
