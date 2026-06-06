@@ -13,7 +13,8 @@ uses
   Dext.Types.UUID,
   System.SysUtils,
   System.Classes,
-  System.JSON,
+  Dext.Json,
+  Dext.Json.Types,
   System.DateUtils,
   Dext.WebHost,
   Dext.Web.Interfaces,
@@ -206,9 +207,9 @@ var
   Entry: TLogEntry;
   ReceivedPayload: string;
   Lock: TCriticalSection;
-  JO: TJSONObject;
-  ResourceLogs, ScopeLogs, LogRecords: TJSONArray;
-  Resource, Scope, LogRec, Body: TJSONObject;
+  JO: IDextJsonObject;
+  ResourceLogs, ScopeLogs, LogRecords: IDextJsonArray;
+  Resource, Scope, LogRec, Body: IDextJsonObject;
 begin
   Lock := TCriticalSection.Create;
   ReceivedPayload := '';
@@ -274,35 +275,31 @@ begin
     try
       Should(ReceivedPayload).NotBeEmpty;
       
-      JO := TJSONObject.ParseJSONValue(ReceivedPayload) as TJSONObject;
-      try
-        Should(JO).NotBeNull;
-        ResourceLogs := JO.Values['resourceLogs'] as TJSONArray;
-        Should(ResourceLogs).NotBeNull;
-        Should(ResourceLogs.Count).Be(1);
+      JO := TDextJson.Provider.Parse(ReceivedPayload) as IDextJsonObject;
+      Should(JO).NotBeNil;
+      ResourceLogs := JO.GetArray('resourceLogs');
+      Should(ResourceLogs).NotBeNil;
+      Should(ResourceLogs.Count).Be(1);
 
-        Resource := (ResourceLogs.Items[0] as TJSONObject).Values['resource'] as TJSONObject;
-        Should(Resource).NotBeNull;
+      Resource := ResourceLogs.GetObject(0).GetObject('resource');
+      Should(Resource).NotBeNil;
 
-        ScopeLogs := (ResourceLogs.Items[0] as TJSONObject).Values['scopeLogs'] as TJSONArray;
-        Should(ScopeLogs).NotBeNull;
-        Should(ScopeLogs.Count).Be(1);
+      ScopeLogs := ResourceLogs.GetObject(0).GetArray('scopeLogs');
+      Should(ScopeLogs).NotBeNil;
+      Should(ScopeLogs.Count).Be(1);
 
-        Scope := (ScopeLogs.Items[0] as TJSONObject).Values['scope'] as TJSONObject;
-        Should(Scope.Values['name'].Value).Be('dext.logger');
+      Scope := ScopeLogs.GetObject(0).GetObject('scope');
+      Should(Scope.GetString('name')).Be('dext.logger');
 
-        LogRecords := (ScopeLogs.Items[0] as TJSONObject).Values['logRecords'] as TJSONArray;
-        Should(LogRecords).NotBeNull;
-        Should(LogRecords.Count).Be(1);
+      LogRecords := ScopeLogs.GetObject(0).GetArray('logRecords');
+      Should(LogRecords).NotBeNil;
+      Should(LogRecords.Count).Be(1);
 
-        LogRec := LogRecords.Items[0] as TJSONObject;
-        Should(LogRec.Values['severityText'].Value).Be('Info');
-        
-        Body := LogRec.Values['body'] as TJSONObject;
-        Should(Body.Values['stringValue'].Value).Be('Test Message OTel');
-      finally
-        JO.Free;
-      end;
+      LogRec := LogRecords.GetObject(0);
+      Should(LogRec.GetString('severityText')).Be('Info');
+      
+      Body := LogRec.GetObject('body');
+      Should(Body.GetString('stringValue')).Be('Test Message OTel');
     finally
       Lock.Leave;
     end;
