@@ -36,16 +36,36 @@ uses
 
 ## 1. Define an Entity
 
-Use **Properties**, not public fields. Dext relies on Delphi RTTI properties for metadata discovery.
+Use **Properties**, not public fields. Dext relies on Delphi RTTI properties for metadata discovery. Always map entities using the appropriate Dext attributes.
+
+### 1.1. Core Imports & Uses Clause
+For any unit containing Dext ORM entities, the following `uses` clause is required:
+```pascal
+uses
+  System.SysUtils,
+  System.Classes,
+  Dext.Entity,              // Attributes facade (Table, Column, PK, FK, etc.)
+  Dext.Entity.Collections,  // For collections like IEntityCollection<T>
+  Dext.Types.Nullable,      // For Nullable<T> and Prop<Nullable<T>>
+  Dext.Types.Lazy,          // For lazy loading ILazy<T> and TValueLazy<T>
+  Dext.Core.SmartTypes;     // For Smart Properties (IntType, StringType, etc.)
+```
+
+### 1.2. Complete Mapping Example
+Here is a complete example of an entity showing primary keys, columns, nullable fields, smart properties, and relationships:
 
 ```pascal
 type
+  TOrder = class; // Forward declaration
+
   [Table('users')]
   TUser = class
   private
     FId: IntType;
     FName: StringType;
     FEmail: StringType;
+    FOrders: ILazy<TList<TOrder>>;
+    function GetOrders: TList<TOrder>;
   public
     [PK, AutoInc]
     property Id: IntType read FId write FId;
@@ -53,40 +73,109 @@ type
     [Required, MaxLength(100)]
     property Name: StringType read FName write FName;
 
-    [Required, MaxLength(200)]
+    [Required, MaxLength(200), Column('user_email')]
     property Email: StringType read FEmail write FEmail;
+
+    // One-to-Many Relationship (HasMany)
+    [InverseProperty('User'), HasMany]
+    property Orders: TList<TOrder> read GetOrders;
   end;
+
+  [Table('orders')]
+  TOrder = class
+  private
+    FId: IntType;
+    FUserId: IntType;
+    FUser: ILazy<TUser>;
+    FTotal: DoubleType;
+    function GetUser: TUser;
+    procedure SetUser(const Value: TUser);
+  public
+    [PK, AutoInc]
+    property Id: IntType read FId write FId;
+
+    [Required]
+    property UserId: IntType read FUserId write FUserId;
+
+    [Required]
+    property Total: DoubleType read FTotal write FTotal;
+
+    // Many-to-One Navigation Property (BelongsTo)
+    [ForeignKey('user_id'), BelongsTo]
+    property User: TUser read GetUser write SetUser;
+  end;
+
+implementation
+
+{ TUser }
+function TUser.GetOrders: TList<TOrder>;
+begin
+  if FOrders = nil then FOrders := TLazy<TList<TOrder>>.Create;
+  Result := FOrders.Value;
+end;
+
+{ TOrder }
+function TOrder.GetUser: TUser;
+begin
+  if FUser <> nil then
+    Result := FUser.Value
+  else
+    Result := nil;
+end;
+
+procedure TOrder.SetUser(const Value: TUser);
+begin
+  FUser := TValueLazy<TUser>.Create(Value);
+  if Value <> nil then
+    FUserId := Value.Id;
+end;
 ```
 
-> [!TIP]
-> Always use native Smart Property aliases (**IntType**, **StringType**, **DoubleType**, **BoolType**) for class properties to enable automatic model binding and type-safe filtering.
+### 1.3. Smart Properties
+Always use native Smart Property aliases (**IntType**, **StringType**, **DoubleType**, **BoolType** from `Dext.Core.SmartTypes`) for class properties to enable automatic model binding and type-safe filtering.
 
-### Available Attributes
+### 1.4. Available Mapping Attributes
 
-| Category | Attribute | Description |
-| :--- | :--- | :--- |
-| **Mapping** | `[Table('name')]` | Map class to specific table |
-| | `[Column('name')]` | Map property to specific column |
-| | `[Schema('name')]` | Specify database schema |
-| | `[PK]` | Primary Key (supports composite) |
-| | `[AutoInc]` | Auto-incrementing integer PK |
-| **Audit** | `[CreatedAt]` | Timestamp set on INSERT |
-| | `[UpdatedAt]` | Timestamp set on UPDATE |
-| | `[Version]` | Optimistic concurrency (integer) |
-| **Logic** | `[SoftDelete]` | Logical deletion flag |
-| | `[NotMapped]` | Exclude from mapping and JSON |
+| Category | Attribute | Target | Description |
+| :--- | :--- | :--- | :--- |
+| **Class Mapping** | `[Table('name')]` | Class | Map class to specific table |
+| | `[Schema('name')]` | Class | Specify database schema |
+| | `[Inheritance(TInheritanceStrategy)]` | Class | Set inheritance strategy (`TablePerHierarchy`, `TablePerType`) |
+| | `[DiscriminatorColumn('name')]` | Class | Column name for TPH discriminator |
+| | `[DiscriminatorValue(Value)]` | Class | Value representing this class in TPH |
+| **Field/Prop Mapping** | `[Column('name')]` | Property | Map property to specific column |
+| | `[PK]` or `[PrimaryKey]` | Property | Primary Key (supports composite PKs) |
+| | `[AutoInc]` | Property | Auto-incrementing integer PK |
+| | `[Required]` | Property | NOT NULL constraint |
+| | `[MaxLength(N)]` | Property | Max string/array length |
+| | `[MinLength(N)]` | Property | Min string/array length |
+| | `[Precision(P, S)]` | Property | Numeric precision and scale |
+| | `[DefaultValue(Val)]` | Property | Default value when DB returns NULL |
+| | `[NotMapped]` | Property | Exclude from mapping and JSON serialization |
+| | `[JsonColumn]` | Property | Marks field as JSON/JSONB column |
+| | `[TypeConverter(Class)]`| Property | Map custom type converter class |
+| **Audit & Concurrency** | `[CreatedAt]` | Property | Timestamp set automatically on INSERT |
+| | `[UpdatedAt]` | Property | Timestamp set automatically on INSERT/UPDATE |
+| | `[Version]` | Property | Optimistic concurrency version column (Integer) |
+| | `[SoftDelete('Col')]` | Class | Enable soft delete mapping |
+| | `[DeletedAt]` | Property | Soft delete timestamp |
+| **Relationships** | `[ForeignKey('col')]` | Property | Define foreign key column name |
+| | `[BelongsTo]` | Property | Many-to-One relationship |
+| | `[HasMany]` | Property | One-to-Many relationship (Collection) |
+| | `[HasOne]` | Property | One-to-One relationship |
+| | `[ManyToMany('tbl', 'c1', 'c2')]` | Property | Many-to-Many relationship with join table |
+| | `[InverseProperty('prop')]` | Property | Specify navigation property on the other side |
+
+---
 
 ## 2. Nullable Columns
 
 Database columns can be `NULL`. Dext provides two options to represent nullable values depending on whether you are using standard fields or Smart Properties:
 
 ### 2.1. Standard Nullable Fields (`Nullable<T>`)
-Use `Nullable<T>` for standard columns where query-mode expression trees are not needed:
+Use `Nullable<T>` (from `Dext.Types.Nullable`) for standard columns where query-mode expression trees are not needed:
 
 ```pascal
-uses
-  Dext.Types.Nullable; // Required for Nullable<T>
-
 type
   TTicket = class
   private
