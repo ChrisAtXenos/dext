@@ -1,4 +1,4 @@
-﻿program Dext.Entity.UnitTests;
+program Dext.Entity.UnitTests;
 
 {$IFNDEF TESTINSIGHT}
   {$APPTYPE CONSOLE}
@@ -32,7 +32,8 @@ uses
   Dext.Entity.SnakeCaseFk.Tests in 'Dext.Entity.SnakeCaseFk.Tests.pas',
   Dext.Entity.FormatSettings.Tests in 'Dext.Entity.FormatSettings.Tests.pas',
   Dext.Entity.SoftDelete.Tests in 'Dext.Entity.SoftDelete.Tests.pas',
-  Dext.Entity.Validation.Tests in 'Dext.Entity.Validation.Tests.pas';
+  Dext.Entity.Validation.Tests in 'Dext.Entity.Validation.Tests.pas',
+  Dext.Entity.DynamicQueryFilter.Tests in 'Dext.Entity.DynamicQueryFilter.Tests.pas';
 
 begin
   {$IFDEF TESTINSIGHT}
@@ -78,7 +79,10 @@ begin
         TEntityFormatSettingsTests,
         TSoftDeleteUnitTests,
         TSoftDeleteIntegrationTests,
-        TEntityValidationTests
+        TEntityValidationTests,
+        TFluentQueryTests,
+        TDynamicQueryFilterUnitTests,
+        TDynamicQueryFilterIntegrationTests
       ]));
   except
     on E: Exception do

@@ -1825,6 +1825,14 @@ var
   Span: TSpan;
 begin
   LSpec := ASpec;
+
+  // Propagate spec-level filter flags to DbSet state for this query execution.
+  // ResetQueryFlags in the finally block ensures these do not leak between calls.
+  if (LSpec <> nil) and LSpec.IsIgnoringFilters then
+    FIgnoreQueryFilters := True;
+  if (LSpec <> nil) and LSpec.IsOnlyDeleted then
+    FOnlyDeleted := True;
+
   ApplyTenantFilter(LSpec);
 
   Span := TTracer.BeginSpan('DbSet.ToList', 'SQL');

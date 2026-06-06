@@ -35,7 +35,7 @@ ID | Title | Status | Goal
 **S31** | [Fluent Validation API & Smart Property Integration](S31-Validation.md) | ✅ Finalized | Strong-typed fluent validation engine integrated with Prop<T> and Web model binding.
 **S32** | [Resilience Pipeline & Fault Handling](S32-Resilience-Pipeline.md) | ✅ Finalized | Polly-style transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) for generic I/O.
 **S33** | [Persistent Background Jobs](S33-Background-Jobs.md) | ✅ Finalized | Out-of-process scheduled/recurring background tasks with database/Redis persistence.
-**S34** | [Dynamic Query Filters](S34-Dynamic-Query-Filters.md) | 📝 Draft | Bypassing global query filters (soft-delete, multi-tenancy) dynamically.
+**S34** | [Dynamic Query Filters](S34-Dynamic-Query-Filters.md) | ✅ Finalized | Bypassing global query filters (soft-delete, multi-tenancy) dynamically via `IgnoreQueryFilters`.
 **S35** | [APM Log Sinks & Structured Logging Pipeline](S35-APM-Log-Sinks.md) | 📝 Draft | Batch-oriented asynchronous logger sinks for Seq, Elasticsearch, and APM platforms.
 ---
 
@@ -52,4 +52,4 @@ For a high-level view of all roadmap items and their current waves, see the [Mas
 5. **Finalized**: Feature delivered and documented in the Book.
 
 ---
-*Last update: April 17, 2026*
+*Last update: June 2026*

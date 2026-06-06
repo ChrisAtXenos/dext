@@ -225,7 +225,6 @@ begin
 
     if Db.EnsureCreated then  // True only when schema is first created
     begin
-      var u := TUser.Props;
       if not Db.Users.QueryAll.Any then  // Check before inserting
       begin
         var Admin := TUser.Create;

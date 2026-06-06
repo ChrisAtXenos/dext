@@ -14,6 +14,7 @@ Deep dives into infrastructure and advanced patterns.
 8. [Serialization & Globalization](serialization-globalization.md) - Handling locales and JSON formats
 9. [Resilience Pipeline](resilience.md) - Polly-style fault handling (Retry, Circuit Breaker, Fallback, Timeout)
 10. [Persistent Background Jobs](background-jobs.md) - Out-of-process scheduled/delayed tasks
+11. [Dynamic Query Filters](dynamic-query-filters.md) - Bypassing Soft Delete & Multi-Tenancy filters on demand
 
 ## Quick Examples
 

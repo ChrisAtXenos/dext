@@ -114,7 +114,7 @@ type
   end;
 
 // Usage & Querying
-var u := TUser.Props;
+var u := Prototype.Entity<TUser>;
 var Results := Db.Users
   .Where(u.MiddleName.IsNull)
   .ToList;
@@ -200,22 +200,21 @@ Smart Properties provide type-safe queries without strings.
 
 ```pascal
 type
-  TUserProps = record
-    Name: StringType; // Alias for Prop<string>
-    Age: IntType;    // Alias for Prop<Integer>
-  end;
-
   TUser = class
   public
-    class var Props: TUserProps;
-    // ... normal properties ...
+    // Smart Properties are the class fields with Prop<T> aliases
+    Name: StringType;
+    Age: IntType;
+    // ... normal mapped properties ...
   end;
 ```
 
 ### Type-Safe Filtering
 
+Use `Prototype.Entity<T>` to obtain a query-mode instance. Its properties generate expression tree nodes — they do **not** hold real data.
+
 ```pascal
-var u := TUser.Props; // Short alias
+var u := Prototype.Entity<TUser>; // Query-mode prototype
 var Users := Db.Users
   .Where((u.Name.Contains('Cezar')) and (u.Age >= 18))
   .OrderBy(u.Name.Asc)

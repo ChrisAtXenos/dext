@@ -379,6 +379,14 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 - **Multi-Tenancy** — Shared Database (TenantId), Schema Isolation (`search_path`), Tenant per Database.
 - **Bulk / Batch Operations** — High-performance batch APIs: `AddRange`, `UpdateRange`, and `RemoveRange` supporting raw generic collections (`TArray<T>`, `IEnumerable<T>`) for bulk database operations in a single context transaction.
 
+### 4.12 Dynamic Query Filters (`Dext.Entity.DbSet`, `Dext.Specifications.SQL.Generator`)
+- **`IgnoreQueryFilters` (Fluent API)** — `Db.Users.IgnoreQueryFilters.ToList` — bypasses all registered global query filters (Soft Delete, Multi-Tenancy) for a single query. Does not affect subsequent calls.
+- **Specification-Level Control** — `ISpecification<T>.IgnoreQueryFilters` and `ISpecification<T>.IsIgnoringFilters`: enables specification classes to declare intent, keeping admin queries self-contained and reusable.
+- **`IsOnlyDeleted` (Spec Integration)** — `ISpecification<T>.IsOnlyDeleted` propagates the trash-bin query flag in the same mechanism, allowing `OnlyDeleted` to be declared in a spec.
+- **Scoped Propagation** — In `TDbSet<T>.ToList(ASpec)`, spec flags are propagated to the internal `FIgnoreQueryFilters` / `FOnlyDeleted` state before SQL generation and reset via `ResetQueryFlags` in a `finally` block — ensuring isolation between calls.
+- **SQL Generator Integration** — `TSQLGenerator<T>.GetSoftDeleteFilter` returns empty string when `FIgnoreQueryFilters` is `True`. `GetQueryFiltersSQL` exits early for the same reason.
+- **Admin Spec Pattern** — Allows building dedicated specification classes (`TAdminListSpec`) that call `IgnoreQueryFilters` in their constructor, enabling declarative, zero-friction access to raw data.
+
 ---
 
 ## 🔌 5. Dext Net — HTTP Client & Authentication (`Sources\Net`)

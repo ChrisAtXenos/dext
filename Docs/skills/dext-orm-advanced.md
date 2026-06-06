@@ -195,24 +195,21 @@ type
 Encapsulate reusable, composable query predicates:
 
 ```pascal
-uses Dext.Specifications;
+uses Dext.Specifications, Dext.Entity.Prototype;
 
 type
   TActiveAdultSpec = class(TSpecification<TUser>)
   public
-    function IsSatisfiedBy(Entity: TUser): Boolean; override;
-    function ToExpression: TSpecExpression; override;
+    constructor Create;
   end;
 
-function TActiveAdultSpec.IsSatisfiedBy(Entity: TUser): Boolean;
+constructor TActiveAdultSpec.Create;
+var
+  u: TUser;
 begin
-  Result := Entity.IsActive and (Entity.Age >= 18);
-end;
-
-function TActiveAdultSpec.ToExpression: TSpecExpression;
-begin
-  var u := TUser.Props;
-  Result := (u.IsActive = True) and (u.Age >= 18);
+  inherited Create;
+  u := Prototype.Entity<TUser>;
+  Where((u.IsActive = True) and (u.Age >= 18));
 end;
 
 // Usage
@@ -563,3 +560,52 @@ App.Builder.UseMultiTenancy(procedure(Options: TMultiTenancyOptions)
     Options.ResolveFromHost; // customer1.myapp.com → schema "customer1"
   end);
 ```
+
+## Dynamic Query Filters
+
+Override global filters (Soft Delete, Multi-Tenancy) for a specific query.
+
+### Direct DbSet Call
+
+```pascal
+// All records — including soft-deleted
+var All := Db.Users.IgnoreQueryFilters.ToList;
+
+// Only soft-deleted records
+var Trash := Db.Users.OnlyDeleted.ToList;
+```
+
+### Via Specification
+
+```pascal
+var Spec := TSpecification<TUser>.Create;
+Spec.IgnoreQueryFilters;
+
+var All := Db.Users.ToList(Spec);
+```
+
+### Admin Spec Pattern
+
+```pascal
+type
+  TAllUsersAdminSpec = class(TSpecification<TUser>)
+  public
+    constructor Create;
+  end;
+
+constructor TAllUsersAdminSpec.Create;
+var
+  u: TUser;
+begin
+  inherited Create;
+  u := Prototype.Entity<TUser>;
+  IgnoreQueryFilters; // Bypasses Soft Delete & Tenancy
+  OrderBy(u.Name.Asc);
+end;
+
+// Clean, reusable
+var All := Db.Users.ToList(TAllUsersAdminSpec.Create);
+```
+
+`IgnoreQueryFilters` is **call-scoped** — it does not affect subsequent queries on the same `DbSet`.
+

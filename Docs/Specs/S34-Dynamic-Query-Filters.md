@@ -1,5 +1,7 @@
 # S34 — Dynamic Query Filters (ORM Bypass)
 
+**Status:** ✅ Finalized — Implemented in `Dext.Entity.DbSet` and `Dext.Specifications.SQL.Generator`
+
 This architectural specification details the design for dynamically bypassing global query filters (like Multi-Tenancy and Soft Delete) at the query level in Dext ORM.
 
 ---
@@ -8,30 +10,31 @@ This architectural specification details the design for dynamically bypassing gl
 
 Dext ORM supports Global Query Filters (such as automatic soft-delete filter `IsDeleted = 0` or tenant isolation `TenantId = X`). While extremely useful for security and convenience, administrative queries or specific reports often need to bypass these filters to access raw historical records or query across tenants.
 
-Currently, bypassing these filters requires writing manual raw SQL commands. This specification defines a type-safe fluent mechanism to bypass query filters at the `DbSet<T>` level dynamically.
+Bypassing these filters required writing manual raw SQL commands. This specification defined a type-safe fluent mechanism to bypass query filters at the `DbSet<T>` level dynamically.
 
 ---
 
 ## 2. Fluent API Design
 
-We introduce the `.IgnoreQueryFilters` chainable method to the `TFluentQuery<T>` query builder:
+The `.IgnoreQueryFilters` chainable method is available on both `IDbSet<T>` and `TFluentQuery<T>`:
 
 ```pascal
-var AllUsers := Db.Users.IgnoreQueryFilters.ToList;
+// Via DbSet directly
+var AllTasks := Db.Tasks.IgnoreQueryFilters.ToList;
+
+// Via Specification
+var Spec := TSpecification<TUser>.Create;
+Spec.IgnoreQueryFilters;
+var AllUsers := Db.Users.ToList(Spec);
 ```
 
 ### Underlying Execution Mechanism
 
-1. **State Flag**: `TFluentQuery<T>` and `ISpecification<T>` are updated to maintain a boolean flag `FIgnoreQueryFilters` (default: `False`).
-2. **Ignored Injection**: When query filters are applied in `TDbSet<T>.ToList`, the method checks if the specification has `IgnoreQueryFilters` enabled:
-   ```pascal
-   procedure TDbSet<T>.ApplyTenantFilter(var ASpec: ISpecification<T>);
-   begin
-     if (ASpec <> nil) and ASpec.IsQueryFilterIgnored then Exit;
-     // ... otherwise proceed to inject TenantId filter
-   end;
-   ```
-3. **Soft Delete Filter**: The soft delete compiler handler similarly skips appending the exclusion predicate if the flag is set.
+1. **State Flag**: `TFluentQuery<T>` and `ISpecification<T>` maintain a boolean flag `FIgnoreQueryFilters` (default: `False`).
+2. **Spec Propagation**: In `TDbSet<T>.ToList(ASpec)`, the spec's `IsIgnoringFilters` flag is read and applied to the DbSet's internal state before executing the query. The `ResetQueryFlags` in the `finally` block ensures this is scoped to a single call.
+3. **Soft Delete Filter**: `TSQLGenerator<T>.GetSoftDeleteFilter` returns an empty string when `FIgnoreQueryFilters` is `True`.
+4. **Tenant Filter**: `TDbSet<T>.ApplyTenantFilter` skips injection when `FIgnoreQueryFilters` is `True`.
+5. **Global Query Filters**: `TSQLGenerator<T>.GetQueryFiltersSQL` exits early when `FIgnoreQueryFilters` is `True`.
 
 ---
 
@@ -52,7 +55,22 @@ begin
   IgnoreQueryFilters; // Bypasses Soft Delete & Tenancy automatically
   Where(TPropExpression.Create('Role').Equal('SuperAdmin'));
 end;
+
+// Usage
+var AllAdmins := Db.Users.ToList(TAdminUserListSpec.Create);
 ```
 
 ---
-*Dext Specifications — S34 Dynamic Query Filters | June 2026*
+
+## 4. Implementation Summary
+
+| File | Change |
+|---|---|
+| `Dext.Entity.DbSet.pas` | `ToList(ASpec)` now propagates `IsIgnoringFilters` and `IsOnlyDeleted` from `ISpecification` to `FIgnoreQueryFilters`/`FOnlyDeleted` before calling `ApplyTenantFilter` and `CreateGenerator`. |
+| `Dext.Entity.Query.pas` | `TFluentQuery<T>.IgnoreQueryFilters` already propagated to `ISpecification` — no change needed. |
+| `Dext.Specifications.SQL.Generator.pas` | Already respected `FIgnoreQueryFilters` — no change needed. |
+| `Dext.Entity.DynamicQueryFilter.Tests.pas` | New test file with 4 unit tests and 4 integration tests. |
+| `Dext.Entity.UnitTests.dpr` | Registered `TFluentQueryTests`, `TDynamicQueryFilterUnitTests`, and `TDynamicQueryFilterIntegrationTests`. |
+
+---
+*Dext Specifications — S34 Dynamic Query Filters | June 2026 — Finalized*
