@@ -263,7 +263,42 @@ type
     procedure Dispose;
   end;
 
+  /// <summary>
+  ///   Options configuration for batching telemetry log sinks.
+  /// </summary>
+  TBatchOptions = record
+  private
+    FBatchSize: Integer;
+    FFlushIntervalMs: Integer;
+  public
+    class function Default: TBatchOptions; static;
+    function BatchSize(AValue: Integer): TBatchOptions;
+    function FlushInterval(AValue: Integer): TBatchOptions;
+    property GetBatchSize: Integer read FBatchSize;
+    property GetFlushIntervalMs: Integer read FFlushIntervalMs;
+  end;
+
 implementation
+
+{ TBatchOptions }
+
+class function TBatchOptions.Default: TBatchOptions;
+begin
+  Result.FBatchSize := 100;
+  Result.FFlushIntervalMs := 5000;
+end;
+
+function TBatchOptions.BatchSize(AValue: Integer): TBatchOptions;
+begin
+  FBatchSize := AValue;
+  Result := Self;
+end;
+
+function TBatchOptions.FlushInterval(AValue: Integer): TBatchOptions;
+begin
+  FFlushIntervalMs := AValue;
+  Result := Self;
+end;
 
 { TLogFormatter }
 

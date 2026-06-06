@@ -121,10 +121,15 @@ O Dext foi desenhado para alavancar recursos modernos da linguagem Object Pascal
 - **Escalonador Work-Stealing** — Distribuição eficiente de tarefas entre os núcleos da CPU para máxima performance paralela.
 - **ICancellationToken** — Cancelamento cooperativo com `WaitForCancellation(timeout)` e `IsCancellationRequested`. Integrado com Event Bus Lifecycle e Background Services.
 
-### 1.10 Logging Pipeline (`Dext.Logging`)
+### 1.10 Logging Pipeline (`Dext.Logging`, `Dext.Logging.Sinks.APM`)
 - **ILoggerFactory** — Factory de loggers com registro de múltiplos providers. `CreateLogger(categoryName)` retorna `ILogger` composto.
 - **ILogger** — Interface com métodos por nível: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`. Suporte a structured templates com placeholders.
 - **Aggregate Logger** — Cada `ILogger` criado pela factory agrega todos os providers registrados, despachando cada log entry para todos simultaneamente.
+- **TBatchingTelemetrySink** — Sink base abstrato e assíncrono para envio em lotes (batching) com buffering em fila, sincronização thread-safe e execução em background.
+- **TSeqLogSink** — Sink de logs estruturados utilizando o formato Compact Log Event Format (CLEF) para envio de lotes a servidores Seq via HTTP.
+- **TOTLPTelemetrySink** — Sink de telemetria no padrão OpenTelemetry (OTLP/HTTP JSON) para exportar Logs a coletores OTel (SigNoz, Datadog).
+- **TTelemetrySinkRegistry** — Registro plugável de criadores de sinks que desacopla dependências circulares entre as camadas de pacotes.
+- **Fluent Logging Builders** — Extensões de inicialização que suportam `AddSeq()` e `AddOpenTelemetry()` com configurações customizadas de batching e serviços.
 
 ### 1.11 Event Bus & Messaging (`Dext.Events`, `Dext.Events.Interfaces`)
 - **Dext.Events (In-Process)** — Sistema de Publish/Subscribe inspirado no **MediatR**. Permite o desacoplamento total entre quem gera o evento e quem o processa.

@@ -1,67 +1,122 @@
-# S35 — APM Log Sinks & Structured Logging Pipeline
+# S35 — APM Log Sinks & Unified Telemetry Pipeline (OTLP & Seq)
 
-This architectural specification details the extension of Dext Logging to support asynchronous, batch-oriented pluggable log sinks targeting centralized APM services (Seq, Elasticsearch, Datadog).
+**Status:** ✅ Finalized (Implemented)
+
+This architectural specification details the extension of Dext Logging and Telemetry to support asynchronous, batch-oriented pluggable sinks targeting centralized APM services (Seq, SigNoz, Datadog) via native protocols and standard OpenTelemetry (OTLP).
 
 ---
 
 ## 1. Context & Motivation
 
-Dext currently supports in-memory structured logging, ring buffers, and local telemetry output via the Sidecar dashboard. However, production microservices and enterprise clusters require logs to be forwarded to centralized log management systems (APMs).
+Dext currently supports local structured logging, ring buffers, and telemetry output via the Sidecar dashboard. However, production environments require logs, metrics, and execution traces to be aggregated in centralized Application Performance Monitoring (APM) tools.
 
-While creating custom `ILogSink` implementations is natively supported (such as `TMemoLogSink` in VCL), sending individual log entries immediately to external APIs causes blocking overhead and network saturation.
-
-This specification details a thread-safe, batch-oriented HTTP log sink infrastructure designed to buffer log events and forward them asynchronously in batches.
+Rather than building proprietary exporters for every APM platform on the market, Dext supports a dual-pipeline strategy:
+1. **Seq Integration**: High-efficiency, developer-friendly structured logging using the Compact Log Event Format (CLEF). Ideal for local development, staging, and lightweight single-instance production setups.
+2. **OpenTelemetry Protocol (OTLP)**: The cloud-native standard. By supporting OTLP over HTTP/JSON (and optionally gRPC), Dext telemetry connects out-of-the-box to **SigNoz** (our recommended open-source APM suite powered by ClickHouse), **Datadog**, **Grafana Loki/Tempo**, and any OpenTelemetry collector.
 
 ---
 
 ## 2. Architectural Design
 
-The pipeline introduces the base asynchronous HTTP logger sink:
+The telemetry pipeline is non-blocking and batch-oriented to prevent network bottlenecks or application halts:
 
 ```
-[ILogger] ➔ [Ring Buffer] ➔ [TLogConsumerThread] ➔ [TBatchingLogSink] ➔ (Batch HTTP POST) ➔ [Seq/Elastic]
+[Application Logger] 
+        ➔ [Thread-Safe Ring Buffer Queue] 
+        ➔ [TLogConsumerThread] 
+        ➔ [TBatchingTelemetrySink] 
+        ➔ (Async Batch HTTP Post) 
+        ➔ [Seq / OpenTelemetry Collector (SigNoz/Datadog)]
 ```
 
-### 1. The Batching Sink Interface (`TBatchingLogSink`)
-An abstract base class inheriting from `ILogSink`. It intercepts log entries, appends them to a thread-safe local queue, and schedules a periodic flush:
+### 1. Base Batching Sink (`TBatchingTelemetrySink`)
+An abstract base class that buffers events, handles retries with exponential backoff via the Resilience Pipeline, and flushes data based on size or time limits.
 
 ```pascal
 type
-  TBatchingLogSink = class(TInterfacedObject, ILogSink)
+  TBatchingTelemetrySink = class(TInterfacedObject, ILogSink)
+  private
+    FQueue: TThreadSafeQueue<TLogEntry>;
+    FBatchSize: Integer;
+    FFlushIntervalMs: Integer;
+    // ... thread execution and timer controls
   protected
     procedure Emit(const Entry: TLogEntry); virtual;
     procedure Flush; virtual;
-    procedure SendBatch(const Batch: IList<TLogEntry>); virtual; abstract;
+    procedure SendBatch(const Batch: TArray<TLogEntry>); virtual; abstract;
+  public
+    constructor Create(const Options: TBatchOptions);
   end;
 ```
 
 ---
 
-## 3. Concrete APM Providers
+## 3. APM Providers & Protocols
 
 ### A. Seq Logger Sink (`TSeqLogSink`)
-* **Format**: Converts log entries to CLEF (Compact Log Event Format) JSON structure.
-* **Endpoint**: Batch POST to `/api/events/raw?key=API_KEY`.
-* **Details**: Maps log levels, structured parameters, and exceptions automatically.
+* **Protocol**: HTTP/JSON POST.
+* **Format**: CLEF (Compact Log Event Format). Each log event is mapped as a single-line JSON object:
+  ```json
+  {"@t":"2026-06-06T13:30:00.000Z","@l":"Information","@mt":"User {UserId} logged in from {IP}","UserId":1024,"IP":"127.0.0.1"}
+  ```
+* **Default Endpoint**: `POST http://localhost:5341/api/events/raw?key=API_KEY`
 
-### B. Elasticsearch / OpenSearch Sink (`TElasticSearchLogSink`)
-* **Format**: Converts entries to standard NDJSON (Newline Delimited JSON).
-* **Endpoint**: Bulk API `POST /_bulk`.
-* **Details**: Dynamic index naming based on UTC date (e.g. `dext-logs-2026-06-04`).
+### B. OpenTelemetry Protocol Sink (`TOTLPTelemetrySink`)
+* **Protocol**: OTLP/HTTP (JSON or Protobuf payloads).
+* **Endpoints**:
+  * Logs: `POST /v1/logs`
+  * Traces (APM spans): `POST /v1/traces`
+* **Structure Alignment**:
+  * **Resource Attributes**: Shared environment variables (`service.name`, `service.version`, `deployment.environment`).
+  * **LogRecord**: Map `TLogEntry` attributes (timestamp, severity text, message body, context RTTI properties).
+  * **SpanRecord**: Connects with Dext’s database profiler and web handler invoker to export tracing trees with spans representing queries, external HTTP calls, and route handlers.
 
 ---
 
-## 4. Usage Example
+## 4. Usage & Configuration Example
 
+### Programmatic Registration
 ```pascal
+// Register Seq for local logging
 Log.AddSink(TSeqLogSink.Create(
   'http://localhost:5341', 
-  'MY_API_KEY',
-  TBatchOptions.Create
-    .BatchSize(100)      // Flush when 100 items are queued
-    .FlushInterval(5000) // Or every 5 seconds
+  'SECRET_API_KEY',
+  TBatchOptions.Create.BatchSize(100).FlushInterval(5000)
+));
+
+// Register OpenTelemetry (SigNoz/Datadog Collector) for centralized tracing & logs
+Telemetry.AddSink(TOTLPTelemetrySink.Create(
+  'http://localhost:4318', // Default OTLP/HTTP collector port
+  TTelemetryOptions.Create
+    .ServiceName('DextCommerceAPI')
+    .Environment('Production')
+    .EnableTraces(True)
+    .EnableLogs(True)
 ));
 ```
 
+### JSON Configuration (`appsettings.json`)
+```json
+{
+  "Dext": {
+    "Telemetry": {
+      "Seq": {
+        "Enabled": true,
+        "Endpoint": "http://localhost:5341",
+        "ApiKey": "SECRET_API_KEY"
+      },
+      "OpenTelemetry": {
+        "Enabled": true,
+        "Endpoint": "http://localhost:4318",
+        "ServiceName": "DextCommerceAPI",
+        "Environment": "Production",
+        "ExportLogs": true,
+        "ExportTraces": true
+      }
+    }
+  }
+}
+```
+
 ---
-*Dext Specifications — S35 APM Log Sinks | June 2026*
+*Dext Specifications — S35 APM Log Sinks & Unified Telemetry | June 2026*

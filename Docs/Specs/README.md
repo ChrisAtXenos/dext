@@ -36,7 +36,7 @@ ID | Title | Status | Goal
 **S32** | [Resilience Pipeline & Fault Handling](S32-Resilience-Pipeline.md) | ✅ Finalized | Polly-style transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) for generic I/O.
 **S33** | [Persistent Background Jobs](S33-Background-Jobs.md) | ✅ Finalized | Out-of-process scheduled/recurring background tasks with database/Redis persistence.
 **S34** | [Dynamic Query Filters](S34-Dynamic-Query-Filters.md) | ✅ Finalized | Bypassing global query filters (soft-delete, multi-tenancy) dynamically via `IgnoreQueryFilters`.
-**S35** | [APM Log Sinks & Structured Logging Pipeline](S35-APM-Log-Sinks.md) | 📝 Draft | Batch-oriented asynchronous logger sinks for Seq, Elasticsearch, and APM platforms.
+**S35** | [APM Log Sinks & Unified Telemetry Pipeline (OTLP & Seq)](S35-APM-Log-Sinks.md) | ✅ Finalized | Asynchronous batch-oriented telemetry sinks targeting Seq and OpenTelemetry (OTLP) collectors.
 ---
 
 ## 🔍 Project Status & Roadmap

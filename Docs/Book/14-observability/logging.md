@@ -120,6 +120,41 @@ begin
 end;
 ```
 
+## APM Log Sinks (Seq & OpenTelemetry)
+
+Dext supports sending structured logs and telemetry to modern application performance monitoring (APM) tools. These sinks buffer logs in a thread-safe memory queue and forward them in asynchronous batches on background threads to prevent application performance bottlenecks.
+
+To use APM sinks, make sure your project references the `Dext.Net` package, where the high-performance network clients reside.
+
+### Seq Log Sink (CLEF Format)
+
+Seq is a popular structured log server. Dext can stream logs formatted in the Compact Log Event Format (CLEF) over HTTP to Seq.
+
+```pascal
+Builder.AddSeq('http://localhost:5341', 'your-api-key', TBatchOptions.Default.BatchSize(100).FlushInterval(5000));
+```
+
+### OpenTelemetry Telemetry Sink (OTLP/HTTP)
+
+For enterprise tracing and log collection (e.g. SigNoz, Datadog, or OpenTelemetry Collector), Dext supports the OTLP/HTTP JSON standard protocol.
+
+```pascal
+Builder.AddOpenTelemetry(
+  'http://localhost:4318', 
+  'my-service-name', 
+  'Production',
+  True, // Export Logs
+  False, // Export Traces
+  TBatchOptions.Default.BatchSize(200).FlushInterval(2000)
+);
+```
+
+### Batch Options Configuration
+
+Both sinks accept a `TBatchOptions` configuration:
+- `BatchSize(Integer)`: The maximum number of entries to buffer before a batch transmission is automatically triggered (default: 100).
+- `FlushInterval(Integer)`: The maximum duration in milliseconds to wait before transmitting any buffered entries, even if the batch size limit has not been reached (default: 5000ms).
+
 ---
 
 [← Telemetry](telemetry.md)

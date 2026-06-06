@@ -21,6 +21,7 @@ Pacotes de instruções focados para escrever código **Dext** (framework modern
 | **dext-validation** | `dext-validation.md` | Validação baseada em atributos, TAbstractValidator<T>, validação fortemente tipada com Prop<T>, registro de padrões, auto-validação no model binding |
 | **dext-background** | `dext-background.md` | Workers em segundo plano (`IHostedService`), configuração (`IConfiguration`, padrão Options), tarefas assíncronas (`TAsyncTask`) |
 | **dext-networking** | `dext-networking.md` | Cliente REST (`TRestClient`), requisições HTTP assíncronas, respostas tipadas, provedores de autenticação, pool de conexões |
+| **dext-logging** | `dext-logging.md` | Logging estruturado (`ILogger`), níveis de log, log assíncrono (RingBuffer), sinks APM (Seq, OpenTelemetry OTLP) |
 | **dext-resilience** | `dext-resilience.md` | Pipeline de Resiliência estilo Polly (Retry, Circuit Breaker, Fallback, Timeout) |
 | **dext-realtime** | `dext-realtime.md` | Hubs (`THub`), mensagens em tempo real compatíveis com SignalR, grupos, `IHubContext<T>` |
 | **dext-database-as-api** | `dext-database-as-api.md` | API REST CRUD instantânea de entidades ORM com zero código (`MapDataApi<T>`) |
@@ -128,6 +129,12 @@ As habilidades são carregadas dinamicamente quando o agente precisa delas. O RE
 - Fazer requisições HTTP de saída para APIs externas
 - Usar `TRestClient` para chamadas REST
 - Precisar de chamadas HTTP assíncronas com desserialização tipada
+
+**Carregue `dext-logging`** quando:
+
+- Configurar o logger ou registrar sinks (Console, File, Seq, OpenTelemetry)
+- Gravar mensagens de log usando interfaces `ILogger` e structured placeholders
+- Configurar propriedades de lote (`TBatchOptions`) ou utilizar o RingBuffer de alta performance
 
 **Carregue `dext-resilience`** quando:
 

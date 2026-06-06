@@ -21,6 +21,7 @@ Focused instruction packages for writing correct, idiomatic **Dext** (Delphi mod
 | **dext-validation** | `dext-validation.md` | Attribute-based validation, TAbstractValidator<T>, strongly-typed smart property validation, regex patterns, model binding auto-validation |
 | **dext-background** | `dext-background.md` | Background workers (`IHostedService`), configuration (`IConfiguration`, Options pattern), async tasks (`TAsyncTask`) |
 | **dext-networking** | `dext-networking.md` | REST client (`TRestClient`), async HTTP requests, typed responses, auth providers, connection pooling |
+| **dext-logging** | `dext-logging.md` | Structured logging (`ILogger`), Log Levels, Async logging (RingBuffer), APM sinks (Seq, OpenTelemetry OTLP) |
 | **dext-resilience** | `dext-resilience.md` | Resilience Pipeline, Polly-style fault handling (Retry, Circuit Breaker, Fallback, Timeout) |
 | **dext-realtime** | `dext-realtime.md` | Hubs (`THub`), SignalR-compatible real-time messaging, groups, `IHubContext<T>` |
 | **dext-database-as-api** | `dext-database-as-api.md` | Zero-code CRUD REST API from ORM entities (`MapDataApi<T>`) |
@@ -128,6 +129,12 @@ Skills are loaded dynamically when the agent needs them. The README is always lo
 - Making outbound HTTP requests to external APIs
 - Using `TRestClient` for REST calls
 - Needing async HTTP with typed deserialization
+
+**Load `dext-logging`** when:
+
+- Configuring the logger or registering sinks (Console, File, Seq, OpenTelemetry)
+- Recording logs using `ILogger` interfaces and structured placeholders
+- Configuring batch transmission properties (`TBatchOptions`) or using high-performance RingBuffer
 
 **Load `dext-resilience`** when:
 

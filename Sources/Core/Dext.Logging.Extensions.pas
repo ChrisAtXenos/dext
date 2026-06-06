@@ -30,7 +30,8 @@ interface
 uses
   System.SysUtils,
   Dext.DI.Interfaces,
-  Dext.Logging;
+  Dext.Logging,
+  Dext.Logging.Sinks;
 
 type
   /// <summary>
@@ -45,6 +46,10 @@ type
     function AddFile(const AFileName: string; AMaxFileSizeMB: Integer = 0; ARollDaily: Boolean = False): ILoggingBuilder;
     function AddTelemetry: ILoggingBuilder;
     function AddAsync(ACapacityPowerOfTwo: Integer = 16): ILoggingBuilder;
+    function AddSeq(const AUrl: string; const AApiKey: string = ''): ILoggingBuilder; overload;
+    function AddSeq(const AUrl: string; const AApiKey: string; const AOptions: TBatchOptions): ILoggingBuilder; overload;
+    function AddOpenTelemetry(const AUrl: string; const AServiceName: string = 'DextApp'; const AEnvironment: string = 'Production'): ILoggingBuilder; overload;
+    function AddOpenTelemetry(const AUrl: string; const AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILoggingBuilder; overload;
   end;
 
   /// <summary>
@@ -62,7 +67,6 @@ uses
   System.Math,
   Dext.Collections,
   Dext.Logging.Console,
-  Dext.Logging.Sinks,
   Dext.Logging.Async,
   Dext.Logging.Telemetry;
 
@@ -97,6 +101,10 @@ type
     function AddFile(const AFileName: string; AMaxFileSizeMB: Integer = 0; ARollDaily: Boolean = False): ILoggingBuilder;
     function AddTelemetry: ILoggingBuilder;
     function AddAsync(ACapacityPowerOfTwo: Integer = 16): ILoggingBuilder;
+    function AddSeq(const AUrl: string; const AApiKey: string = ''): ILoggingBuilder; overload;
+    function AddSeq(const AUrl: string; const AApiKey: string; const AOptions: TBatchOptions): ILoggingBuilder; overload;
+    function AddOpenTelemetry(const AUrl: string; const AServiceName: string = 'DextApp'; const AEnvironment: string = 'Production'): ILoggingBuilder; overload;
+    function AddOpenTelemetry(const AUrl: string; const AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILoggingBuilder; overload;
     
     function ExtractProviders: IList<ILoggerProvider>;
     function ExtractSinks: IList<ILogSink>;
@@ -191,6 +199,28 @@ function TLoggingBuilder.AddAsync(ACapacityPowerOfTwo: Integer): ILoggingBuilder
 begin
   FAsync := True;
   FAsyncCapacity := ACapacityPowerOfTwo;
+  Result := Self;
+end;
+
+function TLoggingBuilder.AddSeq(const AUrl, AApiKey: string): ILoggingBuilder;
+begin
+  Result := AddSeq(AUrl, AApiKey, TBatchOptions.Default);
+end;
+
+function TLoggingBuilder.AddSeq(const AUrl, AApiKey: string; const AOptions: TBatchOptions): ILoggingBuilder;
+begin
+  FSinks.Add(TTelemetrySinkRegistry.CreateSeq(AUrl, AApiKey, AOptions));
+  Result := Self;
+end;
+
+function TLoggingBuilder.AddOpenTelemetry(const AUrl, AServiceName, AEnvironment: string): ILoggingBuilder;
+begin
+  Result := AddOpenTelemetry(AUrl, AServiceName, AEnvironment, True, True, TBatchOptions.Default);
+end;
+
+function TLoggingBuilder.AddOpenTelemetry(const AUrl, AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILoggingBuilder;
+begin
+  FSinks.Add(TTelemetrySinkRegistry.CreateOTLP(AUrl, AServiceName, AEnvironment, AExportLogs, AExportTraces, AOptions));
   Result := Self;
 end;
 

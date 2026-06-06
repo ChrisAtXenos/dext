@@ -18,6 +18,20 @@ uses
   Dext.Logging.RingBuffer;
 
 type
+  TSeqSinkCreator = reference to function(const AUrl, AApiKey: string; const AOptions: TBatchOptions): ILogSink;
+  TOTLPSinkCreator = reference to function(const AUrl, AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILogSink;
+
+  TTelemetrySinkRegistry = class
+  private
+    class var FSeqCreator: TSeqSinkCreator;
+    class var FOTLPCreator: TOTLPSinkCreator;
+  public
+    class procedure RegisterSeqCreator(const ACreator: TSeqSinkCreator); static;
+    class procedure RegisterOTLPCreator(const ACreator: TOTLPSinkCreator); static;
+    class function CreateSeq(const AUrl, AApiKey: string; const AOptions: TBatchOptions): ILogSink; static;
+    class function CreateOTLP(const AUrl, AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILogSink; static;
+  end;
+
   /// <summary>
   ///   Sink that writes to Standard Output (Console).
   /// </summary>
@@ -320,6 +334,32 @@ begin
   if FSink <> nil then
     FSink.Flush;
   FSink := nil;
+end;
+
+{ TTelemetrySinkRegistry }
+
+class procedure TTelemetrySinkRegistry.RegisterSeqCreator(const ACreator: TSeqSinkCreator);
+begin
+  FSeqCreator := ACreator;
+end;
+
+class procedure TTelemetrySinkRegistry.RegisterOTLPCreator(const ACreator: TOTLPSinkCreator);
+begin
+  FOTLPCreator := ACreator;
+end;
+
+class function TTelemetrySinkRegistry.CreateSeq(const AUrl, AApiKey: string; const AOptions: TBatchOptions): ILogSink;
+begin
+  if not Assigned(FSeqCreator) then
+    raise Exception.Create('Seq log sink creator is not registered. Make sure Dext.Net package is linked and Dext.Logging.Sinks.APM is initialized.');
+  Result := FSeqCreator(AUrl, AApiKey, AOptions);
+end;
+
+class function TTelemetrySinkRegistry.CreateOTLP(const AUrl, AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILogSink;
+begin
+  if not Assigned(FOTLPCreator) then
+    raise Exception.Create('OTLP telemetry sink creator is not registered. Make sure Dext.Net package is linked and Dext.Logging.Sinks.APM is initialized.');
+  Result := FOTLPCreator(AUrl, AServiceName, AEnvironment, AExportLogs, AExportTraces, AOptions);
 end;
 
 end.

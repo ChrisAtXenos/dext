@@ -120,6 +120,41 @@ begin
 end;
 ```
 
+## Sinks de Log APM (Seq & OpenTelemetry)
+
+O Dext suporta o envio de logs estruturados e telemetria para ferramentas modernas de monitoramento de performance de aplicação (APM). Esses sinks acumulam os logs em uma fila thread-safe na memória e os enviam em lotes (batches) assíncronos usando threads em background, garantindo que a aplicação não sofra gargalos de performance.
+
+Para utilizar os sinks APM, certifique-se de que o seu projeto referencie o pacote `Dext.Net`, onde os clientes de rede de alta performance estão localizados.
+
+### Sink para Seq (Formato CLEF)
+
+O Seq é um servidor popular para visualização de logs estruturados. O Dext envia os logs formatados no padrão Compact Log Event Format (CLEF) via HTTP.
+
+```pascal
+Builder.AddSeq('http://localhost:5341', 'sua-chave-api', TBatchOptions.Default.BatchSize(100).FlushInterval(5000));
+```
+
+### Sink para OpenTelemetry (OTLP/HTTP)
+
+Para coleta de logs corporativa e tracing distribuído (ex: SigNoz, Datadog ou OpenTelemetry Collector), o Dext implementa o protocolo OTLP/HTTP JSON padrão.
+
+```pascal
+Builder.AddOpenTelemetry(
+  'http://localhost:4318', 
+  'nome-do-servico', 
+  'Production',
+  True, // Exportar Logs
+  False, // Exportar Traces
+  TBatchOptions.Default.BatchSize(200).FlushInterval(2000)
+);
+```
+
+### Configurações de Envio em Lote (TBatchOptions)
+
+Ambos os sinks aceitam uma configuração fluida de `TBatchOptions`:
+- `BatchSize(Integer)`: O número máximo de logs acumulados na fila antes que o envio em lote seja disparado automaticamente (padrão: 100).
+- `FlushInterval(Integer)`: O intervalo máximo em milissegundos a se esperar antes de disparar o lote, mesmo que o tamanho máximo de logs não tenha sido atingido (padrão: 5000ms).
+
 ---
 
 [← Telemetria](observabilidade.md)

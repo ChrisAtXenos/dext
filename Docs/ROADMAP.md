@@ -46,12 +46,12 @@ Status | Task | Spec | Description
 🔴 | **EntityDataSet Providers** | - | Pluggable providers (REST/gRPC) for EntityDataSet.
 🔴 | **Redis Client (Dext.Redis)** | [S13](Specs/S13-Redis-Client.md) | High-performance async Redis client with RESP3 and RedisJSON support.
 🟡 | **SOA via Interfaces** | [S14](Specs/S14-SOA-Interfaces.md) | Transparent Code-First gRPC mapping for Delphi Interfaces.
+✅ | **APM & Telemetry Sinks** | [S35](Specs/S35-APM-Log-Sinks.md) | Asynchronous batch-oriented telemetry sinks targeting Seq and OpenTelemetry (OTLP) collectors.
 
 ## 🔮 Future / Post-V1
 - [ ] **OData Support**: Full OData query support.
 - [ ] **GraphQL**: Native layer for data graphs.
 - [ ] **Microservices Mesh**: Service discovery and native Load Balancing.
-- [ ] **APM Log Sinks**: [S35](Specs/S35-APM-Log-Sinks.md) Batch-oriented asynchronous logger sinks for Seq, Elasticsearch, and APM platforms.
 
 ---
 
@@ -94,12 +94,12 @@ Status | Tarefa | Spec | Descrição
 🔴 | **Provider de EntityDataSet** | - | Providers plugáveis (REST/gRPC) para o EntityDataSet.
 🔴 | **Redis Client (Dext.Redis)** | [S13](Specs/S13-Redis-Client.md) | Client Redis async de alta performance com suporte a RESP3 e RedisJSON.
 🟡 | **SOA via Interfaces** | [S14](Specs/S14-SOA-Interfaces.md) | SOA e RPC via gRPC Code-First transparente para interfaces Delphi.
+✅ | **APM & Telemetry Sinks** | [S35](Specs/S35-APM-Log-Sinks.md) | Envio assíncrono em lotes de telemetria e logs para Seq e coletores OpenTelemetry (OTLP).
 
 ## 🔮 Futuro / Pós-V1
 - [ ] **Suporte a OData**: Suporte completo a queries OData.
 - [ ] **GraphQL**: Camada nativa para exposição de grafos de dados.
 - [ ] **Microservices Mesh**: Service discovery e Load Balancing nativo.
-- [ ] **Sinks de Log APM (Structured)**: [S35](Specs/S35-APM-Log-Sinks.md) Envio assíncrono em lotes para APMs externos (Seq, Elasticsearch, Datadog).
 
 - HTTP Server nativo IOCP, EPOLL, Kqueue
 - UI Nativo com Skia

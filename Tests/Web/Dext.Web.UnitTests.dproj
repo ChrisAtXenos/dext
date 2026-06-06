@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{740F4258-92A6-4FA6-BCED-B4333D2D7583}</ProjectGuid>
         <ProjectVersion>20.4</ProjectVersion>
@@ -203,6 +203,7 @@
         <DCCReference Include="Dext.Web.DataApi.Utils.Tests.pas"/>
         <DCCReference Include="Dext.Web.Hosting.Tests.pas"/>
         <DCCReference Include="Dext.Web.Htmx.Tests.pas"/>
+        <DCCReference Include="Dext.Logging.Sinks.APM.Tests.pas"/>
         <DCCReference Include="..\Common\Dext.Web.Mocks.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
