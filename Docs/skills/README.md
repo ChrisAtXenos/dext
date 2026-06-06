@@ -17,6 +17,7 @@ Focused instruction packages for writing correct, idiomatic **Dext** (Delphi mod
 | **dext-auth** | `dext-auth.md` | JWT authentication, login endpoints, `[Authorize]`, claims, `TClaimsBuilder` |
 | **dext-testing** | `dext-testing.md` | Unit tests, `Mock<T>`, fluent assertions (`Should`), `[TestFixture]`, snapshot testing |
 | **dext-collections** | `dext-collections.md` | `IList<T>`, `TCollections`, LINQ operations, ownership semantics, `IChannel<T>` |
+| **dext-json** | `dext-json.md` | JSON serialization (`TDextJson`), custom settings (`TJsonSettings`), DOM traversal (`IDextJsonObject`, `IDextJsonArray`) |
 | **dext-api-features** | `dext-api-features.md` | Middleware, CORS, rate limiting, response caching, health checks, OpenAPI/Swagger, static files, compression |
 | **dext-validation** | `dext-validation.md` | Attribute-based validation, TAbstractValidator<T>, strongly-typed smart property validation, regex patterns, model binding auto-validation |
 | **dext-background** | `dext-background.md` | Background workers (`IHostedService`), configuration (`IConfiguration`, Options pattern), async tasks (`TAsyncTask`) |
@@ -103,6 +104,13 @@ Skills are loaded dynamically when the agent needs them. The README is always lo
 - Using `IList<T>`, `TCollections.CreateList`, `TCollections.CreateObjectList`
 - Writing LINQ-style queries on in-memory lists
 - Using `IChannel<T>` for thread communication
+
+**Load `dext-json`** when:
+
+- Serializing objects or records to JSON strings (`TDextJson.Serialize`)
+- Deserializing JSON strings to typed structures (`TDextJson.Deserialize<T>`)
+- Parsing and traversing JSON documents using DOM interfaces (`IDextJsonObject`, `IDextJsonArray`)
+- Configuring casing styles (`TCaseStyle`) or other formatting options (`TJsonSettings`)
 
 **Load `dext-api-features`** when:
 

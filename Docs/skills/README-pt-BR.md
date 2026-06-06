@@ -17,6 +17,7 @@ Pacotes de instruções focados para escrever código **Dext** (framework modern
 | **dext-auth** | `dext-auth.md` | Autenticação JWT, endpoints de login, `[Authorize]`, claims, `TClaimsBuilder` |
 | **dext-testing** | `dext-testing.md` | Testes de unidade, `Mock<T>`, assertions fluentes (`Should`), `[TestFixture]`, testes de snapshot |
 | **dext-collections** | `dext-collections.md` | `IList<T>`, `TCollections`, operações LINQ, semântica de ownership, `IChannel<T>` |
+| **dext-json** | `dext-json.md` | Serialização JSON (`TDextJson`), configurações customizadas (`TJsonSettings`), manipulação do DOM (`IDextJsonObject`, `IDextJsonArray`) |
 | **dext-api-features** | `dext-api-features.md` | Middleware, CORS, rate limiting, cache de resposta, health checks, OpenAPI/Swagger, arquivos estáticos, compressão |
 | **dext-validation** | `dext-validation.md` | Validação baseada em atributos, TAbstractValidator<T>, validação fortemente tipada com Prop<T>, registro de padrões, auto-validação no model binding |
 | **dext-background** | `dext-background.md` | Workers em segundo plano (`IHostedService`), configuração (`IConfiguration`, padrão Options), tarefas assíncronas (`TAsyncTask`) |
@@ -103,6 +104,13 @@ As habilidades são carregadas dinamicamente quando o agente precisa delas. O RE
 - Usar `IList<T>`, `TCollections.CreateList`, `TCollections.CreateObjectList`
 - Escrever consultas estilo LINQ em listas em memória
 - Usar `IChannel<T>` para comunicação entre threads
+
+**Carregue `dext-json`** quando:
+
+- Serializar objetos ou records em strings JSON (`TDextJson.Serialize`)
+- Desserializar strings JSON em estruturas tipadas (`TDextJson.Deserialize<T>`)
+- Analisar e navegar em documentos JSON utilizando as interfaces de DOM (`IDextJsonObject`, `IDextJsonArray`)
+- Configurar estilos de casing (`TCaseStyle`) ou outras propriedades de formatação (`TJsonSettings`)
 
 **Carregue `dext-api-features`** quando:
 
