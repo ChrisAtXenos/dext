@@ -332,18 +332,25 @@ begin
   end;
 end;
 
+function CreateSeqSink(const AUrl, AApiKey: string; const AOptions: TBatchOptions): ILogSink;
+begin
+  Result := TSeqLogSink.Create(AUrl, AApiKey, AOptions);
+end;
+
+function CreateOTLPSink(const AUrl, AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILogSink;
+begin
+  Result := TOTLPTelemetrySink.Create(AUrl, AServiceName, AEnvironment, AExportLogs, AExportTraces, AOptions);
+end;
+
+var
+  GSeqCreator: TSeqSinkCreator;
+  GOTLPCreator: TOTLPSinkCreator;
+
 initialization
-  TTelemetrySinkRegistry.RegisterSeqCreator(
-    function(const AUrl, AApiKey: string; const AOptions: TBatchOptions): ILogSink
-    begin
-      Result := TSeqLogSink.Create(AUrl, AApiKey, AOptions);
-    end
-  );
-  TTelemetrySinkRegistry.RegisterOTLPCreator(
-    function(const AUrl, AServiceName, AEnvironment: string; AExportLogs, AExportTraces: Boolean; const AOptions: TBatchOptions): ILogSink
-    begin
-      Result := TOTLPTelemetrySink.Create(AUrl, AServiceName, AEnvironment, AExportLogs, AExportTraces, AOptions);
-    end
-  );
+  GSeqCreator := CreateSeqSink;
+  TTelemetrySinkRegistry.RegisterSeqCreator(GSeqCreator);
+
+  GOTLPCreator := CreateOTLPSink;
+  TTelemetrySinkRegistry.RegisterOTLPCreator(GOTLPCreator);
 
 end.

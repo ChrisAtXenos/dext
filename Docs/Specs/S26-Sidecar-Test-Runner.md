@@ -1,6 +1,8 @@
 # Specification: S26 — Interactive Test Runner (Premium Edition)
 
-Esta especificação detalha a evolução do Test Runner do Dext Sidecar para uma ferramenta de produtividade de nível internacional, inspirada nas melhores experiências do **JetBrains Rider** e **Visual Studio Test Explorer**, superando as limitações históricas de ferramentas legadas como o TestInsight.
+> [!CAUTION]
+> **STATUS: CANCELED / SUPERSEDED**
+> Esta especificação (S26 - baseada no Sidecar externo) foi cancelada e substituída pela especificação nativa de IDE: [S27 — Native Delphi IDE Test Runner (VCL Premium)](file:///C:/dev/Dext/DextRepository/Docs/Specs/S27-IDE-Test-Runner.md).
 
 ---
 
