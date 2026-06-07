@@ -354,6 +354,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **HardDelete** — `Db.Tasks.HardDelete(Task)` para exclusão física.
 - **Restore** — `Db.Tasks.Restore(Task)` para restaurar registros soft-deleted.
 - **Query Filters Automáticos** — Registros excluídos ficam **invisíveis** por padrão. `IgnoreQueryFilters` para ver tudo, `OnlyDeleted` para a lixeira.
+- **Soft Delete por Timestamp** (`[DeletedAt]`) — Converte automaticamente `Remove()` em uma atualização definindo o timestamp atual, e gera filtros `IS NULL` para registros ativos (Issue #121).
 - **IdentityMap Cleanup** — Entidades soft-deleted são removidas do cache de memória após `SaveChanges`.
 
 ### 4.8 JSON/JSONB Column Queries (`[JsonColumn]`)
@@ -398,6 +399,10 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 
 ### 5.1 High-Performance REST Client (`Dext.Net.RestClient`)
 - **Fluent API** — Consumo de APIs sem componentes visuais. Métodos: `RestClient('url').BearerToken('...').Get<T>('/path').Await`.
+- **Factory de Requisições REST Fluente** — Padrão de agrupamento usando `Client.Request.Get('/path')` para isolar o modo de planejamento/builder, evitando o inchaço de escopo na raiz do cliente e limitações de tipo de retorno (Issue #119).
+- **Payloads de Body sem Restrição** — Suporte nativo à serialização de `record` e `TArray<T>` nos payloads de requisição `Body<T>` e no helper de array `BodyArray<T>`, contornando limitações de restrições genéricas do compilador.
+- **Deserialização de Records & Arrays** — Deserialização nativa de arrays e objetos JSON diretamente em records e arrays dinâmicos (`TArray<T>`) durante a execução de requisições.
+- **Respostas Ergonômicas** — Helper booleano `IRestResponse.IsSuccess` para verificação imediata de status codes na faixa `200..299`.
 - **Connection Pooling** — Reuso inteligente de instâncias `TNetHttpClient` (pooling thread-safe), eliminando o overhead de handshakes TCP/SSL repetitivos e reduzindo drasticamente o uso de recursos do SO.
 - **Auto-Serialization** — Integração nativa com o motor JSON do Dext para hidratação de objetos e coleções genéricas (`IList<T>`).
 - **Async First** — Totalmente integrado ao `Dext.Threading.Async` com suporte a `ICancellationToken` para cancelamento cooperativo e proteção contra Access Violations na UI.
@@ -682,7 +687,7 @@ O framework fornece uma implementação nativa e sem dependências da especifica
 O framework inclui uma suíte de observabilidade premium, de alta performance e assíncrona, para coleta, armazenamento e visualização de logs estruturados, spans distribuídos, métricas do sistema e profiling de chamadas de banco de dados e conexões de rede externas.
 
 ### 19.1 Tracing Distribuído & Logging Estruturado (S24)
-- **Ring Buffer Assíncrono** — Pipeline de logs estruturados e spans armazenados em ring buffer de alta performance na memória (limite de 1000 itens) para evitar gargalos de I/O em threads de execução HTTP/ORM.
+- **Ring Buffer Assíncrono** — Pipeline de logs estruturados e spans armazenados em ring buffer de alta performance na memória (limite de 1000 itens) para evitar gargalos de I/O em threads de execução HTTP.
 - **Persistência Assíncrona** — Thread de background dedicada (`TDashboardSaveTimer`) que descarrega periodicamente os logs para `telemetry.json` a cada 30 segundos de forma não-bloqueante.
 - **Visualização Gantt Hierárquica** — O Dashboard renderiza em tempo real a árvore de spans sob o contexto de trace pai (`TraceId`/`SpanId`), permitindo analisar tempos de resposta e gargalos de processamento de forma sequencial.
 
@@ -699,7 +704,5 @@ O framework inclui uma suíte de observabilidade premium, de alta performance e 
 ### 19.4 Streamable Sessions & HTMX (S23)
 - **IStreamableSessionManager** — Gerenciador de canais SSE com limpeza de sessões expiradas (Garbage Collector a cada 60s expulsando sessões inativas após 30 minutos).
 - **HTMX Fragment Swap** — Endpoints que expõem fragmentos HTML dinâmicos (como `/sidecar/fragments/metrics`) permitindo atualização visual direta no DOM em tempo real via HTMX sem escrever código JavaScript.
-
----
 
 *Dext Framework — Exhaustive Technical Map & Features Index. (Revision: Jun 05, 2026).*

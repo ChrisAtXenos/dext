@@ -10,7 +10,7 @@ ID | Title | Status | Goal
 **S02** | [Modernizer: gRPC & Protobuf](S02-Modernizer-gRPC.md) | 📝 Draft | High-speed binary communication as a legacy replacement for DataSnap/RDW.
 **S03** | [Live Observability Dashboard](S03-Live-Observability.md) | 🟡 In Progress | Real-time debugging of SQL, HTTP and Exceptions via Telemetry.
 **S04** | [DataAPI Conventions](S04-DataApi-Conventions.md) | ✅ Finalized | Simplify REST endpoint exposure using attributes and global defaults.
-**S05** | [Advanced Tooling](S05-Advanced-Tooling.md) | 📝 Draft | IDE Wizards, Code-First Parsers, and UI-driven scaffolding.
+**S05** | [Advanced Tooling](S05-Advanced-Tooling.md) | 📝 Draft | IDE Wizards, Code-First Parsers (Pending), and TFDConnection Scaffolding (Implemented).
 **S06** | [Security & Identity](S06-Security-Identity.md) | 📝 Draft | Native OAuth2, OpenID Connect, and JWT policy-based authorization.
 **S07** | [High-Performance Reflection](S07-High-Performance-Reflection.md) | ✅ Finalized | Zero-boxing type handlers, fast-path reflection registry, and thread-safe RTTI caches.
 **S08** | [Dynamic Ports](S08-Dynamic-Ports.md) | ✅ Finalized | Support for Port 0 (OS picks free port) for Demos and CI.
@@ -21,8 +21,8 @@ ID | Title | Status | Goal
 **S14** | [SOA via Interfaces](S14-SOA-Interfaces.md) | 📝 Draft | Code-First RPC exposing Delphi interfaces via gRPC natively.
 **S15** | [Dext Studio & Visual Scaffolding](S15-Dext-Studio-IDE-Expert.md) | 📝 Draft | Visual IDE Expert for schema mapping, GitOps (YAML), and continuous DB syncing.
 **S19** | [FluentQuery Join Evolution](S19-FluentQuery-Join-Evolution.md) | ✅ Finalized | Unified DSL for complex SQL Joins via Managed Records.
-**S20** | [Fluent REST Evolution](S20-Fluent-Rest-Evolution.md) | 📝 Draft | Enhanced TRestClient factories and native record/array payload support.
-**S21** | [Soft Delete: Timestamp-based Audit](S21-SoftDelete-Timestamp-Audit.md) | 📝 Draft | Soft Delete based on nullable timestamps for audit trails.
+**S20** | [Fluent REST Evolution](S20-Fluent-Rest-Evolution.md) | ✅ Finalized | Enhanced TRestClient factories and native record/array payload support.
+**S21** | [Soft Delete: Timestamp-based Audit](S21-SoftDelete-Timestamp-Audit.md) | ✅ Finalized | Soft Delete based on nullable timestamps for audit trails.
 **S22** | [Prop and Nullable Convergence](S22-Prop-Nullable-Convergence.md) | ✅ Finalized | Convergence of Smart Properties and Nullable wrappers.
 **S23** | [HTTP Streamable Sessions & HTMX](S23-Http-Streamable-HTMX.md) | ✅ Finalized | Native HTMX fragment rendering and Streamable Sessions.
 **S24** | [Live Logging & Tracing](S24-Sidecar-Logging-Tracing.md) | ✅ Finalized | Distributed tracing and observability suite for logs/spans.

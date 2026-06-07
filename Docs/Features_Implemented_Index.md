@@ -354,6 +354,7 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 - **HardDelete** — `Db.Tasks.HardDelete(Task)` for physical deletion.
 - **Restore** — `Db.Tasks.Restore(Task)` to restore soft-deleted records.
 - **Automatic Query Filters** — Deleted records are **invisible** by default. `IgnoreQueryFilters` to see everything, `OnlyDeleted` for the trash bin.
+- **Timestamp Soft Delete** (`[DeletedAt]`) — Automatically converts `Remove()` into an update setting the current timestamp, and generates `IS NULL` filters for active records (Issue #121).
 - **IdentityMap Cleanup** — Soft-deleted entities are removed from the memory cache after `SaveChanges`.
 
 ### 4.8 JSON/JSONB Column Queries (`[JsonColumn]`)
@@ -398,6 +399,10 @@ One of Dext's most powerful features: **automatic generation of full REST APIs f
 
 ### 5.1 High-Performance REST Client (`Dext.Net.RestClient`)
 - **Fluent API** — Consume APIs without visual components. Methods: `RestClient('url').BearerToken('...').Get<T>('/path').Await`.
+- **Fluent REST Request Factory** — Grouping pattern using `Client.Request.Get('/path')` to isolate request building, avoiding root-level client scope bloat and return type limitations (Issue #119).
+- **Unrestricted Body Payloads** — Native support for serializing `record` and `TArray<T>` in request payloads (`Body<T>` and the array helper `BodyArray<T>`), bypassing generic compiler restrictions.
+- **Record & Array Deserialization** — Native deserialization of JSON arrays and objects directly into records and dynamic arrays (`TArray<T>`) during request execution.
+- **Ergonomic Responses** — Boolean helper `IRestResponse.IsSuccess` for immediate status code validation in the `200..299` range.
 - **Connection Pooling** — Intelligent `TNetHttpClient` instance reuse (thread-safe pooling), eliminating TCP/SSL handshake overhead and radically reducing OS resource usage.
 - **Auto-Serialization** — Native integration with Dext's JSON engine for hydrating objects and generic collections (`IList<T>`).
 - **Async First** — Fully integrated with `Dext.Threading.Async` with `ICancellationToken` support for cooperative cancellation and UI Access Violation protection.

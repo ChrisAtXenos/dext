@@ -32,7 +32,9 @@ Status | Task | Spec | Description
 ✅ | **Resilience Pipeline** | [S32](Specs/S32-Resilience-Pipeline.md) | Polly-style transient-fault handling (Retry, Circuit Breaker, Fallback, Timeout) for generic I/O.
 ✅ | **Persistent Background Jobs** | [S33](Specs/S33-Background-Jobs.md) | Out-of-process scheduled/recurring background tasks with database/SQLite/InMemory persistence.
 ✅ | **Dynamic Query Filters** | [S34](Specs/S34-Dynamic-Query-Filters.md) | Bypassing global query filters (soft-delete, multi-tenancy) dynamically via `IgnoreQueryFilters`.
-🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Initial visual tool for Migrations inside the IDE.
+✅ | **Soft Delete Evolution** | [S21](Specs/S21-SoftDelete-Timestamp-Audit.md) | Soft Delete based on nullable timestamps for audit trails.
+✅ | **Fluent REST Evolution** | [S20](Specs/S20-Fluent-Rest-Evolution.md) | Enhanced TRestClient factories and native record/array payload support.
+🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Initial visual tool for Migrations inside the IDE (Only TFDConnection scaffolding implemented).
 🔴 | **Dext Studio (Expert)**| [S15](Specs/S15-Dext-Studio-IDE-Expert.md) | Visual IDE Expert for schema mapping and continuous syncing via YAML.
 🟡 | **Production Middleware** | - | SPA Fallback, Forwarded Headers, and Resilience.
 
@@ -80,7 +82,9 @@ Status | Tarefa | Spec | Descrição
 ✅ | **Resilience Pipeline** | [S32](Specs/S32-Resilience-Pipeline.md) | Tratamento de falhas estilo Polly (Retry, Circuit Breaker, Fallback, Timeout) genérico para I/O.
 ✅ | **Persistent Background Jobs** | [S33](Specs/S33-Background-Jobs.md) | Processamento de tarefas em background agendadas/recorrentes fora do processo com persistência em BD/SQLite/InMemory.
 ✅ | **Filtros Dinâmicos de Query** | [S34](Specs/S34-Dynamic-Query-Filters.md) | Bypass dinâmico de filtros globais de query (soft-delete, multi-tenancy) via `IgnoreQueryFilters`.
-🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Ferramenta visual inicial para Migrations na IDE.
+✅ | **Evolução do Soft Delete** | [S21](Specs/S21-SoftDelete-Timestamp-Audit.md) | Soft Delete baseado em timestamps anuláveis para trilhas de auditoria.
+✅ | **Evolução REST Fluente** | [S20](Specs/S20-Fluent-Rest-Evolution.md) | Factories aprimoradas para TRestClient e suporte nativo a records/arrays.
+🟡 | **Dext IDE Explorer** | [S05](Specs/S05-Advanced-Tooling.md) | Ferramenta visual inicial para Migrations na IDE (Somente scaffolding de TFDConnection implementado).
 🔴 | **Dext Studio (Expert)**| [S15](Specs/S15-Dext-Studio-IDE-Expert.md) | Expert visual na IDE para mapeamento de schema e sync contínuo via YAML.
 🟡 | **Middleware Pack** | - | SPA Fallback, Forwarded Headers e Resiliência.
 
