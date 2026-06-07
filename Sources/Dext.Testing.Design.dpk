@@ -43,6 +43,7 @@ contains
   Dext.Testing.Design.DockableForm in 'Testing\Design\Dext.Testing.Design.DockableForm.pas',
   Dext.Testing.Design.Server in 'Testing\Design\Dext.Testing.Design.Server.pas',
   Dext.Testing.Design.AST in 'Testing\Design\Dext.Testing.Design.AST.pas',
-  Dext.Testing.Design.Gutter in 'Testing\Design\Dext.Testing.Design.Gutter.pas';
+  Dext.Testing.Design.Gutter in 'Testing\Design\Dext.Testing.Design.Gutter.pas',
+  Dext.Testing.Design.Coverage in 'Testing\Design\Dext.Testing.Design.Coverage.pas';
 
 end.

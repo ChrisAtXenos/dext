@@ -122,6 +122,7 @@
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Server.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.AST.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Gutter.pas"/>
+        <DCCReference Include="Testing\Design\Dext.Testing.Design.Coverage.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -518,7 +518,9 @@ begin
 
       if SameText(FullName, CleanSelected) or 
          SameText(FullNameAlt, CleanSelected) or
-         CleanSelected.EndsWith('.' + ATestName, True) and CleanSelected.Contains(AClassName) then
+         SameText(AClassName, CleanSelected) or
+         SameText(AUnitName + '.' + AClassName, CleanSelected) or
+         (CleanSelected.EndsWith('.' + ATestName, True) and CleanSelected.Contains(AClassName)) then
       begin
         Exit(True);
       end;

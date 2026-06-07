@@ -27,7 +27,8 @@ uses
   Winapi.Windows,
   Vcl.Forms,
   Dext.Testing.Design.DockableForm,
-  Dext.Testing.Design.Gutter;
+  Dext.Testing.Design.Gutter,
+  Dext.Testing.Design.Coverage;
 
 type
   TDextMenuHelper = class
@@ -139,7 +140,10 @@ end;
 
 procedure TDextTestRunnerIDENotifier.FileNotification(NotifyCode: TOTAFileNotification; const FileName: string; var CanModify: Boolean);
 begin
-  // File notifications stub
+  if NotifyCode = ofnFileOpened then
+  begin
+    TCoverageManager.GetInstance.RefreshActiveViews;
+  end;
 end;
 
 initialization

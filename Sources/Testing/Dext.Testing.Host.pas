@@ -183,7 +183,8 @@ begin
 
   LJSON := '{' +
     '"testName":"' + Info.ClassName + '.' + Info.TestName + '",' +
-    '"status":"' + LStatus + '"';
+    '"status":"' + LStatus + '",' +
+    '"durationMs":' + Round(Info.Duration.TotalMilliseconds).ToString;
     
   if Info.Result in [trFailed, trError, trTimeout] then
   begin
@@ -378,6 +379,53 @@ begin
       begin
         LogDebug('TTestHost.Execute: Registering TDextTestExplorerListener on port ' + LPort.ToString);
         TTestRunner.RegisterListener(TDextTestExplorerListener.Create(LPort));
+        
+        var LClient := THTTPClient.Create;
+        try
+          try
+            var LResp := LClient.Get('http://localhost:' + LPort.ToString + '/tests');
+            if LResp.StatusCode = 200 then
+            begin
+              var LJSONStr := LResp.ContentAsString(TEncoding.UTF8).Trim;
+              LogDebug('TTestHost.Execute: Fetched selected tests: ' + LJSONStr);
+              if LJSONStr.StartsWith('[') and LJSONStr.EndsWith(']') then
+              begin
+                var LTestsList := TStringList.Create;
+                try
+                  var LInner := LJSONStr.Substring(1, LJSONStr.Length - 2).Trim;
+                  if LInner <> '' then
+                  begin
+                    var LParts := LInner.Split([',']);
+                    for var LPart in LParts do
+                    begin
+                      var LCleaned := LPart.Trim;
+                      if LCleaned.StartsWith('"') and LCleaned.EndsWith('"') then
+                        LCleaned := LCleaned.Substring(1, LCleaned.Length - 2);
+                      if LCleaned <> '' then
+                        LTestsList.Add(LCleaned);
+                    end;
+                  end;
+                  if LTestsList.Count > 0 then
+                  begin
+                    LogDebug(Format('TTestHost.Execute: Setting %d selected tests.', [LTestsList.Count]));
+                    var LSelectedArr: TArray<string>;
+                    SetLength(LSelectedArr, LTestsList.Count);
+                    for var LIdx := 0 to LTestsList.Count - 1 do
+                      LSelectedArr[LIdx] := LTestsList[LIdx];
+                    TTestRunner.SetSelectedTests(LSelectedArr);
+                  end;
+                finally
+                  LTestsList.Free;
+                end;
+              end;
+            end;
+          except
+            on E: Exception do
+              LogDebug('TTestHost.Execute: Failed to fetch selected tests: ' + E.Message);
+          end;
+        finally
+          LClient.Free;
+        end;
       end;
       LogDebug('TTestHost.Execute: Running Config.Run');
       Config.Run;
