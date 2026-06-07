@@ -10,10 +10,8 @@ object FormDextTestRunner: TFormDextTestRunner
   Font.Height = -11
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = False
-  PixelsPerInch = 96
   TextHeight = 13
-  object Splitter1: TSplitter
+  object NameSplitter: TSplitter
     Left = 0
     Top = 350
     Width = 350
@@ -21,9 +19,8 @@ object FormDextTestRunner: TFormDextTestRunner
     Cursor = crVSplit
     Align = alBottom
     ExplicitTop = 300
-    ExplicitWidth = 350
   end
-  object pnlToolbar: TPanel
+  object ToolbarPanel: TPanel
     Left = 0
     Top = 0
     Width = 350
@@ -31,54 +28,78 @@ object FormDextTestRunner: TFormDextTestRunner
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    object cbProjects: TComboBox
+    object ProjectsComboBox: TComboBox
+      AlignWithMargins = True
       Left = 5
       Top = 7
-      Width = 150
+      Width = 45
       Height = 21
+      Margins.Left = 5
+      Margins.Top = 7
+      Margins.Right = 5
+      Margins.Bottom = 7
+      Align = alClient
       Style = csDropDownList
       TabOrder = 0
-      OnChange = cbProjectsChange
+      OnChange = ProjectsComboBoxChange
     end
-    object btnRunAll: TButton
-      Left = 160
-      Top = 5
-      Width = 50
-      Height = 25
-      Caption = 'Run All'
+    object ButtonsPanel: TPanel
+      Left = 55
+      Top = 0
+      Width = 295
+      Height = 35
+      Align = alRight
+      BevelOuter = bvNone
       TabOrder = 1
-      OnClick = btnRunAllClick
-    end
-    object btnRunSelected: TButton
-      Left = 215
-      Top = 5
-      Width = 55
-      Height = 25
-      Caption = 'Selected'
-      TabOrder = 2
-      OnClick = btnRunSelectedClick
-    end
-    object btnStop: TButton
-      Left = 275
-      Top = 5
-      Width = 40
-      Height = 25
-      Caption = 'Stop'
-      TabOrder = 3
-      OnClick = btnStopClick
+      object RefreshButton: TButton
+        Left = 5
+        Top = 5
+        Width = 70
+        Height = 25
+        Caption = 'Refresh'
+        TabOrder = 0
+        OnClick = RefreshButtonClick
+      end
+      object RunAllButton: TButton
+        Left = 80
+        Top = 5
+        Width = 75
+        Height = 25
+        Caption = 'Run All'
+        TabOrder = 1
+        OnClick = RunAllButtonClick
+      end
+      object RunSelectedButton: TButton
+        Left = 160
+        Top = 5
+        Width = 80
+        Height = 25
+        Caption = 'Selected'
+        TabOrder = 2
+        OnClick = RunSelectedButtonClick
+      end
+      object StopButton: TButton
+        Left = 245
+        Top = 5
+        Width = 45
+        Height = 25
+        Caption = 'Stop'
+        TabOrder = 3
+        OnClick = StopButtonClick
+      end
     end
   end
-  object pcSessions: TPageControl
+  object SessionsPageControl: TPageControl
     Left = 0
     Top = 35
     Width = 350
     Height = 315
-    ActivePage = tsDefaultSession
+    ActivePage = DefaultSessionTabSheet
     Align = alClient
     TabOrder = 1
-    object tsDefaultSession: TTabSheet
+    object DefaultSessionTabSheet: TTabSheet
       Caption = 'Tests'
-      object tvTests: TTreeView
+      object TestsTreeView: TTreeView
         Left = 0
         Top = 0
         Width = 342
@@ -87,11 +108,11 @@ object FormDextTestRunner: TFormDextTestRunner
         Indent = 19
         ReadOnly = True
         TabOrder = 0
-        OnDblClick = tvTestsDblClick
+        OnDblClick = TestsTreeViewDblClick
       end
     end
   end
-  object pnlDetails: TPanel
+  object DetailsPanel: TPanel
     Left = 0
     Top = 353
     Width = 350
@@ -99,7 +120,7 @@ object FormDextTestRunner: TFormDextTestRunner
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
-    object memDetails: TMemo
+    object DetailsMemo: TMemo
       Left = 0
       Top = 0
       Width = 350

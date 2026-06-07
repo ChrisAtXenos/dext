@@ -12,6 +12,7 @@ uses
   Dext.Testing.Runner,
   Dext.Testing.Attributes,
   Dext.Testing.Fluent,
+  Dext.Testing,
   Dext.Utils,
   Dext.Web.DataApi.Resolver.Tests in 'Dext.Web.DataApi.Resolver.Tests.pas',
   Dext.Web.DataApi.Tests in 'Dext.Web.DataApi.Tests.pas',
@@ -24,8 +25,6 @@ uses
   Dext.Logging.Sinks.APM.Tests in 'Dext.Logging.Sinks.APM.Tests.pas',
   Dext.Web.Mocks in '..\Common\Dext.Web.Mocks.pas';
 
-var
-  TestResult: Boolean;
 begin
   SetConsoleCharSet();
   try
@@ -34,7 +33,7 @@ begin
     SafeWriteLn('======================');
     SafeWriteLn;
 
-    TestResult := TTest
+    RunTests(TTest
       .Configure
       .Verbose
       {$IFDEF TESTINSIGHT}
@@ -51,9 +50,7 @@ begin
         TDataApiSerializationTests,
         THtmxResponseTests,
         TAPMSinksTests
-      ]).Run;
-
-    TTest.SetExitCode(TestResult);
+      ]));
   except
     on E: Exception do
     begin
@@ -61,6 +58,4 @@ begin
       ExitCode := 1;
     end;
   end;
-
-  ConsolePause;
 end.

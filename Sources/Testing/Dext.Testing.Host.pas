@@ -62,7 +62,155 @@ uses
   TestInsight.Client,
   Dext.Testing.TestInsight,
   {$ENDIF}
-  Dext.Core.Writers;
+  Dext.Core.Writers,
+  System.Net.HttpClient,
+  System.Net.Mime,
+  System.Net.URLClient;
+
+type
+  TDextTestExplorerListener = class(TInterfacedObject, ITestListener)
+  private
+    FPort: Integer;
+    FClient: THTTPClient;
+  public
+    constructor Create(APort: Integer);
+    destructor Destroy; override;
+    procedure OnRunStart(TotalTests: Integer);
+    procedure OnRunComplete(const Summary: TTestSummary);
+    procedure OnFixtureStart(const FixtureName: string; TestCount: Integer);
+    procedure OnFixtureComplete(const FixtureName: string);
+    procedure OnTestStart(const UnitName, Fixture, Test: string);
+    procedure OnTestComplete(const Info: TTestInfo);
+  end;
+
+procedure LogDebug(const AMsg: string);
+var
+  LFile: string;
+begin
+  LFile := 'C:\dev\Dext\dext_runner_debug.log';
+  try
+    TFile.AppendAllText(LFile, DateTimeToStr(Now) + ' [PID:' + GetCurrentProcessId.ToString + ']: ' + AMsg + sLineBreak, TEncoding.UTF8);
+  except
+    // ignore
+  end;
+end;
+
+{ TDextTestExplorerListener }
+
+constructor TDextTestExplorerListener.Create(APort: Integer);
+begin
+  inherited Create;
+  FPort := APort;
+  FClient := THTTPClient.Create;
+  LogDebug('TDextTestExplorerListener.Create: Listener initialized for port ' + APort.ToString);
+end;
+
+destructor TDextTestExplorerListener.Destroy;
+begin
+  FClient.Free;
+  LogDebug('TDextTestExplorerListener.Destroy: Listener destroyed');
+  inherited;
+end;
+
+procedure TDextTestExplorerListener.OnRunStart(TotalTests: Integer);
+begin
+  LogDebug('TDextTestExplorerListener.OnRunStart: TotalTests = ' + TotalTests.ToString);
+end;
+
+procedure TDextTestExplorerListener.OnRunComplete(const Summary: TTestSummary);
+var
+  LJSON: string;
+  LStream: TStringStream;
+  LHeaders: TNetHeaders;
+begin
+  LogDebug('TDextTestExplorerListener.OnRunComplete: Passed = ' + Summary.Passed.ToString + ', Failed = ' + Summary.Failed.ToString);
+  
+  LJSON := '{' +
+    '"event":"RunComplete",' +
+    '"passed":' + Summary.Passed.ToString + ',' +
+    '"failed":' + Summary.Failed.ToString + ',' +
+    '"ignored":' + Summary.Skipped.ToString +
+    '}';
+
+  LStream := TStringStream.Create(LJSON, TEncoding.UTF8);
+  try
+    try
+      SetLength(LHeaders, 1);
+      LHeaders[0] := TNetHeader.Create('Content-Type', 'application/json');
+      FClient.Post('http://localhost:' + FPort.ToString + '/', LStream, nil, LHeaders);
+    except
+      on E: Exception do
+        LogDebug('TDextTestExplorerListener.OnRunComplete: POST failed: ' + E.ClassName + ': ' + E.Message);
+    end;
+  finally
+    LStream.Free;
+  end;
+end;
+
+procedure TDextTestExplorerListener.OnFixtureStart(const FixtureName: string; TestCount: Integer);
+begin
+  LogDebug('TDextTestExplorerListener.OnFixtureStart: ' + FixtureName + ' (Tests: ' + TestCount.ToString + ')');
+end;
+
+procedure TDextTestExplorerListener.OnFixtureComplete(const FixtureName: string);
+begin
+  LogDebug('TDextTestExplorerListener.OnFixtureComplete: ' + FixtureName);
+end;
+
+procedure TDextTestExplorerListener.OnTestStart(const UnitName, Fixture, Test: string);
+begin
+  LogDebug('TDextTestExplorerListener.OnTestStart: ' + Fixture + '.' + Test);
+end;
+
+procedure TDextTestExplorerListener.OnTestComplete(const Info: TTestInfo);
+var
+  LJSON: string;
+  LStatus: string;
+  LStream: TStringStream;
+  LHeaders: TNetHeaders;
+begin
+  case Info.Result of
+    trPassed: LStatus := 'Passed';
+    trFailed: LStatus := 'Failed';
+    trError: LStatus := 'Error';
+    trSkipped: LStatus := 'Skipped';
+    trTimeout: LStatus := 'Error';
+  else
+    LStatus := 'Skipped';
+  end;
+
+  LogDebug('TDextTestExplorerListener.OnTestComplete: ' + Info.ClassName + '.' + Info.TestName + ' - ' + LStatus);
+
+  LJSON := '{' +
+    '"testName":"' + Info.ClassName + '.' + Info.TestName + '",' +
+    '"status":"' + LStatus + '"';
+    
+  if Info.Result in [trFailed, trError, trTimeout] then
+  begin
+    LJSON := LJSON + ',"error":{' +
+      '"message":"' + Info.ErrorMessage.Replace('\', '\\').Replace('"', '\"').Replace(#13, '\r').Replace(#10, '\n') + '",' +
+      '"stackTrace":{"raw":"' + Info.StackTrace.Replace('\', '\\').Replace('"', '\"').Replace(#13, '\r').Replace(#10, '\n') + '"}' +
+      '}';
+  end;
+  
+  LJSON := LJSON + '}';
+
+  LStream := TStringStream.Create(LJSON, TEncoding.UTF8);
+  try
+    try
+      LogDebug('TDextTestExplorerListener.OnTestComplete: POSTing to http://localhost:' + FPort.ToString + '/');
+      SetLength(LHeaders, 1);
+      LHeaders[0] := TNetHeader.Create('Content-Type', 'application/json');
+      FClient.Post('http://localhost:' + FPort.ToString + '/', LStream, nil, LHeaders);
+      LogDebug('TDextTestExplorerListener.OnTestComplete: POST successful');
+    except
+      on E: Exception do
+        LogDebug('TDextTestExplorerListener.OnTestComplete: POST failed: ' + E.ClassName + ': ' + E.Message);
+    end;
+  finally
+    LStream.Free;
+  end;
+end;
 
 procedure RunTests(const Config: TTestConfigurator);
 begin
@@ -90,6 +238,7 @@ var
   IsLogEnabled: Boolean;
   ParentProcess: string;
   P: string;
+  LPort: Integer;
   {$IFDEF MSWINDOWS}
   IsUI: Boolean;
   {$ENDIF}
@@ -101,11 +250,15 @@ var
   InsightOptions: TTestInsightOptions;
   {$ENDIF}
 begin
+  LogDebug('TTestHost.Execute: Starting test host execution...');
+  LogDebug('TTestHost.Execute: Command Line: ' + GetCommandLine);
   ParentProcess := GetParentProcessName;
+  LogDebug('TTestHost.Execute: Parent Process: ' + ParentProcess);
   
   // 1. Detect parameters first
   IsLogEnabled := False;
   LogFile := '';
+  LPort := 0;
   {$IFDEF MSWINDOWS}
   IsUI := False;
   {$ENDIF}
@@ -117,6 +270,11 @@ begin
     begin
       IsLogEnabled := True;
       LogFile := ChangeFileExt(ParamStr(0), '.log');
+    end
+    else if P.StartsWith('--port', True) or P.StartsWith('-port', True) then
+    begin
+      if (Index < ParamCount) and (not ParamStr(Index + 1).StartsWith('-')) then
+        LPort := StrToIntDef(ParamStr(Index + 1), 0);
     end;
     {$IFDEF MSWINDOWS}
     // Detect TestInsight
@@ -216,7 +374,14 @@ begin
     {$ENDIF}
     begin
       SafeWriteLn('Dext Test Host - Console Mode');
+      if LPort > 0 then
+      begin
+        LogDebug('TTestHost.Execute: Registering TDextTestExplorerListener on port ' + LPort.ToString);
+        TTestRunner.RegisterListener(TDextTestExplorerListener.Create(LPort));
+      end;
+      LogDebug('TTestHost.Execute: Running Config.Run');
       Config.Run;
+      LogDebug('TTestHost.Execute: Config.Run completed');
     end;
     
     // Set exit code based on failure
@@ -224,6 +389,8 @@ begin
       ExitCode := 1
     else
       ExitCode := 0;
+
+    LogDebug('TTestHost.Execute: ExitCode set to ' + ExitCode.ToString);
 
     if IsLogEnabled and (LogFile <> '') then
     begin
@@ -237,11 +404,15 @@ begin
   finally
     // Pause if not CI/No-Wait
     if IsConsoleAvailable and not FindCmdLineSwitch('no-wait', ['-', '\'], True) then
+    begin
+      LogDebug('TTestHost.Execute: Entering ConsolePause');
       ConsolePause;
+    end;
     
     // Crucial: Set writer to Nil before freeing the memory it points to!
     InitializeDextWriter(Nil);
     LogStrings.Free;
+    LogDebug('TTestHost.Execute: Test host execution completed.');
   end;
 end;
 
