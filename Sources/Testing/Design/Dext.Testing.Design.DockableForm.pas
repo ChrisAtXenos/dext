@@ -39,6 +39,8 @@ type
     class procedure AnalyzeHistory(const AProjectFile: string; AMemo: TMemo);
   end;
 
+  TTestExplorerLayout = (telCompact, telSplitBottom, telSplitRight);
+
   TFormDextTestRunner = class(TDockableForm)
     ToolbarPanel: TPanel;
     ProjectsComboBox: TComboBox;
@@ -89,8 +91,20 @@ type
     FProgressPanel: TPanel;
     FTotalTests: Integer;
     FCompletedTests: Integer;
+    FFilterEdit: TEdit;
+    FLayoutPopupMenu: TPopupMenu;
+    FInspectorSplitter: TSplitter;
+    FCurrentLayout: TTestExplorerLayout;
+    LayoutButton: TButton;
     procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
     procedure UpdateTestInspector(const ATestName: string);
+    procedure FilterEditChange(Sender: TObject);
+    procedure LayoutButtonClick(Sender: TObject);
+    procedure LayoutMenuClick(Sender: TObject);
+    procedure ApplyLayout(ALayout: TTestExplorerLayout);
+    procedure RefreshTreeView;
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    function GetNodeFullTestName(ANode: TTreeNode): string;
     procedure SetActiveSession(ASession: TTestSession);
     procedure SessionsPageControlChange(Sender: TObject);
     function FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
@@ -480,6 +494,70 @@ begin
       LThemingServices.ApplyTheme(Self);
   end;
 
+  // Reposition existing buttons to make space
+  RefreshButton.Left := 2;
+  RefreshButton.Width := 50;
+  RunAllButton.Left := 55;
+  RunAllButton.Width := 55;
+  RunSelectedButton.Left := 113;
+  RunSelectedButton.Width := 60;
+  StopButton.Left := 176;
+  StopButton.Width := 40;
+
+  LayoutButton := TButton.Create(Self);
+  LayoutButton.Parent := ButtonsPanel;
+  LayoutButton.Left := 220;
+  LayoutButton.Top := 5;
+  LayoutButton.Width := 50;
+  LayoutButton.Height := 25;
+  LayoutButton.Caption := 'Layout';
+  LayoutButton.OnClick := LayoutButtonClick;
+
+  FLayoutPopupMenu := TPopupMenu.Create(Self);
+  var LItem1 := TMenuItem.Create(FLayoutPopupMenu);
+  LItem1.Caption := 'Tabbed (Bottom)';
+  LItem1.Tag := Ord(telCompact);
+  LItem1.OnClick := LayoutMenuClick;
+  FLayoutPopupMenu.Items.Add(LItem1);
+
+  var LItem2 := TMenuItem.Create(FLayoutPopupMenu);
+  LItem2.Caption := 'Split (Bottom)';
+  LItem2.Tag := Ord(telSplitBottom);
+  LItem2.OnClick := LayoutMenuClick;
+  FLayoutPopupMenu.Items.Add(LItem2);
+
+  var LItem3 := TMenuItem.Create(FLayoutPopupMenu);
+  LItem3.Caption := 'Split (Right)';
+  LItem3.Tag := Ord(telSplitRight);
+  LItem3.OnClick := LayoutMenuClick;
+  FLayoutPopupMenu.Items.Add(LItem3);
+
+  FInspectorSplitter := TSplitter.Create(Self);
+  FInspectorSplitter.Parent := DetailsPanel;
+  FInspectorSplitter.Visible := False;
+  FCurrentLayout := telCompact;
+
+  // Create Filter panel dynamically
+  var LFilterPanel := TPanel.Create(Self);
+  LFilterPanel.Parent := Self;
+  LFilterPanel.Align := alTop;
+  LFilterPanel.Height := 28;
+  LFilterPanel.BevelOuter := bvNone;
+
+  FFilterEdit := TEdit.Create(Self);
+  FFilterEdit.Parent := LFilterPanel;
+  FFilterEdit.Align := alClient;
+  FFilterEdit.AlignWithMargins := True;
+  FFilterEdit.Margins.Left := 6;
+  FFilterEdit.Margins.Right := 6;
+  FFilterEdit.Margins.Top := 3;
+  FFilterEdit.Margins.Bottom := 3;
+  FFilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
+  FFilterEdit.OnChange := FilterEditChange;
+
+  Self.KeyPreview := True;
+  Self.OnKeyDown := FormKeyDown;
+
   ApplyIDETheme;
   RefreshProjects;
   FServer.Start(OnTestResultReceived);
@@ -739,23 +817,9 @@ begin
               begin
                 LTest := LScanResults[LIdx];
                 FTestLocations.Add(LTest);
-
-                // Populate Tree View
-                LFixtureNode := FindNodeByPath(LTest.ClassName);
-                if not Assigned(LFixtureNode) then
-                begin
-                  LFixtureNode := TestsTreeView.Items.AddChild(nil, LTest.ClassName);
-                  LFixtureNode.ImageIndex := 3;
-                  LFixtureNode.SelectedIndex := 3;
-                end;
-
-                LMethodNode := TestsTreeView.Items.AddChild(LFixtureNode, LTest.MethodName);
-                LMethodNode.Data := Pointer(FTestLocations.Count - 1); // Index of location
-                LMethodNode.ImageIndex := 0;
-                LMethodNode.SelectedIndex := 0;
               end;
 
-              TestsTreeView.FullExpand;
+              RefreshTreeView;
             finally
               TestsTreeView.Items.EndUpdate;
               LScanResults.Free;
@@ -775,6 +839,17 @@ var
   I: Integer;
   LNode: TTreeNode;
   LSplit: TArray<string>;
+  
+  function GetNodeClassName(const ANodeText: string): string;
+  var
+    LPos: Integer;
+  begin
+    LPos := ANodeText.IndexOf(' (');
+    if LPos > 0 then
+      Result := ANodeText.Substring(0, LPos)
+    else
+      Result := ANodeText;
+  end;
 begin
   Result := nil;
   
@@ -787,7 +862,7 @@ begin
       for I := 0 to TestsTreeView.Items.Count - 1 do
       begin
         LNode := TestsTreeView.Items[I];
-        if (LNode.Parent = nil) and SameText(LNode.Text, LSplit[0]) then
+        if (LNode.Parent = nil) and SameText(GetNodeClassName(LNode.Text), LSplit[0]) then
         begin
           var J: Integer;
           for J := 0 to LNode.Count - 1 do
@@ -803,16 +878,14 @@ begin
     end;
   end;
   
-  // Fallback: search all nodes by text
-  if Result = nil then
+  // Fallback: search all nodes by ClassName prefix
+  for I := 0 to TestsTreeView.Items.Count - 1 do
   begin
-    for I := 0 to TestsTreeView.Items.Count - 1 do
+    LNode := TestsTreeView.Items[I];
+    if (LNode.Parent = nil) and SameText(GetNodeClassName(LNode.Text), APath) then
     begin
-      if SameText(TestsTreeView.Items[I].Text, APath) then
-      begin
-        Result := TestsTreeView.Items[I];
-        Exit;
-      end;
+      Result := LNode;
+      Exit;
     end;
   end;
 end;
@@ -923,7 +996,7 @@ begin
     // If this test is selected, update inspector tab
     if (TestsTreeView.Selected <> nil) and 
        (SameText(TestsTreeView.Selected.Text, LTestName) or 
-        (TestsTreeView.Selected.Parent <> nil) and SameText(TestsTreeView.Selected.Parent.Text + '.' + TestsTreeView.Selected.Text, LTestName)) then
+        SameText(GetNodeFullTestName(TestsTreeView.Selected), LTestName)) then
     begin
       UpdateTestInspector(LTestName);
     end;
@@ -983,15 +1056,11 @@ var
 begin
   if not Assigned(Node) then Exit;
   
-  if Node.Parent = nil then
+  LKey := GetNodeFullTestName(Node);
+  UpdateTestInspector(LKey);
+  if (Node.Parent <> nil) and FTestDetails.ContainsKey(LKey) then
   begin
-    UpdateTestInspector(Node.Text);
-  end
-  else
-  begin
-    LKey := Node.Parent.Text + '.' + Node.Text;
-    UpdateTestInspector(LKey);
-    if FTestDetails.ContainsKey(LKey) then
+    if FDetailsPageControl.Visible then
       FDetailsPageControl.ActivePage := FInspectorTab;
   end;
 end;
@@ -1398,7 +1467,7 @@ begin
       LNode := TestsTreeView.Items[I];
       if (LNode.Parent <> nil) and LNode.Checked then
       begin
-        LList.Add(LNode.Parent.Text + '.' + LNode.Text);
+        LList.Add(GetNodeFullTestName(LNode));
       end;
     end;
     Result := LList.ToArray;
@@ -1534,7 +1603,7 @@ begin
         if PtInRect(LBtnRect, Point(X, Y)) then
         begin
           TestsTreeView.Selected := LNode;
-          RunActiveProjectTests(LNode.Parent.Text + '.' + LNode.Text);
+          RunActiveProjectTests(GetNodeFullTestName(LNode));
         end;
       end;
     end;
@@ -1592,17 +1661,355 @@ begin
   end;
 end;
 
+function TFormDextTestRunner.GetNodeFullTestName(ANode: TTreeNode): string;
+var
+  LParentText: string;
+  LSpaceIdx: Integer;
+begin
+  Result := '';
+  if not Assigned(ANode) then Exit;
+  
+  if ANode.Parent = nil then
+  begin
+    LParentText := ANode.Text;
+    LSpaceIdx := LParentText.IndexOf(' (');
+    if LSpaceIdx > 0 then
+      Result := LParentText.Substring(0, LSpaceIdx)
+    else
+      Result := LParentText;
+  end
+  else
+  begin
+    LParentText := ANode.Parent.Text;
+    LSpaceIdx := LParentText.IndexOf(' (');
+    if LSpaceIdx > 0 then
+      LParentText := LParentText.Substring(0, LSpaceIdx);
+    Result := LParentText + '.' + ANode.Text;
+  end;
+end;
+
+procedure TFormDextTestRunner.FilterEditChange(Sender: TObject);
+begin
+  RefreshTreeView;
+end;
+
+procedure TFormDextTestRunner.LayoutButtonClick(Sender: TObject);
+var
+  LPoint: TPoint;
+begin
+  if Assigned(FLayoutPopupMenu) then
+  begin
+    LPoint := LayoutButton.ClientToScreen(Point(0, LayoutButton.Height));
+    FLayoutPopupMenu.Popup(LPoint.X, LPoint.Y);
+  end;
+end;
+
+procedure TFormDextTestRunner.LayoutMenuClick(Sender: TObject);
+begin
+  if Sender is TMenuItem then
+    ApplyLayout(TTestExplorerLayout(TMenuItem(Sender).Tag));
+end;
+
+procedure TFormDextTestRunner.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if (Key = Ord('F')) and (ssCtrl in Shift) then
+  begin
+    if Assigned(FFilterEdit) then
+    begin
+      FFilterEdit.SetFocus;
+      Key := 0;
+    end;
+  end;
+end;
+
+procedure TFormDextTestRunner.ApplyLayout(ALayout: TTestExplorerLayout);
+begin
+  FCurrentLayout := ALayout;
+  
+  DetailsMemo.Align := alNone;
+  FInspectorScroll.Align := alNone;
+  FInspectorSplitter.Visible := False;
+
+  case ALayout of
+    telCompact:
+    begin
+      NameSplitter.Align := alBottom;
+      NameSplitter.Cursor := crVSplit;
+      DetailsPanel.Align := alBottom;
+      DetailsPanel.Height := 150;
+
+      FDetailsPageControl.Visible := True;
+      DetailsMemo.Parent := FConsoleTab;
+      DetailsMemo.Align := alClient;
+      FInspectorScroll.Parent := FInspectorTab;
+      FInspectorScroll.Align := alClient;
+    end;
+
+    telSplitBottom:
+    begin
+      NameSplitter.Align := alBottom;
+      NameSplitter.Cursor := crVSplit;
+      DetailsPanel.Align := alBottom;
+      DetailsPanel.Height := 150;
+
+      FDetailsPageControl.Visible := False;
+      
+      DetailsMemo.Parent := DetailsPanel;
+      DetailsMemo.Align := alLeft;
+      DetailsMemo.Width := DetailsPanel.Width div 2;
+
+      FInspectorSplitter.Parent := DetailsPanel;
+      FInspectorSplitter.Align := alLeft;
+      FInspectorSplitter.Visible := True;
+
+      FInspectorScroll.Parent := DetailsPanel;
+      FInspectorScroll.Align := alClient;
+    end;
+
+    telSplitRight:
+    begin
+      NameSplitter.Align := alRight;
+      NameSplitter.Cursor := crHSplit;
+      DetailsPanel.Align := alRight;
+      DetailsPanel.Width := 320;
+
+      FDetailsPageControl.Visible := False;
+
+      DetailsMemo.Parent := DetailsPanel;
+      DetailsMemo.Align := alTop;
+      DetailsMemo.Height := DetailsPanel.Height div 2;
+
+      FInspectorSplitter.Parent := DetailsPanel;
+      FInspectorSplitter.Align := alTop;
+      FInspectorSplitter.Visible := True;
+
+      FInspectorScroll.Parent := DetailsPanel;
+      FInspectorScroll.Align := alClient;
+    end;
+  end;
+end;
+
+procedure TFormDextTestRunner.RefreshTreeView;
+var
+  LFilter: string;
+  LIdx: Integer;
+  LTest: TTestLocation;
+  LFixtureNode, LMethodNode: TTreeNode;
+  LClassMatches: Boolean;
+  LMethodMatches: Boolean;
+  LFixtureTestsCount: TDictionary<string, Integer>;
+begin
+  TestsTreeView.Items.BeginUpdate;
+  try
+    TestsTreeView.Items.Clear;
+    LFilter := '';
+    if Assigned(FFilterEdit) then
+      LFilter := Trim(FFilterEdit.Text);
+
+    LFixtureTestsCount := TDictionary<string, Integer>.Create;
+    try
+      for LIdx := 0 to FTestLocations.Count - 1 do
+      begin
+        LTest := FTestLocations[LIdx];
+        LClassMatches := (LFilter = '') or LTest.ClassName.ToLower.Contains(LFilter.ToLower);
+        LMethodMatches := (LFilter = '') or LTest.MethodName.ToLower.Contains(LFilter.ToLower);
+        
+        if LClassMatches or LMethodMatches then
+        begin
+          if LFixtureTestsCount.ContainsKey(LTest.ClassName) then
+            LFixtureTestsCount[LTest.ClassName] := LFixtureTestsCount[LTest.ClassName] + 1
+          else
+            LFixtureTestsCount.Add(LTest.ClassName, 1);
+        end;
+      end;
+
+      for LIdx := 0 to FTestLocations.Count - 1 do
+      begin
+        LTest := FTestLocations[LIdx];
+        LClassMatches := (LFilter = '') or LTest.ClassName.ToLower.Contains(LFilter.ToLower);
+        LMethodMatches := (LFilter = '') or LTest.MethodName.ToLower.Contains(LFilter.ToLower);
+
+        if LClassMatches or LMethodMatches then
+        begin
+          var LCount: Integer;
+          LFixtureTestsCount.TryGetValue(LTest.ClassName, LCount);
+          var LClassNodeText := LTest.ClassName + ' (' + LCount.ToString + ' tests)';
+
+          LFixtureNode := FindNodeByPath(LTest.ClassName);
+          if not Assigned(LFixtureNode) then
+          begin
+            LFixtureNode := TestsTreeView.Items.AddChild(nil, LClassNodeText);
+            LFixtureNode.ImageIndex := 3;
+            LFixtureNode.SelectedIndex := 3;
+          end;
+
+          LMethodNode := TestsTreeView.Items.AddChild(LFixtureNode, LTest.MethodName);
+          LMethodNode.Data := Pointer(LIdx);
+          LMethodNode.ImageIndex := 0;
+          LMethodNode.SelectedIndex := 0;
+        end;
+      end;
+    finally
+      LFixtureTestsCount.Free;
+    end;
+
+    TestsTreeView.FullExpand;
+  finally
+    TestsTreeView.Items.EndUpdate;
+  end;
+end;
+
 procedure TFormDextTestRunner.TestsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
 var
   LBtnRect: TRect;
 begin
   DefaultDraw := True;
+  
+  if (Stage = cdPrePaint) and (Node <> nil) then
+  begin
+    DefaultDraw := False;
+    var LRect := Node.DisplayRect(True);
+    
+    if cdsSelected in State then
+    begin
+      Sender.Canvas.Brush.Color := clHighlight;
+      Sender.Canvas.FillRect(LRect);
+      Sender.Canvas.Font.Color := clHighlightText;
+    end
+    else
+    begin
+      Sender.Canvas.Brush.Color := TTreeView(Sender).Color;
+      Sender.Canvas.FillRect(LRect);
+      Sender.Canvas.Font.Color := TTreeView(Sender).Font.Color;
+    end;
+
+    var LTextX := LRect.Left + 2;
+    var LTextY := LRect.Top + (LRect.Height - Sender.Canvas.TextHeight('W')) div 2;
+
+    if Node.Parent = nil then
+    begin
+      var LClassName := Node.Text;
+      var LCountText := '';
+      var LSpaceIdx := Node.Text.IndexOf(' (');
+      if LSpaceIdx > 0 then
+      begin
+        LClassName := Node.Text.Substring(0, LSpaceIdx);
+        LCountText := Node.Text.Substring(LSpaceIdx);
+      end;
+
+      Sender.Canvas.Font.Style := [fsBold];
+      Sender.Canvas.TextOut(LTextX, LTextY, LClassName);
+      LTextX := LTextX + Sender.Canvas.TextWidth(LClassName);
+
+      if LCountText <> '' then
+      begin
+        Sender.Canvas.Font.Style := [];
+        if cdsSelected in State then
+          Sender.Canvas.Font.Color := clHighlightText
+        else
+          Sender.Canvas.Font.Color := clGrayText;
+        Sender.Canvas.TextOut(LTextX, LTextY, LCountText);
+        LTextX := LTextX + Sender.Canvas.TextWidth(LCountText) + 6;
+      end;
+
+      var LFailedCount := 0;
+      var J: Integer;
+      for J := 0 to Node.Count - 1 do
+      begin
+        var LChildFull := LClassName + '.' + Node.Item[J].Text;
+        var LChildInfo: TTestDetailInfo;
+        if FTestDetails.TryGetValue(LChildFull, LChildInfo) then
+        begin
+          if SameText(LChildInfo.Status, 'Failed') or SameText(LChildInfo.Status, 'Error') then
+            Inc(LFailedCount);
+        end;
+      end;
+
+      if LFailedCount > 0 then
+      begin
+        Sender.Canvas.Font.Style := [];
+        if cdsSelected in State then
+          Sender.Canvas.Font.Color := clHighlightText
+        else
+          Sender.Canvas.Font.Color := TColor($EF4444);
+        var LFailText := Format('Failed: %d tests failed', [LFailedCount]);
+        Sender.Canvas.TextOut(LTextX, LTextY, LFailText);
+      end
+      else
+      begin
+        var LPassedCount := 0;
+        for J := 0 to Node.Count - 1 do
+        begin
+          var LChildFull := LClassName + '.' + Node.Item[J].Text;
+          var LChildInfo: TTestDetailInfo;
+          if FTestDetails.TryGetValue(LChildFull, LChildInfo) then
+          begin
+            if SameText(LChildInfo.Status, 'Passed') then
+              Inc(LPassedCount);
+          end;
+        end;
+        if (LPassedCount > 0) and (LPassedCount = Node.Count) then
+        begin
+          Sender.Canvas.Font.Style := [];
+          if cdsSelected in State then
+            Sender.Canvas.Font.Color := clHighlightText
+          else
+            Sender.Canvas.Font.Color := TColor($22C55E);
+          Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
+        end;
+      end;
+    end
+    else
+    begin
+      Sender.Canvas.Font.Style := [];
+      Sender.Canvas.TextOut(LTextX, LTextY, Node.Text);
+      LTextX := LTextX + Sender.Canvas.TextWidth(Node.Text) + 6;
+
+      var LFullTestName := GetNodeFullTestName(Node);
+      var LInfo: TTestDetailInfo;
+      if FTestDetails.TryGetValue(LFullTestName, LInfo) then
+      begin
+        var LDurText := Format('[%.2f ms]', [LInfo.DurationMs]);
+        if LInfo.DurationMs < 1.0 then
+          LDurText := Format('[%.3f ms]', [LInfo.DurationMs]);
+          
+        if cdsSelected in State then
+          Sender.Canvas.Font.Color := clHighlightText
+        else
+          Sender.Canvas.Font.Color := clGrayText;
+        Sender.Canvas.TextOut(LTextX, LTextY, LDurText);
+        LTextX := LTextX + Sender.Canvas.TextWidth(LDurText) + 6;
+
+        if SameText(LInfo.Status, 'Passed') then
+        begin
+          if cdsSelected in State then
+            Sender.Canvas.Font.Color := clHighlightText
+          else
+            Sender.Canvas.Font.Color := TColor($22C55E);
+          Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
+        end;
+        if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
+        begin
+          if cdsSelected in State then
+            Sender.Canvas.Font.Color := clHighlightText
+          else
+            Sender.Canvas.Font.Color := TColor($EF4444);
+          var LErrText := 'Failed';
+          if LInfo.ErrorMessage <> '' then
+            LErrText := 'Failed: ' + LInfo.ErrorMessage.Replace(#13, '').Replace(#10, ' ');
+          if Length(LErrText) > 60 then
+            LErrText := Copy(LErrText, 1, 57) + '...';
+          Sender.Canvas.TextOut(LTextX, LTextY, LErrText);
+        end;
+      end;
+    end;
+  end;
+
   if Stage = cdPostPaint then
   begin
     if (Node = FHoverNode) and (Node.Parent <> nil) then
     begin
       LBtnRect := GetRunButtonRect(Node);
-      // Modern soft green hover button
       Sender.Canvas.Brush.Color := TColor($DCFCE7);
       Sender.Canvas.Pen.Color := TColor($22C55E);
       Sender.Canvas.RoundRect(LBtnRect.Left, LBtnRect.Top, LBtnRect.Right, LBtnRect.Bottom, 4, 4);
