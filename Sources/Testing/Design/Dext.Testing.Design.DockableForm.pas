@@ -529,21 +529,33 @@ begin
       LThemingServices.ApplyTheme(Self);
   end;
 
-  // Reposition existing buttons to make space
-  RefreshButton.Left := 2;
-  RefreshButton.Width := 50;
-  RunAllButton.Left := 55;
-  RunAllButton.Width := 55;
-  RunSelectedButton.Left := 113;
-  RunSelectedButton.Width := 60;
-  StopButton.Left := 176;
-  StopButton.Width := 40;
+  // Reposition buttons with enough room for Unicode symbol + label
+  // ButtonsPanel is alRight and ~325px wide in the DFM
+  RefreshButton.Left   := 2;
+  RefreshButton.Top    := 5;
+  RefreshButton.Width  := 80;
+  RefreshButton.Height := 25;
+
+  RunAllButton.Left   := 85;
+  RunAllButton.Top    := 5;
+  RunAllButton.Width  := 85;
+  RunAllButton.Height := 25;
+
+  RunSelectedButton.Left   := 173;
+  RunSelectedButton.Top    := 5;
+  RunSelectedButton.Width  := 80;
+  RunSelectedButton.Height := 25;
+
+  StopButton.Left   := 256;
+  StopButton.Top    := 5;
+  StopButton.Width  := 55;
+  StopButton.Height := 25;
 
   LayoutButton := TButton.Create(Self);
   LayoutButton.Parent := ButtonsPanel;
-  LayoutButton.Left := 220;
-  LayoutButton.Top := 5;
-  LayoutButton.Width := 50;
+  LayoutButton.Left   := 314;
+  LayoutButton.Top    := 5;
+  LayoutButton.Width  := 60;
   LayoutButton.Height := 25;
   LayoutButton.Caption := 'Layout';
   LayoutButton.OnClick := LayoutButtonClick;
@@ -830,7 +842,6 @@ begin
         TThread.Queue(nil, TThreadProcedure(procedure
           var
             LIdx: Integer;
-            LFixtureNode, LMethodNode: TTreeNode;
           begin
             // Discard results if another scan has started in the meantime
             if LGeneration <> FScanGeneration then
