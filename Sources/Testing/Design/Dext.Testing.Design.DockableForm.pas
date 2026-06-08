@@ -351,8 +351,8 @@ begin
   FilterEdit.Parent := LFilterPanel;
   FilterEdit.Align := alClient;
   FilterEdit.AlignWithMargins := True;
-  FilterEdit.Margins.Left := 6;
-  FilterEdit.Margins.Right := 6;
+  FilterEdit.Margins.Left := 0;
+  FilterEdit.Margins.Right := 0;
   FilterEdit.Margins.Top := 3;
   FilterEdit.Margins.Bottom := 3;
   FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
@@ -387,8 +387,8 @@ begin
   FilterEdit.Parent := LFilterPanel;
   FilterEdit.Align := alClient;
   FilterEdit.AlignWithMargins := True;
-  FilterEdit.Margins.Left := 6;
-  FilterEdit.Margins.Right := 6;
+  FilterEdit.Margins.Left := 0;
+  FilterEdit.Margins.Right := 0;
   FilterEdit.Margins.Top := 3;
   FilterEdit.Margins.Bottom := 3;
   FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
@@ -578,13 +578,18 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
 
-  // Create progress bar inside DetailsPanel at the top (hidden until running)
+  // Create progress bar at the top of the form (below toolbar)
   FProgressPanel := TPanel.Create(Self);
-  FProgressPanel.Parent := DetailsPanel;
+  FProgressPanel.Parent := Self;
   FProgressPanel.Align := alTop;
   FProgressPanel.Height := 20;
   FProgressPanel.BevelOuter := bvNone;
   FProgressPanel.Visible := False; // only shown when tests are running
+  FProgressPanel.AlignWithMargins := True;
+  FProgressPanel.Margins.Left := 5;
+  FProgressPanel.Margins.Right := 5;
+  FProgressPanel.Margins.Top := 2;
+  FProgressPanel.Margins.Bottom := 4;
 
   FProgressLabel := TLabel.Create(Self);
   FProgressLabel.Parent := FProgressPanel;
@@ -625,50 +630,59 @@ begin
   FInspectorScroll.ParentColor := True;
   FInspectorScroll.StyleElements := [];
 
+  var LInfoPanel := TPanel.Create(Self);
+  LInfoPanel.Parent := FInspectorScroll;
+  LInfoPanel.Align := alTop;
+  LInfoPanel.Height := 98;
+  LInfoPanel.BevelOuter := bvNone;
+  LInfoPanel.ParentColor := True;
+  LInfoPanel.StyleElements := [];
+
   FLblTestName := TLabel.Create(Self);
-  FLblTestName.Parent := FInspectorScroll;
-  FLblTestName.Top := 8;
-  FLblTestName.Left := 8;
+  FLblTestName.Parent := LInfoPanel;
+  FLblTestName.Top := 6;
+  FLblTestName.Left := 6;
   FLblTestName.Font.Style := [fsBold];
   FLblTestName.Caption := 'Test Name: Select a test...';
   FLblTestName.StyleElements := [];
 
   FLblStatus := TLabel.Create(Self);
-  FLblStatus.Parent := FInspectorScroll;
-  FLblStatus.Top := 26;
-  FLblStatus.Left := 8;
+  FLblStatus.Parent := LInfoPanel;
+  FLblStatus.Top := 24;
+  FLblStatus.Left := 6;
   FLblStatus.Caption := 'Status: Idle';
   FLblStatus.StyleElements := [];
 
   FLblLocation := TLabel.Create(Self);
-  FLblLocation.Parent := FInspectorScroll;
-  FLblLocation.Top := 44;
-  FLblLocation.Left := 8;
+  FLblLocation.Parent := LInfoPanel;
+  FLblLocation.Top := 42;
+  FLblLocation.Left := 6;
   FLblLocation.Caption := 'Location: N/A';
   FLblLocation.StyleElements := [];
 
   FLblDuration := TLabel.Create(Self);
-  FLblDuration.Parent := FInspectorScroll;
-  FLblDuration.Top := 62;
-  FLblDuration.Left := 8;
+  FLblDuration.Parent := LInfoPanel;
+  FLblDuration.Top := 60;
+  FLblDuration.Left := 6;
   FLblDuration.Caption := 'Duration: N/A';
   FLblDuration.StyleElements := [];
 
   FLblErrorHeader := TLabel.Create(Self);
-  FLblErrorHeader.Parent := FInspectorScroll;
-  FLblErrorHeader.Top := 80;
-  FLblErrorHeader.Left := 8;
+  FLblErrorHeader.Parent := LInfoPanel;
+  FLblErrorHeader.Top := 78;
+  FLblErrorHeader.Left := 6;
   FLblErrorHeader.Font.Style := [fsBold];
   FLblErrorHeader.Caption := 'Errors / Stack Trace:';
   FLblErrorHeader.StyleElements := [];
 
   FMemoError := TMemo.Create(Self);
   FMemoError.Parent := FInspectorScroll;
-  FMemoError.Top := 98;
-  FMemoError.Left := 8;
-  FMemoError.Width := FInspectorScroll.ClientWidth - 16;
-  FMemoError.Height := 40;
-  FMemoError.Anchors := [akLeft, akTop, akRight, akBottom];
+  FMemoError.Align := alClient;
+  FMemoError.AlignWithMargins := True;
+  FMemoError.Margins.Left := 6;
+  FMemoError.Margins.Right := 6;
+  FMemoError.Margins.Top := 2;
+  FMemoError.Margins.Bottom := 6;
   FMemoError.ReadOnly := True;
   FMemoError.ScrollBars := ssBoth;
 
@@ -2103,8 +2117,11 @@ begin
       FDetailsPageControl.Visible := True;
       DetailsMemo.Parent := FConsoleTab;
       DetailsMemo.Align := alClient;
+      DetailsMemo.AlignWithMargins := False;
       FInspectorScroll.Parent := FInspectorTab;
       FInspectorScroll.Align := alClient;
+      FInspectorScroll.AlignWithMargins := False;
+      NameSplitter.Top := FInspectorScroll.Top - NameSplitter.Height;
     end;
 
     telSplitBottom:
@@ -2119,13 +2136,26 @@ begin
       DetailsMemo.Parent := DetailsPanel;
       DetailsMemo.Align := alLeft;
       DetailsMemo.Width := DetailsPanel.Width div 2;
+      DetailsMemo.AlignWithMargins := True;
+      DetailsMemo.Margins.Left := 6;
+      DetailsMemo.Margins.Right := 0;
+      DetailsMemo.Margins.Top := 6;
+      DetailsMemo.Margins.Bottom := 6;
 
       FInspectorSplitter.Parent := DetailsPanel;
       FInspectorSplitter.Align := alLeft;
+      FInspectorSplitter.Cursor := crHSplit;
+      FInspectorSplitter.Width := 6;
       FInspectorSplitter.Visible := True;
 
       FInspectorScroll.Parent := DetailsPanel;
       FInspectorScroll.Align := alClient;
+      FInspectorScroll.AlignWithMargins := True;
+      FInspectorScroll.Margins.Left := 0;
+      FInspectorScroll.Margins.Right := 6;
+      FInspectorScroll.Margins.Top := 6;
+      FInspectorScroll.Margins.Bottom := 6;
+      NameSplitter.Top := FInspectorScroll.Top - NameSplitter.Height;
     end;
 
     telSplitRight:
@@ -2136,19 +2166,35 @@ begin
       DetailsPanel.Width := 320;
 
       FDetailsPageControl.Visible := False;
-
+      
       DetailsMemo.Parent := DetailsPanel;
-      DetailsMemo.Align := alTop;
+      DetailsMemo.Align := alBottom;
       DetailsMemo.Height := DetailsPanel.Height div 2;
+      DetailsMemo.AlignWithMargins := True;
+      DetailsMemo.Margins.Left := 6;
+      DetailsMemo.Margins.Right := 6;
+      DetailsMemo.Margins.Top := 0;
+      DetailsMemo.Margins.Bottom := 6;
 
       FInspectorSplitter.Parent := DetailsPanel;
-      FInspectorSplitter.Align := alTop;
+      FInspectorSplitter.Align := alBottom;
+      FInspectorSplitter.Cursor := crVSplit;
+      FInspectorSplitter.Height := 6;
       FInspectorSplitter.Visible := True;
 
       FInspectorScroll.Parent := DetailsPanel;
       FInspectorScroll.Align := alClient;
+      FInspectorScroll.AlignWithMargins := True;
+      FInspectorScroll.Margins.Left := 0;
+      FInspectorScroll.Margins.Right := 0;
+      FInspectorScroll.Margins.Top := 6;
+      FInspectorScroll.Margins.Bottom := 0;
     end;
   end;
+
+  // Ensure correct Z-order of aligned controls to make Splitter work correctly
+  DetailsPanel.SendToBack;
+  NameSplitter.SendToBack;
 end;
 
 procedure TFormDextTestRunner.RefreshTreeView;

@@ -29,8 +29,6 @@ object FormDextTestRunner: TFormDextTestRunner
     ActivePage = DefaultSessionTabSheet
     Align = alClient
     TabOrder = 0
-    ExplicitTop = 61
-    ExplicitHeight = 289
     object DefaultSessionTabSheet: TTabSheet
       Caption = 'Tests'
       object TestsTreeView: TTreeView
@@ -43,7 +41,6 @@ object FormDextTestRunner: TFormDextTestRunner
         ReadOnly = True
         TabOrder = 0
         OnDblClick = TestsTreeViewDblClick
-        ExplicitHeight = 261
       end
     end
   end
@@ -94,7 +91,6 @@ object FormDextTestRunner: TFormDextTestRunner
     AutoSize = True
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitTop = 35
     object RefreshButton: TButton
       Left = 5
       Top = 0
