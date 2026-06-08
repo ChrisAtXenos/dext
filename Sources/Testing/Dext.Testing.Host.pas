@@ -203,7 +203,7 @@ begin
   LJSON := '{' +
     '"testName":"' + Info.ClassName + '.' + Info.TestName + '",' +
     '"status":"' + LStatus + '",' +
-    '"durationMs":' + FormatFloat('0.####', Info.Duration.TotalMilliseconds);
+    '"durationMs":' + FormatFloat('0.####', Info.Duration.TotalMilliseconds, TFormatSettings.Invariant);
     
   if Info.Result in [trFailed, trError, trTimeout] then
   begin

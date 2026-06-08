@@ -86,6 +86,7 @@ type
     // Progress tracking
     FProgressBar: TProgressBar;
     FProgressLabel: TLabel;
+    FProgressPanel: TPanel;
     FTotalTests: Integer;
     FCompletedTests: Integer;
     procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
@@ -385,23 +386,25 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
 
-  // Create progress bar inside DetailsPanel at the top
-  var LProgressPanel := TPanel.Create(Self);
-  LProgressPanel.Parent := DetailsPanel;
-  LProgressPanel.Align := alTop;
-  LProgressPanel.Height := 20;
-  LProgressPanel.BevelOuter := bvNone;
+  // Create progress bar inside DetailsPanel at the top (hidden until running)
+  FProgressPanel := TPanel.Create(Self);
+  FProgressPanel.Parent := DetailsPanel;
+  FProgressPanel.Align := alTop;
+  FProgressPanel.Height := 20;
+  FProgressPanel.BevelOuter := bvNone;
+  FProgressPanel.Visible := False; // only shown when tests are running
 
   FProgressLabel := TLabel.Create(Self);
-  FProgressLabel.Parent := LProgressPanel;
+  FProgressLabel.Parent := FProgressPanel;
   FProgressLabel.Align := alLeft;
   FProgressLabel.Layout := tlCenter;
-  FProgressLabel.Caption := 'Ready';
-  FProgressLabel.Width := 80;
+  FProgressLabel.Caption := '';
+  FProgressLabel.Width := 55;
   FProgressLabel.Font.Size := 7;
+  FProgressLabel.Margins.Left := 2;
 
   FProgressBar := TProgressBar.Create(Self);
-  FProgressBar.Parent := LProgressPanel;
+  FProgressBar.Parent := FProgressPanel;
   FProgressBar.Align := alClient;
   FProgressBar.Min := 0;
   FProgressBar.Max := 100;
@@ -835,11 +838,17 @@ begin
       DetailsMemo.Lines.Add('========================================');
       DetailsMemo.Lines.Add(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [LPassed, LFailed, LIgnored]));
       DetailsMemo.Lines.Add('========================================');
-      // Finalize progress bar
-      if Assigned(FProgressBar) then
+      // Complete and then hide the progress panel
+      if Assigned(FProgressPanel) then
       begin
         FProgressBar.Position := FProgressBar.Max;
-        FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, FTotalTests]);
+        FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
+        // Hide after a short delay so user can see 100%
+        TThread.ForceQueue(nil, TThreadProcedure(procedure
+          begin
+            if Assigned(FProgressPanel) then
+              FProgressPanel.Visible := False;
+          end));
       end;
       TTelemetryTracker.AnalyzeHistory(FActiveProjectFile, DetailsMemo);
       TryLoadCoverage;
@@ -850,14 +859,16 @@ begin
     begin
       FTotalTests := LJSON.GetValue<Integer>('totalTests');
       FCompletedTests := 0;
-      if Assigned(FProgressBar) then
+      if Assigned(FProgressPanel) then
       begin
         FProgressBar.Max := Max(1, FTotalTests);
         FProgressBar.Position := 0;
         FProgressLabel.Caption := Format('0/%d', [FTotalTests]);
+        FProgressPanel.Visible := True;
       end;
       Exit;
     end;
+
 
     DetailsMemo.Lines.Add('Result received: ' + AJSONData);
     LTestName := LJSON.GetValue<string>('testName');
@@ -870,7 +881,7 @@ begin
     
     // Update progress bar
     Inc(FCompletedTests);
-    if Assigned(FProgressBar) then
+    if Assigned(FProgressPanel) and FProgressPanel.Visible then
     begin
       FProgressBar.Max := Max(FProgressBar.Max, FCompletedTests);
       FProgressBar.Position := FCompletedTests;
@@ -1112,11 +1123,12 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
-  if Assigned(FProgressBar) then
+  if Assigned(FProgressPanel) then
   begin
     FProgressBar.Position := 0;
     FProgressBar.Max := 100;
-    FProgressLabel.Caption := 'Running...';
+    FProgressLabel.Caption := '...';
+    FProgressPanel.Visible := True;
   end;
   // Focus Console Log
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
@@ -1220,11 +1232,12 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
-  if Assigned(FProgressBar) then
+  if Assigned(FProgressPanel) then
   begin
     FProgressBar.Position := 0;
     FProgressBar.Max := 100;
-    FProgressLabel.Caption := 'Running all...';
+    FProgressLabel.Caption := '...';
+    FProgressPanel.Visible := True;
   end;
   // Focus Console Log
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
@@ -1633,11 +1646,12 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
-  if Assigned(FProgressBar) then
+  if Assigned(FProgressPanel) then
   begin
     FProgressBar.Position := 0;
     FProgressBar.Max := 100;
-    FProgressLabel.Caption := 'Debugging...';
+    FProgressLabel.Caption := '...';
+    FProgressPanel.Visible := True;
   end;
   // Focus Console Log
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
