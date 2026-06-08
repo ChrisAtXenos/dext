@@ -79,7 +79,7 @@ begin
   if not Assigned(ATests) then
     ATests := TList<TTestLocation>.Create;
 
-  Lines := AText.Split([#10, #13]);
+  Lines := AText.Split([#10]);
   CurrentClass := '';
   InTypeSection := False;
   InPublishedSection := False;
