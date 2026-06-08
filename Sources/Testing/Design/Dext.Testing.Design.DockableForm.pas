@@ -96,6 +96,11 @@ type
     FInspectorSplitter: TSplitter;
     FCurrentLayout: TTestExplorerLayout;
     LayoutButton: TButton;
+    // Async compile state
+    FPendingTestFilter: string;
+    FWaitingForCompile: Boolean;
+    FPendingProject: IOTAProject;
+    FThemeNotifierIndex: Integer;
     function ActiveFilterEdit: TEdit;
     procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
     procedure UpdateTestInspector(const ATestName: string);
@@ -131,6 +136,9 @@ type
     procedure DebugSelectedClick(Sender: TObject);
     procedure RunAllProjectsClick(Sender: TObject);
     procedure RunAllProjectsTests;
+    procedure LaunchTestExe(const ATestFilter: string);
+    procedure LogMsg(const AMsg: string);
+    procedure RebuildStatusImages;
   protected
     procedure DoShow; override;
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
@@ -140,6 +148,8 @@ type
     procedure RunActiveProjectTests(const ATestFilter: string = '');
     procedure RunImpactedTests(const ATests: TArray<string>);
     procedure HandleFileSaved(const AFileName: string);
+    // Called by the IDE AfterCompile notifier
+    procedure NotifyCompileComplete(ASucceeded: Boolean);
   end;
 
 procedure ShowDextTestExplorer;
@@ -156,6 +166,38 @@ implementation
 uses
   DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles;
 
+type
+  TDextThemeNotifier = class(TNotifierObject, INTAIDEThemingServicesNotifier)
+  private
+    FForm: TFormDextTestRunner;
+  public
+    constructor Create(AForm: TFormDextTestRunner);
+    // INTAIDEThemingServicesNotifier
+    procedure ChangingTheme;
+    procedure ChangedTheme;
+  end;
+
+constructor TDextThemeNotifier.Create(AForm: TFormDextTestRunner);
+begin
+  inherited Create;
+  FForm := AForm;
+end;
+
+procedure TDextThemeNotifier.ChangingTheme;
+begin
+end;
+
+procedure TDextThemeNotifier.ChangedTheme;
+begin
+  if Assigned(FForm) then
+  begin
+    TThread.ForceQueue(nil, TThreadProcedure(procedure
+      begin
+        FForm.ApplyIDETheme;
+      end));
+  end;
+end;
+
 procedure ShowDextTestExplorer;
 begin
   if not Assigned(FormDextTestRunner) then
@@ -164,10 +206,15 @@ begin
 end;
 
 procedure RegisterDockableForm;
+var
+  LThemingServices: IOTAIDEThemingServices;
 begin
   if @RegisterFieldAddress <> nil then
     RegisterFieldAddress('FormDextTestRunner', @FormDextTestRunner);
   RegisterDesktopFormClass(TFormDextTestRunner, 'FormDextTestRunner', 'FormDextTestRunner');
+  
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
+    LThemingServices.RegisterFormClass(TFormDextTestRunner);
 end;
 
 procedure UnregisterDockableForm;
@@ -175,7 +222,10 @@ begin
   if @UnRegisterFieldAddress <> nil then
     UnRegisterFieldAddress(@FormDextTestRunner);
   if Assigned(FormDextTestRunner) then
-    FreeAndNil(FormDextTestRunner);
+  begin
+    FormDextTestRunner.Free;
+    FormDextTestRunner := nil;
+  end;
 end;
 
 function GetModuleBuildTime: string;
@@ -285,13 +335,12 @@ begin
   inherited;
 end;
 
-{ TFormDextTestRunner }
-
-constructor TFormDextTestRunner.Create(AOwner: TComponent);
+procedure TFormDextTestRunner.RebuildStatusImages;
 var
-  LThemingServices: IOTAIDEThemingServices;
+  LBgColor: TColor;
   LImageList: TImageList;
   LBitmap: TBitmap;
+
   procedure DrawSmoothCircle(AColor: TColor; ADest: TBitmap);
   var
     LLargeBmp: TBitmap;
@@ -299,15 +348,14 @@ var
     LLargeBmp := TBitmap.Create;
     try
       LLargeBmp.SetSize(64, 64);
-      LLargeBmp.Canvas.Brush.Color := clWhite;
+      LLargeBmp.Canvas.Brush.Color := LBgColor;
       LLargeBmp.Canvas.FillRect(Rect(0, 0, 64, 64));
       
       LLargeBmp.Canvas.Pen.Color := AColor;
       LLargeBmp.Canvas.Brush.Color := AColor;
-      // Draw 32x32 circle centered in 64x64
       LLargeBmp.Canvas.Ellipse(16, 16, 48, 48);
       
-      ADest.Canvas.Brush.Color := clWhite;
+      ADest.Canvas.Brush.Color := LBgColor;
       ADest.Canvas.FillRect(Rect(0, 0, 16, 16));
       
       SetStretchBltMode(ADest.Canvas.Handle, HALFTONE);
@@ -318,6 +366,58 @@ var
     end;
   end;
 
+begin
+  if TestsTreeView <> nil then
+    LBgColor := TestsTreeView.Color
+  else
+    LBgColor := clWindow;
+
+  LImageList := TImageList.Create(Self);
+  LImageList.Width := 16;
+  LImageList.Height := 16;
+  
+  LBitmap := TBitmap.Create;
+  try
+    LBitmap.SetSize(16, 16);
+    
+    // 0: Idle (Gray circle)
+    DrawSmoothCircle(clGray, LBitmap);
+    LImageList.AddMasked(LBitmap, LBgColor);
+    
+    // 1: Pass (Green circle)
+    DrawSmoothCircle(TColor($5EC522), LBitmap);
+    LImageList.AddMasked(LBitmap, LBgColor);
+
+    // 2: Fail (Red circle)
+    DrawSmoothCircle(TColor($4444EF), LBitmap);
+    LImageList.AddMasked(LBitmap, LBgColor);
+
+    // 3: Fixture (Blue circle)
+    DrawSmoothCircle(TColor($F6823B), LBitmap);
+    LImageList.AddMasked(LBitmap, LBgColor);
+  finally
+    LBitmap.Free;
+  end;
+  
+  var LOldImages := TestsTreeView.Images;
+  TestsTreeView.Images := LImageList;
+  
+  if Assigned(FSessions) then
+  begin
+    for var I := 0 to FSessions.Count - 1 do
+      if Assigned(FSessions[I].TreeView) then
+        FSessions[I].TreeView.Images := LImageList;
+  end;
+
+  if Assigned(LOldImages) then
+    LOldImages.Free;
+end;
+
+{ TFormDextTestRunner }
+
+constructor TFormDextTestRunner.Create(AOwner: TComponent);
+var
+  LThemingServices: IOTAIDEThemingServices;
 begin
   FormDextTestRunner := Self;
   inherited Create(AOwner);
@@ -358,35 +458,7 @@ begin
   StopButton.Hint := 'Cancel current test execution';
   StopButton.ShowHint := True;
 
-  // Create and populate ImageList for TreeView status icons
-  LImageList := TImageList.Create(Self);
-  LImageList.Width := 16;
-  LImageList.Height := 16;
-  
-  LBitmap := TBitmap.Create;
-  try
-    LBitmap.SetSize(16, 16);
-    
-    // 0: Idle (Gray circle)
-    DrawSmoothCircle(clGray, LBitmap);
-    LImageList.AddMasked(LBitmap, clWhite);
-    
-    // 1: Pass (Green circle)
-    DrawSmoothCircle(TColor($5EC522), LBitmap);
-    LImageList.AddMasked(LBitmap, clWhite);
-
-    // 2: Fail (Red circle)
-    DrawSmoothCircle(TColor($4444EF), LBitmap);
-    LImageList.AddMasked(LBitmap, clWhite);
-
-    // 3: Fixture (Blue circle/folder icon)
-    DrawSmoothCircle(TColor($F6823B), LBitmap);
-    LImageList.AddMasked(LBitmap, clWhite);
-  finally
-    LBitmap.Free;
-  end;
-  
-  TestsTreeView.Images := LImageList;
+  RebuildStatusImages;
   TestsTreeView.Checkboxes := True;
   TestsTreeView.DoubleBuffered := True;
   
@@ -480,6 +552,8 @@ begin
   FInspectorScroll.Parent := FInspectorTab;
   FInspectorScroll.Align := alClient;
   FInspectorScroll.BorderStyle := bsNone;
+  FInspectorScroll.ParentColor := True;
+  FInspectorScroll.StyleElements := [];
 
   FLblTestName := TLabel.Create(Self);
   FLblTestName.Parent := FInspectorScroll;
@@ -487,24 +561,28 @@ begin
   FLblTestName.Left := 8;
   FLblTestName.Font.Style := [fsBold];
   FLblTestName.Caption := 'Test Name: Select a test...';
+  FLblTestName.StyleElements := [];
 
   FLblStatus := TLabel.Create(Self);
   FLblStatus.Parent := FInspectorScroll;
   FLblStatus.Top := 26;
   FLblStatus.Left := 8;
   FLblStatus.Caption := 'Status: Idle';
+  FLblStatus.StyleElements := [];
 
   FLblLocation := TLabel.Create(Self);
   FLblLocation.Parent := FInspectorScroll;
   FLblLocation.Top := 44;
   FLblLocation.Left := 8;
   FLblLocation.Caption := 'Location: N/A';
+  FLblLocation.StyleElements := [];
 
   FLblDuration := TLabel.Create(Self);
   FLblDuration.Parent := FInspectorScroll;
   FLblDuration.Top := 62;
   FLblDuration.Left := 8;
   FLblDuration.Caption := 'Duration: N/A';
+  FLblDuration.StyleElements := [];
 
   FLblErrorHeader := TLabel.Create(Self);
   FLblErrorHeader.Parent := FInspectorScroll;
@@ -512,6 +590,7 @@ begin
   FLblErrorHeader.Left := 8;
   FLblErrorHeader.Font.Style := [fsBold];
   FLblErrorHeader.Caption := 'Errors / Stack Trace:';
+  FLblErrorHeader.StyleElements := [];
 
   FMemoError := TMemo.Create(Self);
   FMemoError.Parent := FInspectorScroll;
@@ -601,13 +680,28 @@ begin
   Self.KeyPreview := True;
   Self.OnKeyDown := FormKeyDown;
 
+  FThemeNotifierIndex := -1;
   ApplyIDETheme;
+  
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
+  begin
+    FThemeNotifierIndex := LThemingServices.AddNotifier(TDextThemeNotifier.Create(Self) as INTAIDEThemingServicesNotifier);
+  end;
+
   RefreshProjects;
   FServer.Start(OnTestResultReceived);
 end;
 
 destructor TFormDextTestRunner.Destroy;
+var
+  LThemingServices: IOTAIDEThemingServices;
 begin
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) and (FThemeNotifierIndex <> -1) then
+  begin
+    LThemingServices.RemoveNotifier(FThemeNotifierIndex);
+    FThemeNotifierIndex := -1;
+  end;
+
   FServer.Stop;
   FServer.Free;
   FSessions.Free;
@@ -627,23 +721,75 @@ end;
 procedure TFormDextTestRunner.ApplyIDETheme;
 var
   LThemingServices: IOTAIDEThemingServices;
+  LBgColor, LFgColor: TColor;
 begin
   if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
   begin
     if LThemingServices.IDEThemingEnabled then
     begin
-      // Custom theme overrides for background/foreground standard colors
-      TestsTreeView.Color := LThemingServices.StyleServices.GetSystemColor(clWindow);
-      TestsTreeView.Font.Color := LThemingServices.StyleServices.GetSystemColor(clWindowText);
-      // Match IDE font size (Project Explorer uses 9pt typically)
-      TestsTreeView.Font.Size := 9;
-      DetailsMemo.Color := LThemingServices.StyleServices.GetSystemColor(clWindow);
-      DetailsMemo.Font.Color := LThemingServices.StyleServices.GetSystemColor(clWindowText);
+      LThemingServices.ApplyTheme(Self);
+      LBgColor := LThemingServices.StyleServices.GetSystemColor(clWindow);
+      LFgColor := LThemingServices.StyleServices.GetSystemColor(clWindowText);
+
+      // 1. Update the active TestsTreeView
+      if Assigned(TestsTreeView) then
+      begin
+        TestsTreeView.Color := LBgColor;
+        TestsTreeView.Font.Color := LFgColor;
+        TestsTreeView.Font.Size := 9;
+        TestsTreeView.Invalidate;
+      end;
+
+      // 2. Loop through all sessions to update all TreeViews
+      if Assigned(FSessions) then
+      begin
+        for var LIdx := 0 to FSessions.Count - 1 do
+        begin
+          var LSession := FSessions[LIdx];
+          if Assigned(LSession.TreeView) then
+          begin
+            LSession.TreeView.Color := LBgColor;
+            LSession.TreeView.Font.Color := LFgColor;
+            LSession.TreeView.Font.Size := 9;
+            LSession.TreeView.Invalidate;
+          end;
+        end;
+      end;
+
+      // 3. Details Memo
+      if Assigned(DetailsMemo) then
+      begin
+        DetailsMemo.Color := LBgColor;
+        DetailsMemo.Font.Color := LFgColor;
+      end;
+
+      // 4. Test Inspector (Scrollbox & Labels)
+      if Assigned(FInspectorScroll) then
+      begin
+        FInspectorScroll.ParentColor := False;
+        FInspectorScroll.Color := LBgColor;
+      end;
+
+      if Assigned(FLblTestName) then FLblTestName.Font.Color := LFgColor;
+      if Assigned(FLblStatus) then
+      begin
+        if (not string(FLblStatus.Caption).Contains('Passed')) and (not string(FLblStatus.Caption).Contains('Failed')) then
+          FLblStatus.Font.Color := LFgColor;
+      end;
+      if Assigned(FLblLocation) then FLblLocation.Font.Color := LFgColor;
+      if Assigned(FLblDuration) then FLblDuration.Font.Color := LFgColor;
+      if Assigned(FLblErrorHeader) then FLblErrorHeader.Font.Color := LFgColor;
+
       if Assigned(FMemoError) then
       begin
-        FMemoError.Color := LThemingServices.StyleServices.GetSystemColor(clWindow);
-        FMemoError.Font.Color := LThemingServices.StyleServices.GetSystemColor(clWindowText);
+        FMemoError.Color := LBgColor;
+        FMemoError.Font.Color := LFgColor;
       end;
+
+      // 5. Form background color
+      Self.Color := LThemingServices.StyleServices.GetSystemColor(clBtnFace);
+
+      RebuildStatusImages;
     end;
   end;
 end;
@@ -950,10 +1096,10 @@ begin
       LPassed := LJSON.GetValue<Integer>('passed');
       LFailed := LJSON.GetValue<Integer>('failed');
       LIgnored := LJSON.GetValue<Integer>('ignored');
-      DetailsMemo.Lines.Add('');
-      DetailsMemo.Lines.Add('========================================');
-      DetailsMemo.Lines.Add(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [LPassed, LFailed, LIgnored]));
-      DetailsMemo.Lines.Add('========================================');
+      LogMsg('');
+      LogMsg('========================================');
+      LogMsg(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [LPassed, LFailed, LIgnored]));
+      LogMsg('========================================');
       // Complete and then hide the progress panel
       if Assigned(FProgressPanel) then
       begin
@@ -986,7 +1132,7 @@ begin
     end;
 
 
-    DetailsMemo.Lines.Add('Result received: ' + AJSONData);
+    LogMsg('Result received: ' + AJSONData);
     LTestName := LJSON.GetValue<string>('testName');
     LStatus := LJSON.GetValue<string>('status');
     LMsg := '';
@@ -1077,14 +1223,14 @@ begin
       LNode.SelectedIndex := 2;
       if AMessage <> '' then
       begin
-        DetailsMemo.Lines.Add('Test Failed: ' + ATestName);
-        DetailsMemo.Lines.Add('Error: ' + AMessage);
+        LogMsg('Test Failed: ' + ATestName);
+        LogMsg('Error: ' + AMessage);
         if AStackTrace <> '' then
         begin
-          DetailsMemo.Lines.Add('Stack Trace:');
-          DetailsMemo.Lines.Add(AStackTrace);
+          LogMsg('Stack Trace:');
+          LogMsg(AStackTrace);
         end;
-        DetailsMemo.Lines.Add('----------------------------------------');
+        LogMsg('----------------------------------------');
       end;
     end;
     LRect := LNode.DisplayRect(False);
@@ -1212,13 +1358,6 @@ end;
 procedure TFormDextTestRunner.RunActiveProjectTests(const ATestFilter: string);
 var
   LProj: IOTAProject;
-  LExeFile, LCmdLine: string;
-  SI: TStartupInfo;
-  PI: TProcessInformation;
-  LParams: string;
-  LIsPackage: Boolean;
-  LOutput: string;
-  LSplit: TArray<string>;
   LModuleServices: IOTAModuleServices;
   LGroup: IOTAProjectGroup;
 begin
@@ -1231,60 +1370,80 @@ begin
   begin
     LGroup := LModuleServices.MainProjectGroup;
     if Assigned(LGroup) and (LGroup.ActiveProject <> LProj) then
-    begin
       LGroup.ActiveProject := LProj;
-    end;
   end;
 
   ClearTestStatus;
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
+
+  // Show progress immediately so the user knows something is happening
   if Assigned(FProgressPanel) then
   begin
     FProgressBar.Position := 0;
     FProgressBar.Max := 100;
-    FProgressLabel.Caption := '...';
+    FProgressLabel.Caption := 'Saving files...';
     FProgressPanel.Visible := True;
+    FProgressPanel.Update;
   end;
-  // Focus Console Log
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
     FDetailsPageControl.ActivePage := FConsoleTab;
-  DetailsMemo.Lines.Add('Compiling project: ' + ExtractFileName(FActiveProjectFile));
 
-  // Save all modified IDE files before compiling.
-  // DCC uses file timestamps (-M make mode) to decide what to recompile.
-  // If the editor has unsaved changes, the .pas timestamp is older than the
-  // existing .dcu and DCC skips it — launching the stale binary.
+  LogMsg('--- Dext Test Runner ---');
+  LogMsg('Project: ' + ExtractFileName(FActiveProjectFile));
+
+  // Step 1: Save all editor buffers so IDE's make sees up-to-date timestamps
   var LSaveServices: IOTAModuleServices;
   if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
   begin
-    DetailsMemo.Lines.Add('Saving all modified files...');
+    LogMsg('[1/3] Saving all modified files...');
     LSaveServices.SaveAll;
   end;
 
-  // Get dynamic executable path from project target info
+  // Step 2: Trigger the IDE's incremental make (async).
+  //   The IDE knows exactly which files changed in the editor.
+  //   Test launch happens in NotifyCompileComplete → AfterCompile notifier.
+  FPendingTestFilter  := ATestFilter;
+  FPendingProject     := LProj;
+  FWaitingForCompile  := True;
+
+  if Assigned(FProgressPanel) then
+  begin
+    FProgressLabel.Caption := '[2/3] Compiling...';
+    FProgressPanel.Update;
+  end;
+  LogMsg('[2/3] Starting incremental compile (IDE make)...');
+  DetailsMemo.Update;
+
+  LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
+  // Returns immediately — NotifyCompileComplete is called by Expert.AfterCompile
+end;
+
+procedure TFormDextTestRunner.LaunchTestExe(const ATestFilter: string);
+var
+  LIsPackage: Boolean;
+  LOutput: string;
+  LExeFile: string;
+  LParams: string;
+  LCmdLine: string;
+  LSplit: TArray<string>;
+  SI: TStartupInfo;
+  PI: TProcessInformation;
+begin
   LIsPackage := False;
   LOutput := '';
   GetProjectTargetInfo(FActiveProjectFile, LIsPackage, LOutput);
   LExeFile := ResolveExePath(FActiveProjectFile, LOutput);
-  DetailsMemo.Lines.Add('Resolved Executable: ' + LExeFile);
-
-  // Incremental compile (DCC -M): only recompiles units whose source is
-  // newer than the .dcu. Much faster than a full build.
-  if not CompileProjectDirect(FActiveProjectFile) then
-  begin
-    DetailsMemo.Lines.Add('Direct DCC compile failed or bypassed. Falling back to IDE make...');
-    LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
-  end;
 
   if not FileExists(LExeFile) then
   begin
-    DetailsMemo.Lines.Add('Error: Executable not found at ' + LExeFile);
+    LogMsg('Error: Executable not found at ' + LExeFile);
+    if Assigned(FProgressPanel) then FProgressPanel.Visible := False;
     Exit;
   end;
 
-  // Set the selected tests in the design-time server to be queried by the runner via GET /tests
+  // Apply test filter to server selection JSON
   if ATestFilter <> '' then
     FServer.SelectedTestsJSON := '["' + ATestFilter + '"]'
   else
@@ -1305,10 +1464,17 @@ begin
       FServer.SelectedTestsJSON := '[]';
   end;
 
-  DetailsMemo.Lines.Add('Selected tests filter JSON: ' + FServer.SelectedTestsJSON);
-  DetailsMemo.Lines.Add('Executing tests...');
+  LogMsg('Selected tests filter: ' + FServer.SelectedTestsJSON);
 
-  // 2. Launch test executable in background using Dext native port + filter parameters
+  // Update progress to 'Executing'
+  if Assigned(FProgressPanel) then
+  begin
+    FProgressLabel.Caption := '⏳ Executing tests...';
+    FProgressPanel.Visible := True;
+    FProgressPanel.Update;
+  end;
+  DetailsMemo.Update;
+
   LParams := Format('--port %d -no-wait', [FServer.Port]);
   if ATestFilter <> '' then
   begin
@@ -1320,8 +1486,12 @@ begin
   end;
 
   LCmdLine := Format('"%s" %s', [LExeFile, LParams]);
-  DetailsMemo.Lines.Add('Command Line: ' + LCmdLine);
+  LogMsg('Command Line: ' + LCmdLine);
   UniqueString(LCmdLine);
+
+  ZeroMemory(@SI, SizeOf(SI));
+  SI.cb := SizeOf(SI);
+  ZeroMemory(@PI, SizeOf(PI));
 
   if CreateProcess(nil, PChar(LCmdLine), nil, nil, False, CREATE_NO_WINDOW, nil, PChar(ExtractFilePath(LExeFile)), SI, PI) then
   begin
@@ -1329,9 +1499,36 @@ begin
     CloseHandle(PI.hThread);
   end
   else
+    LogMsg('Failed to launch runner: ' + LExeFile);
+end;
+
+procedure TFormDextTestRunner.LogMsg(const AMsg: string);
+begin
+  if AMsg = '' then
+    DetailsMemo.Lines.Add('')
+  else
+    DetailsMemo.Lines.Add(Format('[%s] %s', [FormatDateTime('hh:nn:ss.zzz', Now), AMsg]));
+  DetailsMemo.Update;
+end;
+
+procedure TFormDextTestRunner.NotifyCompileComplete(ASucceeded: Boolean);
+begin
+  if not FWaitingForCompile then Exit;
+  FWaitingForCompile := False;
+
+  if not ASucceeded then
   begin
-    DetailsMemo.Lines.Add('Failed to launch runner: ' + LExeFile);
+    LogMsg('❌ Compile failed — tests not executed.');
+    if Assigned(FProgressPanel) then
+    begin
+      FProgressLabel.Caption := 'Compile failed';
+      FProgressPanel.Visible := False;
+    end;
+    Exit;
   end;
+
+  LogMsg('✔ Compile succeeded.');
+  LaunchTestExe(FPendingTestFilter);
 end;
 
 procedure TFormDextTestRunner.RunAllButtonClick(Sender: TObject);
@@ -1371,13 +1568,13 @@ begin
   // Focus Console Log
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
     FDetailsPageControl.ActivePage := FConsoleTab;
-  DetailsMemo.Lines.Add('=== Running All Test Projects ===');
+  LogMsg('=== Running All Test Projects ===');
 
   // Save all modified IDE files once before the loop.
   var LSaveServices: IOTAModuleServices;
   if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
   begin
-    DetailsMemo.Lines.Add('Saving all modified files...');
+    LogMsg('Saving all modified files...');
     LSaveServices.SaveAll;
   end;
 
@@ -1387,12 +1584,12 @@ begin
     if Assigned(LProj) then
     begin
       LProjFile := LProj.FileName;
-      DetailsMemo.Lines.Add('');
-      DetailsMemo.Lines.Add('----------------------------------------');
-      DetailsMemo.Lines.Add('Compiling ' + ExtractFileName(LProjFile) + '...');
+      LogMsg('');
+      LogMsg('----------------------------------------');
+      LogMsg('Compiling ' + ExtractFileName(LProjFile) + '...');
       if not CompileProjectDirect(LProjFile) then
       begin
-        DetailsMemo.Lines.Add('Direct DCC compile failed, building via IDE make...');
+        LogMsg('Direct DCC compile failed, building via IDE make...');
         LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
       end;
       
@@ -1403,7 +1600,7 @@ begin
       
       if FileExists(LExeFile) then
       begin
-        DetailsMemo.Lines.Add('Executing ' + ExtractFileName(LExeFile) + '...');
+        LogMsg('Executing ' + ExtractFileName(LExeFile) + '...');
         FServer.SelectedTestsJSON := '[]';
         LParams := Format('--port %d -no-wait', [FServer.Port]);
         LCmdLine := Format('"%s" %s', [LExeFile, LParams]);
@@ -1419,7 +1616,7 @@ begin
         end
         else
         begin
-          DetailsMemo.Lines.Add('Failed to launch runner: ' + LExeFile);
+          LogMsg('Failed to launch runner: ' + LExeFile);
         end;
       end;
     end;
@@ -1969,6 +2166,12 @@ begin
   
   if (Stage = cdPrePaint) and (Node <> nil) then
   begin
+    if not (cdsSelected in State) then
+    begin
+      Sender.Canvas.Brush.Color := TTreeView(Sender).Color;
+      Sender.Canvas.Font.Color := TTreeView(Sender).Font.Color;
+    end;
+    
     if Node.Parent = nil then
       Sender.Canvas.Font.Style := [fsBold]
     else
@@ -1977,6 +2180,7 @@ begin
 
   if (Stage = cdPostPaint) and (Node <> nil) then
   begin
+    Sender.Canvas.Brush.Style := bsClear;
     LRect := Node.DisplayRect(True);
     LTextX := LRect.Right + 6;
     LTextY := LRect.Top + (LRect.Height - Sender.Canvas.TextHeight('W')) div 2;
@@ -2127,13 +2331,13 @@ begin
   // Focus Console Log
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
     FDetailsPageControl.ActivePage := FConsoleTab;
-  DetailsMemo.Lines.Add('Compiling project (Debug): ' + ExtractFileName(FActiveProjectFile));
+  LogMsg('Compiling project (Debug): ' + ExtractFileName(FActiveProjectFile));
 
   // Save all modified IDE files before compiling.
   var LSaveServices: IOTAModuleServices;
   if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
   begin
-    DetailsMemo.Lines.Add('Saving all modified files...');
+    LogMsg('Saving all modified files...');
     LSaveServices.SaveAll;
   end;
 
@@ -2144,13 +2348,13 @@ begin
 
   if not CompileProjectDirect(FActiveProjectFile) then
   begin
-    DetailsMemo.Lines.Add('Direct DCC compile failed or bypassed. Falling back to IDE make...');
+    LogMsg('Direct DCC compile failed or bypassed. Falling back to IDE make...');
     LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
   end;
 
   if not FileExists(LExeFile) then
   begin
-    DetailsMemo.Lines.Add('Error: Executable not found at ' + LExeFile);
+    LogMsg('Error: Executable not found at ' + LExeFile);
     Exit;
   end;
 
@@ -2165,7 +2369,7 @@ begin
     FServer.SelectedTestsJSON := '[]';
   end;
 
-  DetailsMemo.Lines.Add('Starting debugger with parameters: ' + LParams);
+  LogMsg('Starting debugger with parameters: ' + LParams);
   LProj.ProjectOptions.Values['RunParams'] := LParams;
 
   LFoundAction := nil;
@@ -2195,8 +2399,8 @@ begin
   end
   else
   begin
-    DetailsMemo.Lines.Add('Warning: Could not trigger debugger automatically.');
-    DetailsMemo.Lines.Add('Please press F9 (Run) manually in the IDE to start debugging.');
+    LogMsg('Warning: Could not trigger debugger automatically.');
+    LogMsg('Please press F9 (Run) manually in the IDE to start debugging.');
   end;
 end;
 
@@ -2479,14 +2683,14 @@ begin
     
   if not FileExists(LDprFile) then
   begin
-    DetailsMemo.Lines.Add('Error: DPR/DPK file not found: ' + LDprFile);
+    LogMsg('Error: DPR/DPK file not found: ' + LDprFile);
     Exit;
   end;
 
   LDccExe := ExtractFilePath(ParamStr(0)) + 'dcc32.exe';
   if not FileExists(LDccExe) then
   begin
-    DetailsMemo.Lines.Add('Error: Compiler not found: ' + LDccExe);
+    LogMsg('Error: Compiler not found: ' + LDccExe);
     Exit;
   end;
 
@@ -2495,7 +2699,7 @@ begin
   except
     on E: Exception do
     begin
-      DetailsMemo.Lines.Add('Error reading project file: ' + E.Message);
+      LogMsg('Error reading project file: ' + E.Message);
       Exit;
     end;
   end;
@@ -2558,18 +2762,18 @@ begin
   if LExeOutput <> '' then LCmdLine := LCmdLine + ' -E"' + LExeOutput + '"';
   LCmdLine := LCmdLine + ' "' + LDprFile + '"';
 
-  DetailsMemo.Lines.Add('DCC Command: ' + LCmdLine);
+  LogMsg('DCC Command: ' + LCmdLine);
   
   if ExecuteAndCapture(LCmdLine, LWorkDir, LOutput) then
   begin
-    DetailsMemo.Lines.Add(LOutput);
-    DetailsMemo.Lines.Add('Direct compilation successful.');
+    LogMsg(LOutput);
+    LogMsg('Direct compilation successful.');
     Result := True;
   end
   else
   begin
-    DetailsMemo.Lines.Add(LOutput);
-    DetailsMemo.Lines.Add('Direct compilation failed.');
+    LogMsg(LOutput);
+    LogMsg('Direct compilation failed.');
   end;
 end;
 
@@ -2614,7 +2818,7 @@ begin
 
   if FileExists(LCovPath) then
   begin
-    DetailsMemo.Lines.Add('Loading code coverage from: ' + LCovPath);
+    LogMsg('Loading code coverage from: ' + LCovPath);
     TThread.Queue(nil, TThreadProcedure(procedure
       begin
         TCoverageManager.GetInstance.LoadCoverageFromXML(LCovPath);
@@ -2622,7 +2826,7 @@ begin
   end
   else
   begin
-    DetailsMemo.Lines.Add('No code coverage report found.');
+    LogMsg('No code coverage report found.');
   end;
 end;
 
