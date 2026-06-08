@@ -729,7 +729,6 @@ begin
   begin
     if LThemingServices.IDEThemingEnabled then
     begin
-      LThemingServices.ApplyTheme(Self);
       LBgColor := LThemingServices.StyleServices.GetSystemColor(clWindow);
       LFgColor := LThemingServices.StyleServices.GetSystemColor(clWindowText);
 
