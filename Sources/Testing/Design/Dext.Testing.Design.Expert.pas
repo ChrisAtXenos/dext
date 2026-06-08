@@ -119,10 +119,10 @@ end;
 
 procedure TDextTestRunnerIDENotifier.AfterCompile(Succeeded: Boolean);
 begin
-  if Succeeded and Assigned(FormDextTestRunner) then
-  begin
-    // Compile finished, we can trigger tests here if continuous testing is enabled
-  end;
+  // Notify the test runner that the IDE compile has finished.
+  // If FWaitingForCompile is set, this triggers test execution.
+  if Assigned(FormDextTestRunner) then
+    FormDextTestRunner.NotifyCompileComplete(Succeeded);
 end;
 
 procedure TDextTestRunnerIDENotifier.AfterCompile(Succeeded, IsCodeInsight: Boolean);

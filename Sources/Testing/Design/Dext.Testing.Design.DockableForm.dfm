@@ -29,12 +29,12 @@ object FormDextTestRunner: TFormDextTestRunner
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 350
+    ExplicitWidth = 624
     object ProjectsComboBox: TComboBox
       AlignWithMargins = True
       Left = 5
       Top = 7
-      Width = 302
+      Width = 242
       Height = 21
       Margins.Left = 5
       Margins.Top = 7
@@ -44,7 +44,6 @@ object FormDextTestRunner: TFormDextTestRunner
       Style = csDropDownList
       TabOrder = 0
       OnChange = ProjectsComboBoxChange
-      ExplicitWidth = 204
     end
     object ButtonsPanel: TPanel
       Left = 252
@@ -100,7 +99,6 @@ object FormDextTestRunner: TFormDextTestRunner
     ActivePage = DefaultSessionTabSheet
     Align = alClient
     TabOrder = 1
-    ExplicitWidth = 350
     object DefaultSessionTabSheet: TTabSheet
       Caption = 'Tests'
       object TestsTreeView: TTreeView
@@ -113,7 +111,6 @@ object FormDextTestRunner: TFormDextTestRunner
         ReadOnly = True
         TabOrder = 0
         OnDblClick = TestsTreeViewDblClick
-        ExplicitWidth = 342
       end
     end
   end
@@ -125,7 +122,6 @@ object FormDextTestRunner: TFormDextTestRunner
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitWidth = 350
     object DetailsMemo: TMemo
       Left = 0
       Top = 0
@@ -135,7 +131,6 @@ object FormDextTestRunner: TFormDextTestRunner
       ReadOnly = True
       ScrollBars = ssBoth
       TabOrder = 0
-      ExplicitWidth = 350
     end
   end
 end
