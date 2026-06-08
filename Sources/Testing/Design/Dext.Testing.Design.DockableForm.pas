@@ -1137,12 +1137,16 @@ begin
   begin
     LStatusText := LInfo.Status;
     FLblStatus.Caption := 'Status: ' + LStatusText;
+    FLblStatus.ParentColor := False;
     if SameText(LStatusText, 'Passed') then
       FLblStatus.Font.Color := TColor($5EC522) // Green BGR
     else if SameText(LStatusText, 'Failed') or SameText(LStatusText, 'Error') then
       FLblStatus.Font.Color := TColor($4444EF) // Red BGR
     else
+    begin
       FLblStatus.Font.Color := clWindowText;
+      FLblStatus.ParentColor := True;
+    end;
       
     // Format duration intelligently: show sub-ms precision when needed
     if LInfo.DurationMs < 1.0 then
@@ -1248,6 +1252,17 @@ begin
     FDetailsPageControl.ActivePage := FConsoleTab;
   DetailsMemo.Lines.Add('Compiling project: ' + ExtractFileName(FActiveProjectFile));
 
+  // Save all modified IDE files before compiling.
+  // DCC uses file timestamps (-M make mode) to decide what to recompile.
+  // If the editor has unsaved changes, the .pas timestamp is older than the
+  // existing .dcu and DCC skips it — launching the stale binary.
+  var LSaveServices: IOTAModuleServices;
+  if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
+  begin
+    DetailsMemo.Lines.Add('Saving all modified files...');
+    LSaveServices.SaveAll;
+  end;
+
   // Get dynamic executable path from project target info
   LIsPackage := False;
   LOutput := '';
@@ -1255,10 +1270,11 @@ begin
   LExeFile := ResolveExePath(FActiveProjectFile, LOutput);
   DetailsMemo.Lines.Add('Resolved Executable: ' + LExeFile);
 
-  // Try direct DCC bypass first, fall back to slow MSBuild if it fails
+  // Incremental compile (DCC -M): only recompiles units whose source is
+  // newer than the .dcu. Much faster than a full build.
   if not CompileProjectDirect(FActiveProjectFile) then
   begin
-    DetailsMemo.Lines.Add('Direct DCC compile failed or bypassed. Falling back to MSBuild...');
+    DetailsMemo.Lines.Add('Direct DCC compile failed or bypassed. Falling back to IDE make...');
     LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
   end;
 
@@ -1356,7 +1372,15 @@ begin
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
     FDetailsPageControl.ActivePage := FConsoleTab;
   DetailsMemo.Lines.Add('=== Running All Test Projects ===');
-  
+
+  // Save all modified IDE files once before the loop.
+  var LSaveServices: IOTAModuleServices;
+  if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
+  begin
+    DetailsMemo.Lines.Add('Saving all modified files...');
+    LSaveServices.SaveAll;
+  end;
+
   for I := 0 to ProjectsComboBox.Items.Count - 1 do
   begin
     LProj := IOTAProject(Pointer(ProjectsComboBox.Items.Objects[I]));
@@ -1368,7 +1392,7 @@ begin
       DetailsMemo.Lines.Add('Compiling ' + ExtractFileName(LProjFile) + '...');
       if not CompileProjectDirect(LProjFile) then
       begin
-        DetailsMemo.Lines.Add('Direct DCC compile failed, building via MSBuild...');
+        DetailsMemo.Lines.Add('Direct DCC compile failed, building via IDE make...');
         LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
       end;
       
@@ -2105,14 +2129,22 @@ begin
     FDetailsPageControl.ActivePage := FConsoleTab;
   DetailsMemo.Lines.Add('Compiling project (Debug): ' + ExtractFileName(FActiveProjectFile));
 
+  // Save all modified IDE files before compiling.
+  var LSaveServices: IOTAModuleServices;
+  if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
+  begin
+    DetailsMemo.Lines.Add('Saving all modified files...');
+    LSaveServices.SaveAll;
+  end;
+
   LIsPackage := False;
   LOutput := '';
   GetProjectTargetInfo(FActiveProjectFile, LIsPackage, LOutput);
   LExeFile := ResolveExePath(FActiveProjectFile, LOutput);
-  
+
   if not CompileProjectDirect(FActiveProjectFile) then
   begin
-    DetailsMemo.Lines.Add('Direct DCC compile failed or bypassed. Falling back to MSBuild...');
+    DetailsMemo.Lines.Add('Direct DCC compile failed or bypassed. Falling back to IDE make...');
     LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
   end;
 
