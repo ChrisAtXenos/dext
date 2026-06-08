@@ -298,6 +298,7 @@ begin
   TreeView.HideSelection := False;
   TreeView.Checkboxes := True;
   TreeView.DoubleBuffered := True;
+  TreeView.StyleElements := [];
 end;
 
 constructor TTestSession.CreateFromExisting(ATabSheet: TTabSheet; ATreeView: TTreeView; ALocations: TList<TTestLocation>; const AProjFile: string);
@@ -461,6 +462,7 @@ begin
   RebuildStatusImages;
   TestsTreeView.Checkboxes := True;
   TestsTreeView.DoubleBuffered := True;
+  TestsTreeView.StyleElements := [];
   
   // Assign advanced dynamic event handlers
   TestsTreeView.OnMouseMove := TestsTreeViewMouseMove;
