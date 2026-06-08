@@ -312,63 +312,23 @@ begin
 end;
 
 procedure TCoverageManager.RegisterView(const AView: IOTAEditView);
-var
-  LIndex: Integer;
-  LNotifier: INTAEditViewNotifier;
 begin
-  if not FNotifiers.ContainsKey(AView) then
-  begin
-    LNotifier := TEditorViewNotifier.Create(AView);
-    LIndex := AView.AddNotifier(LNotifier);
-    FNotifiers.Add(AView, LIndex);
-  end;
+  // Gutter view notifier registration disabled to prevent crash
+  // on TEditView.NotifyDestroyed when editor tabs are closed.
+  // TODO: Re-enable with proper lifetime management.
 end;
 
 procedure TCoverageManager.UnregisterView(const AView: IOTAEditView);
-var
-  LIndex: Integer;
 begin
-  if FNotifiers.TryGetValue(AView, LIndex) then
-  begin
-    try
-      AView.RemoveNotifier(LIndex);
-    except
-      // ignore potential OTA teardown issues
-    end;
-    FNotifiers.Remove(AView);
-  end;
+  // No-op: registration is disabled, nothing to unregister.
+  FNotifiers.Remove(AView);
 end;
 
 procedure TCoverageManager.RefreshActiveViews;
-var
-  LModuleServices: IOTAModuleServices;
-  LModule: IOTAModule;
-  LSourceEditor: IOTASourceEditor;
-  LView: IOTAEditView;
-  I, J, K: Integer;
 begin
-  if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
-  begin
-    for I := 0 to LModuleServices.ModuleCount - 1 do
-    begin
-      LModule := LModuleServices.Modules[I];
-      if Assigned(LModule) then
-      begin
-        for J := 0 to LModule.ModuleFileCount - 1 do
-        begin
-          if Supports(LModule.ModuleFileEditors[J], IOTASourceEditor, LSourceEditor) then
-          begin
-            for K := 0 to LSourceEditor.EditViewCount - 1 do
-            begin
-              LView := LSourceEditor.EditViews[K];
-              RegisterView(LView);
-              LView.Paint;
-            end;
-          end;
-        end;
-      end;
-    end;
-  end;
+  // Gutter refresh disabled to prevent crash when attaching
+  // notifiers to editor views that may be destroyed by the IDE.
+  // Coverage data is still loaded and available for the Inspector.
 end;
 
 procedure TCoverageManager.ShowCoveringTestsPopup(const AView: IOTAEditView; const ATests: TArray<string>);
@@ -413,35 +373,9 @@ begin
 end;
 
 procedure TEditorViewNotifier.AfterSave;
-var
-  LFileName: string;
-  LImpactedTests: TList<string>;
 begin
-  LFileName := FView.Buffer.FileName;
-  
-  if Assigned(FormDextTestRunner) then
-  begin
-    FormDextTestRunner.HandleFileSaved(LFileName);
-  end;
-
-  LImpactedTests := TCoverageManager.GetInstance.GetTestsCoveringFile(LFileName);
-  try
-    if (LImpactedTests.Count > 0) and Assigned(FormDextTestRunner) then
-    begin
-      var LTestsArr := LImpactedTests.ToArray;
-      TThread.Queue(nil, TThreadProcedure(procedure
-        begin
-          if Assigned(FormDextTestRunner) then
-          begin
-            FormDextTestRunner.DetailsMemo.Lines.Add('File changed: ' + ExtractFileName(LFileName));
-            FormDextTestRunner.DetailsMemo.Lines.Add(Format('Impact Analysis: Running %d impacted tests...', [Length(LTestsArr)]));
-            FormDextTestRunner.RunImpactedTests(LTestsArr);
-          end;
-        end));
-    end;
-  finally
-    LImpactedTests.Free;
-  end;
+  // Disabled: notifier is no longer attached to edit views.
+  // File save handling is not active until gutter feature is re-enabled.
 end;
 
 procedure TEditorViewNotifier.BeforeSave; begin end;

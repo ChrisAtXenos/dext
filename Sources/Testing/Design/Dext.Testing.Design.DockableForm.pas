@@ -28,6 +28,7 @@ type
     TreeView: TTreeView;
     TestLocations: TList<TTestLocation>;
     ActiveProjectFile: string;
+    FilterEdit: TEdit;
     constructor Create(APageControl: TPageControl; const AName: string); overload;
     constructor CreateFromExisting(ATabSheet: TTabSheet; ATreeView: TTreeView; ALocations: TList<TTestLocation>; const AProjFile: string); overload;
     destructor Destroy; override;
@@ -91,11 +92,11 @@ type
     FProgressPanel: TPanel;
     FTotalTests: Integer;
     FCompletedTests: Integer;
-    FFilterEdit: TEdit;
     FLayoutPopupMenu: TPopupMenu;
     FInspectorSplitter: TSplitter;
     FCurrentLayout: TTestExplorerLayout;
     LayoutButton: TButton;
+    function ActiveFilterEdit: TEdit;
     procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
     procedure UpdateTestInspector(const ATestName: string);
     procedure FilterEditChange(Sender: TObject);
@@ -153,7 +154,7 @@ implementation
 {$R *.dfm}
 
 uses
-  DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage;
+  DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles;
 
 procedure ShowDextTestExplorer;
 begin
@@ -222,6 +223,24 @@ begin
   TabSheet.PageControl := APageControl;
   TabSheet.Caption := AName;
   
+  var LFilterPanel := TPanel.Create(TabSheet);
+  LFilterPanel.Parent := TabSheet;
+  LFilterPanel.Align := alTop;
+  LFilterPanel.Height := 28;
+  LFilterPanel.BevelOuter := bvNone;
+
+  FilterEdit := TEdit.Create(TabSheet);
+  FilterEdit.Parent := LFilterPanel;
+  FilterEdit.Align := alClient;
+  FilterEdit.AlignWithMargins := True;
+  FilterEdit.Margins.Left := 6;
+  FilterEdit.Margins.Right := 6;
+  FilterEdit.Margins.Top := 3;
+  FilterEdit.Margins.Bottom := 3;
+  FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
+  if APageControl.Owner is TFormDextTestRunner then
+    FilterEdit.OnChange := TFormDextTestRunner(APageControl.Owner).FilterEditChange;
+
   TreeView := TTreeView.Create(TabSheet);
   TreeView.Parent := TabSheet;
   TreeView.Align := alClient;
@@ -238,6 +257,22 @@ begin
   TreeView := ATreeView;
   TestLocations := ALocations;
   ActiveProjectFile := AProjFile;
+  
+  var LFilterPanel := TPanel.Create(ATabSheet);
+  LFilterPanel.Parent := ATabSheet;
+  LFilterPanel.Align := alTop;
+  LFilterPanel.Height := 28;
+  LFilterPanel.BevelOuter := bvNone;
+
+  FilterEdit := TEdit.Create(ATabSheet);
+  FilterEdit.Parent := LFilterPanel;
+  FilterEdit.Align := alClient;
+  FilterEdit.AlignWithMargins := True;
+  FilterEdit.Margins.Left := 6;
+  FilterEdit.Margins.Right := 6;
+  FilterEdit.Margins.Top := 3;
+  FilterEdit.Margins.Bottom := 3;
+  FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
 end;
 
 destructor TTestSession.Destroy;
@@ -337,15 +372,15 @@ begin
     LImageList.AddMasked(LBitmap, clWhite);
     
     // 1: Pass (Green circle)
-    DrawSmoothCircle(TColor($22C55E), LBitmap);
+    DrawSmoothCircle(TColor($5EC522), LBitmap);
     LImageList.AddMasked(LBitmap, clWhite);
 
     // 2: Fail (Red circle)
-    DrawSmoothCircle(TColor($EF4444), LBitmap);
+    DrawSmoothCircle(TColor($4444EF), LBitmap);
     LImageList.AddMasked(LBitmap, clWhite);
 
     // 3: Fixture (Blue circle/folder icon)
-    DrawSmoothCircle(TColor($3B82F6), LBitmap);
+    DrawSmoothCircle(TColor($F6823B), LBitmap);
     LImageList.AddMasked(LBitmap, clWhite);
   finally
     LBitmap.Free;
@@ -537,23 +572,19 @@ begin
   FInspectorSplitter.Visible := False;
   FCurrentLayout := telCompact;
 
-  // Create Filter panel dynamically
-  var LFilterPanel := TPanel.Create(Self);
-  LFilterPanel.Parent := Self;
-  LFilterPanel.Align := alTop;
-  LFilterPanel.Height := 28;
-  LFilterPanel.BevelOuter := bvNone;
-
-  FFilterEdit := TEdit.Create(Self);
-  FFilterEdit.Parent := LFilterPanel;
-  FFilterEdit.Align := alClient;
-  FFilterEdit.AlignWithMargins := True;
-  FFilterEdit.Margins.Left := 6;
-  FFilterEdit.Margins.Right := 6;
-  FFilterEdit.Margins.Top := 3;
-  FFilterEdit.Margins.Bottom := 3;
-  FFilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
-  FFilterEdit.OnChange := FilterEditChange;
+  // Load layout from ini file
+  var LLayoutMode := Ord(telCompact);
+  try
+    var LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+    try
+      LLayoutMode := LIni.ReadInteger('Layout', 'Mode', Ord(telCompact));
+    finally
+      LIni.Free;
+    end;
+  except
+    // ignore
+  end;
+  ApplyLayout(TTestExplorerLayout(LLayoutMode));
 
   Self.KeyPreview := True;
   Self.OnKeyDown := FormKeyDown;
@@ -1096,9 +1127,9 @@ begin
     LStatusText := LInfo.Status;
     FLblStatus.Caption := 'Status: ' + LStatusText;
     if SameText(LStatusText, 'Passed') then
-      FLblStatus.Font.Color := TColor($22C55E) // Green
+      FLblStatus.Font.Color := TColor($5EC522) // Green BGR
     else if SameText(LStatusText, 'Failed') or SameText(LStatusText, 'Error') then
-      FLblStatus.Font.Color := TColor($EF4444) // Red
+      FLblStatus.Font.Color := TColor($4444EF) // Red BGR
     else
       FLblStatus.Font.Color := clWindowText;
       
@@ -1710,21 +1741,46 @@ begin
     ApplyLayout(TTestExplorerLayout(TMenuItem(Sender).Tag));
 end;
 
+function TFormDextTestRunner.ActiveFilterEdit: TEdit;
+begin
+  if FActiveSession <> nil then
+    Result := FActiveSession.FilterEdit
+  else
+    Result := nil;
+end;
+
 procedure TFormDextTestRunner.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+var
+  LActiveFilter: TEdit;
 begin
   if (Key = Ord('F')) and (ssCtrl in Shift) then
   begin
-    if Assigned(FFilterEdit) then
+    LActiveFilter := ActiveFilterEdit;
+    if Assigned(LActiveFilter) then
     begin
-      FFilterEdit.SetFocus;
+      LActiveFilter.SetFocus;
       Key := 0;
     end;
   end;
 end;
 
 procedure TFormDextTestRunner.ApplyLayout(ALayout: TTestExplorerLayout);
+var
+  LIni: TMemIniFile;
 begin
   FCurrentLayout := ALayout;
+  
+  try
+    LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+    try
+      LIni.WriteInteger('Layout', 'Mode', Ord(ALayout));
+      LIni.UpdateFile;
+    finally
+      LIni.Free;
+    end;
+  except
+    // ignore
+  end;
   
   DetailsMemo.Align := alNone;
   FInspectorScroll.Align := alNone;
@@ -1798,13 +1854,15 @@ var
   LClassMatches: Boolean;
   LMethodMatches: Boolean;
   LFixtureTestsCount: TDictionary<string, Integer>;
+  LActiveFilterEdit: TEdit;
 begin
   TestsTreeView.Items.BeginUpdate;
   try
     TestsTreeView.Items.Clear;
     LFilter := '';
-    if Assigned(FFilterEdit) then
-      LFilter := Trim(FFilterEdit.Text);
+    LActiveFilterEdit := ActiveFilterEdit;
+    if Assigned(LActiveFilterEdit) then
+      LFilter := Trim(LActiveFilterEdit.Text);
 
     LFixtureTestsCount := TDictionary<string, Integer>.Create;
     try
@@ -1831,14 +1889,10 @@ begin
 
         if LClassMatches or LMethodMatches then
         begin
-          var LCount: Integer;
-          LFixtureTestsCount.TryGetValue(LTest.ClassName, LCount);
-          var LClassNodeText := LTest.ClassName + ' (' + LCount.ToString + ' tests)';
-
           LFixtureNode := FindNodeByPath(LTest.ClassName);
           if not Assigned(LFixtureNode) then
           begin
-            LFixtureNode := TestsTreeView.Items.AddChild(nil, LClassNodeText);
+            LFixtureNode := TestsTreeView.Items.AddChild(nil, LTest.ClassName);
             LFixtureNode.ImageIndex := 3;
             LFixtureNode.SelectedIndex := 3;
           end;
@@ -1862,121 +1916,97 @@ end;
 procedure TFormDextTestRunner.TestsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
 var
   LBtnRect: TRect;
+  LRect: TRect;
+  LTextX, LTextY: Integer;
+  LClassName: string;
+  LCountText: string;
+  LFailedCount: Integer;
+  LPassedCount: Integer;
+  J: Integer;
+  LChildFull: string;
+  LChildInfo: TTestDetailInfo;
+  LFullTestName: string;
+  LInfo: TTestDetailInfo;
+  LDurText: string;
+  LErrText: string;
 begin
   DefaultDraw := True;
   
   if (Stage = cdPrePaint) and (Node <> nil) then
   begin
-    DefaultDraw := False;
-    var LRect := Node.DisplayRect(True);
-    
-    if cdsSelected in State then
-    begin
-      Sender.Canvas.Brush.Color := clHighlight;
-      Sender.Canvas.FillRect(LRect);
-      Sender.Canvas.Font.Color := clHighlightText;
-    end
+    if Node.Parent = nil then
+      Sender.Canvas.Font.Style := [fsBold]
     else
-    begin
-      Sender.Canvas.Brush.Color := TTreeView(Sender).Color;
-      Sender.Canvas.FillRect(LRect);
-      Sender.Canvas.Font.Color := TTreeView(Sender).Font.Color;
-    end;
+      Sender.Canvas.Font.Style := [];
+  end;
 
-    var LTextX := LRect.Left + 2;
-    var LTextY := LRect.Top + (LRect.Height - Sender.Canvas.TextHeight('W')) div 2;
+  if (Stage = cdPostPaint) and (Node <> nil) then
+  begin
+    LRect := Node.DisplayRect(True);
+    LTextX := LRect.Right + 6;
+    LTextY := LRect.Top + (LRect.Height - Sender.Canvas.TextHeight('W')) div 2;
 
     if Node.Parent = nil then
     begin
-      var LClassName := Node.Text;
-      var LCountText := '';
-      var LSpaceIdx := Node.Text.IndexOf(' (');
-      if LSpaceIdx > 0 then
-      begin
-        LClassName := Node.Text.Substring(0, LSpaceIdx);
-        LCountText := Node.Text.Substring(LSpaceIdx);
-      end;
+      LClassName := Node.Text;
+      
+      // Draw (N tests)
+      if cdsSelected in State then
+        Sender.Canvas.Font.Color := clHighlightText
+      else
+        Sender.Canvas.Font.Color := clGrayText;
+      Sender.Canvas.Font.Style := [];
+      
+      LCountText := ' (' + Node.Count.ToString + ' tests)';
+      Sender.Canvas.TextOut(LTextX, LTextY, LCountText);
+      LTextX := LTextX + Sender.Canvas.TextWidth(LCountText) + 6;
 
-      Sender.Canvas.Font.Style := [fsBold];
-      Sender.Canvas.TextOut(LTextX, LTextY, LClassName);
-      LTextX := LTextX + Sender.Canvas.TextWidth(LClassName);
-
-      if LCountText <> '' then
-      begin
-        Sender.Canvas.Font.Style := [];
-        if cdsSelected in State then
-          Sender.Canvas.Font.Color := clHighlightText
-        else
-          Sender.Canvas.Font.Color := clGrayText;
-        Sender.Canvas.TextOut(LTextX, LTextY, LCountText);
-        LTextX := LTextX + Sender.Canvas.TextWidth(LCountText) + 6;
-      end;
-
-      var LFailedCount := 0;
-      var J: Integer;
+      LFailedCount := 0;
+      LPassedCount := 0;
       for J := 0 to Node.Count - 1 do
       begin
-        var LChildFull := LClassName + '.' + Node.Item[J].Text;
-        var LChildInfo: TTestDetailInfo;
+        LChildFull := LClassName + '.' + Node.Item[J].Text;
         if FTestDetails.TryGetValue(LChildFull, LChildInfo) then
         begin
           if SameText(LChildInfo.Status, 'Failed') or SameText(LChildInfo.Status, 'Error') then
-            Inc(LFailedCount);
+            Inc(LFailedCount)
+          else if SameText(LChildInfo.Status, 'Passed') then
+            Inc(LPassedCount);
         end;
       end;
 
       if LFailedCount > 0 then
       begin
-        Sender.Canvas.Font.Style := [];
         if cdsSelected in State then
           Sender.Canvas.Font.Color := clHighlightText
         else
-          Sender.Canvas.Font.Color := TColor($EF4444);
-        var LFailText := Format('Failed: %d tests failed', [LFailedCount]);
-        Sender.Canvas.TextOut(LTextX, LTextY, LFailText);
+          Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
+        Sender.Canvas.TextOut(LTextX, LTextY, 'Failed: ' + LFailedCount.ToString + ' tests failed');
       end
-      else
+      else if (LPassedCount > 0) and (LPassedCount = Node.Count) then
       begin
-        var LPassedCount := 0;
-        for J := 0 to Node.Count - 1 do
-        begin
-          var LChildFull := LClassName + '.' + Node.Item[J].Text;
-          var LChildInfo: TTestDetailInfo;
-          if FTestDetails.TryGetValue(LChildFull, LChildInfo) then
-          begin
-            if SameText(LChildInfo.Status, 'Passed') then
-              Inc(LPassedCount);
-          end;
-        end;
-        if (LPassedCount > 0) and (LPassedCount = Node.Count) then
-        begin
-          Sender.Canvas.Font.Style := [];
-          if cdsSelected in State then
-            Sender.Canvas.Font.Color := clHighlightText
-          else
-            Sender.Canvas.Font.Color := TColor($22C55E);
-          Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
-        end;
+        if cdsSelected in State then
+          Sender.Canvas.Font.Color := clHighlightText
+        else
+          Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
+        Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
       end;
     end
     else
     begin
-      Sender.Canvas.Font.Style := [];
-      Sender.Canvas.TextOut(LTextX, LTextY, Node.Text);
-      LTextX := LTextX + Sender.Canvas.TextWidth(Node.Text) + 6;
-
-      var LFullTestName := GetNodeFullTestName(Node);
-      var LInfo: TTestDetailInfo;
+      LFullTestName := GetNodeFullTestName(Node);
       if FTestDetails.TryGetValue(LFullTestName, LInfo) then
       begin
-        var LDurText := Format('[%.2f ms]', [LInfo.DurationMs]);
         if LInfo.DurationMs < 1.0 then
-          LDurText := Format('[%.3f ms]', [LInfo.DurationMs]);
+          LDurText := Format('[%.3f ms]', [LInfo.DurationMs])
+        else
+          LDurText := Format('[%.2f ms]', [LInfo.DurationMs]);
           
         if cdsSelected in State then
           Sender.Canvas.Font.Color := clHighlightText
         else
           Sender.Canvas.Font.Color := clGrayText;
+        Sender.Canvas.Font.Style := [];
         Sender.Canvas.TextOut(LTextX, LTextY, LDurText);
         LTextX := LTextX + Sender.Canvas.TextWidth(LDurText) + 6;
 
@@ -1985,16 +2015,16 @@ begin
           if cdsSelected in State then
             Sender.Canvas.Font.Color := clHighlightText
           else
-            Sender.Canvas.Font.Color := TColor($22C55E);
+            Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
           Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
-        end;
-        if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
+        end
+        else if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
         begin
           if cdsSelected in State then
             Sender.Canvas.Font.Color := clHighlightText
           else
-            Sender.Canvas.Font.Color := TColor($EF4444);
-          var LErrText := 'Failed';
+            Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
+          LErrText := 'Failed';
           if LInfo.ErrorMessage <> '' then
             LErrText := 'Failed: ' + LInfo.ErrorMessage.Replace(#13, '').Replace(#10, ' ');
           if Length(LErrText) > 60 then
@@ -2002,21 +2032,18 @@ begin
           Sender.Canvas.TextOut(LTextX, LTextY, LErrText);
         end;
       end;
-    end;
-  end;
 
-  if Stage = cdPostPaint then
-  begin
-    if (Node = FHoverNode) and (Node.Parent <> nil) then
-    begin
-      LBtnRect := GetRunButtonRect(Node);
-      Sender.Canvas.Brush.Color := TColor($DCFCE7);
-      Sender.Canvas.Pen.Color := TColor($22C55E);
-      Sender.Canvas.RoundRect(LBtnRect.Left, LBtnRect.Top, LBtnRect.Right, LBtnRect.Bottom, 4, 4);
-      Sender.Canvas.Font.Color := TColor($15803D);
-      Sender.Canvas.Font.Size := 7;
-      Sender.Canvas.Font.Style := [fsBold];
-      DrawText(Sender.Canvas.Handle, #$25B6, -1, LBtnRect, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+      if Node = FHoverNode then
+      begin
+        LBtnRect := GetRunButtonRect(Node);
+        Sender.Canvas.Brush.Color := TColor($E7FCDC); // Light Green BGR
+        Sender.Canvas.Pen.Color := TColor($5EC522); // Green BGR
+        Sender.Canvas.RoundRect(LBtnRect.Left, LBtnRect.Top, LBtnRect.Right, LBtnRect.Bottom, 4, 4);
+        Sender.Canvas.Font.Color := TColor($3D8015); // Dark Green BGR
+        Sender.Canvas.Font.Size := 7;
+        Sender.Canvas.Font.Style := [fsBold];
+        DrawText(Sender.Canvas.Handle, #$25B6, -1, LBtnRect, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
+      end;
     end;
   end;
 end;
