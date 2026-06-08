@@ -113,8 +113,27 @@ begin
 end;
 
 procedure TDextTestExplorerListener.OnRunStart(TotalTests: Integer);
+var
+  LJSON: string;
+  LStream: TStringStream;
+  LHeaders: TNetHeaders;
 begin
   LogDebug('TDextTestExplorerListener.OnRunStart: TotalTests = ' + TotalTests.ToString);
+  
+  LJSON := '{"event":"RunStart","totalTests":' + TotalTests.ToString + '}';
+  LStream := TStringStream.Create(LJSON, TEncoding.UTF8);
+  try
+    try
+      SetLength(LHeaders, 1);
+      LHeaders[0] := TNetHeader.Create('Content-Type', 'application/json');
+      FClient.Post('http://localhost:' + FPort.ToString + '/', LStream, nil, LHeaders);
+    except
+      on E: Exception do
+        LogDebug('TDextTestExplorerListener.OnRunStart: POST failed: ' + E.ClassName + ': ' + E.Message);
+    end;
+  finally
+    LStream.Free;
+  end;
 end;
 
 procedure TDextTestExplorerListener.OnRunComplete(const Summary: TTestSummary);
@@ -184,7 +203,7 @@ begin
   LJSON := '{' +
     '"testName":"' + Info.ClassName + '.' + Info.TestName + '",' +
     '"status":"' + LStatus + '",' +
-    '"durationMs":' + Round(Info.Duration.TotalMilliseconds).ToString;
+    '"durationMs":' + FormatFloat('0.####', Info.Duration.TotalMilliseconds);
     
   if Info.Result in [trFailed, trError, trTimeout] then
   begin

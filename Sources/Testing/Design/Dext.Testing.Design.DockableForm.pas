@@ -7,10 +7,20 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
   Vcl.ExtCtrls, DockForm, ToolsAPI, Dext.Testing.Design.Server, Dext.Testing.Design.AST,
   System.JSON, System.Generics.Collections, System.IOUtils, System.Threading,
-  System.ImageList, Vcl.ImgList, Vcl.Menus;
+  System.ImageList, Vcl.ImgList, Vcl.Menus, System.Math;
 
 type
   TFormDextTestRunner = class;
+
+  TTestDetailInfo = record
+    TestName: string;
+    Status: string;
+    FileName: string;
+    Line: Integer;
+    DurationMs: Double;
+    ErrorMessage: string;
+    StackTrace: string;
+  end;
 
   TTestSession = class
   public
@@ -60,6 +70,26 @@ type
     FSessions: TObjectList<TTestSession>;
     FActiveSession: TTestSession;
     FAddTab: TTabSheet;
+    
+    // Test Inspector components
+    FTestDetails: TDictionary<string, TTestDetailInfo>;
+    FDetailsPageControl: TPageControl;
+    FConsoleTab: TTabSheet;
+    FInspectorTab: TTabSheet;
+    FInspectorScroll: TScrollBox;
+    FLblTestName: TLabel;
+    FLblStatus: TLabel;
+    FLblLocation: TLabel;
+    FLblDuration: TLabel;
+    FLblErrorHeader: TLabel;
+    FMemoError: TMemo;
+    // Progress tracking
+    FProgressBar: TProgressBar;
+    FProgressLabel: TLabel;
+    FTotalTests: Integer;
+    FCompletedTests: Integer;
+    procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
+    procedure UpdateTestInspector(const ATestName: string);
     procedure SetActiveSession(ASession: TTestSession);
     procedure SessionsPageControlChange(Sender: TObject);
     procedure SessionTabContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
@@ -82,6 +112,8 @@ type
     procedure TestsTreeViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TestsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
     procedure DebugSelectedClick(Sender: TObject);
+    procedure RunAllProjectsClick(Sender: TObject);
+    procedure RunAllProjectsTests;
   protected
     procedure DoShow; override;
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
@@ -90,6 +122,7 @@ type
     destructor Destroy; override;
     procedure RunActiveProjectTests(const ATestFilter: string = '');
     procedure RunImpactedTests(const ATests: TArray<string>);
+    procedure HandleFileSaved(const AFileName: string);
   end;
 
 procedure ShowDextTestExplorer;
@@ -243,11 +276,36 @@ begin
   AutoSave := True;
   SaveStateNecessary := True;
 
-  // Set button captions with elegant symbols
+  // Set button captions with elegant symbols and hints
   RefreshButton.Caption := #$21BB + ' Refresh';
+  RefreshButton.Hint := 'Scan project files and discover tests';
+  RefreshButton.ShowHint := True;
+  
   RunAllButton.Caption := #$25B6 + ' Run All';
+  RunAllButton.Hint := 'Run all tests in the selected project (Click dropdown arrow for more options)';
+  RunAllButton.ShowHint := True;
+  
+  var LRunAllMenu := TPopupMenu.Create(Self);
+  var LRunAllItem1 := TMenuItem.Create(LRunAllMenu);
+  LRunAllItem1.Caption := 'Run Selected Project';
+  LRunAllItem1.OnClick := RunAllButtonClick;
+  LRunAllMenu.Items.Add(LRunAllItem1);
+  
+  var LRunAllItem2 := TMenuItem.Create(LRunAllMenu);
+  LRunAllItem2.Caption := 'Run All Test Projects';
+  LRunAllItem2.OnClick := RunAllProjectsClick;
+  LRunAllMenu.Items.Add(LRunAllItem2);
+  
+  RunAllButton.Style := bsSplitButton;
+  RunAllButton.DropDownMenu := LRunAllMenu;
+  
   RunSelectedButton.Caption := #$25B6 + ' Selected';
+  RunSelectedButton.Hint := 'Run checked tests only';
+  RunSelectedButton.ShowHint := True;
+  
   StopButton.Caption := #$25A0 + ' Stop';
+  StopButton.Hint := 'Cancel current test execution';
+  StopButton.ShowHint := True;
 
   // Create and populate ImageList for TreeView status icons
   LImageList := TImageList.Create(Self);
@@ -287,6 +345,7 @@ begin
   TestsTreeView.OnMouseDown := TestsTreeViewMouseDown;
   TestsTreeView.OnMouseUp := TestsTreeViewMouseUp;
   TestsTreeView.OnAdvancedCustomDrawItem := TestsTreeViewAdvancedCustomDrawItem;
+  TestsTreeView.OnChange := TestsTreeViewChange;
 
   // Build Context Menu
   var LPopupMenu := TPopupMenu.Create(Self);
@@ -321,6 +380,96 @@ begin
 
   FServer := TTestRunnerServer.Create(8102);
 
+  // Initialize Inspector UI dynamically
+  FTestDetails := TDictionary<string, TTestDetailInfo>.Create;
+  FTotalTests := 0;
+  FCompletedTests := 0;
+
+  // Create progress bar inside DetailsPanel at the top
+  var LProgressPanel := TPanel.Create(Self);
+  LProgressPanel.Parent := DetailsPanel;
+  LProgressPanel.Align := alTop;
+  LProgressPanel.Height := 20;
+  LProgressPanel.BevelOuter := bvNone;
+
+  FProgressLabel := TLabel.Create(Self);
+  FProgressLabel.Parent := LProgressPanel;
+  FProgressLabel.Align := alLeft;
+  FProgressLabel.Layout := tlCenter;
+  FProgressLabel.Caption := 'Ready';
+  FProgressLabel.Width := 80;
+  FProgressLabel.Font.Size := 7;
+
+  FProgressBar := TProgressBar.Create(Self);
+  FProgressBar.Parent := LProgressPanel;
+  FProgressBar.Align := alClient;
+  FProgressBar.Min := 0;
+  FProgressBar.Max := 100;
+  FProgressBar.Position := 0;
+  FProgressBar.Style := pbstNormal;
+
+  FDetailsPageControl := TPageControl.Create(Self);
+  FDetailsPageControl.Parent := DetailsPanel;
+  FDetailsPageControl.Align := alClient;
+
+  FConsoleTab := TTabSheet.Create(Self);
+  FConsoleTab.PageControl := FDetailsPageControl;
+  FConsoleTab.Caption := 'Console Log';
+
+  DetailsMemo.Parent := FConsoleTab;
+  DetailsMemo.Align := alClient;
+
+  FInspectorTab := TTabSheet.Create(Self);
+  FInspectorTab.PageControl := FDetailsPageControl;
+  FInspectorTab.Caption := 'Test Inspector';
+
+  FInspectorScroll := TScrollBox.Create(Self);
+  FInspectorScroll.Parent := FInspectorTab;
+  FInspectorScroll.Align := alClient;
+  FInspectorScroll.BorderStyle := bsNone;
+
+  FLblTestName := TLabel.Create(Self);
+  FLblTestName.Parent := FInspectorScroll;
+  FLblTestName.Top := 8;
+  FLblTestName.Left := 8;
+  FLblTestName.Font.Style := [fsBold];
+  FLblTestName.Caption := 'Test Name: Select a test...';
+
+  FLblStatus := TLabel.Create(Self);
+  FLblStatus.Parent := FInspectorScroll;
+  FLblStatus.Top := 26;
+  FLblStatus.Left := 8;
+  FLblStatus.Caption := 'Status: Idle';
+
+  FLblLocation := TLabel.Create(Self);
+  FLblLocation.Parent := FInspectorScroll;
+  FLblLocation.Top := 44;
+  FLblLocation.Left := 8;
+  FLblLocation.Caption := 'Location: N/A';
+
+  FLblDuration := TLabel.Create(Self);
+  FLblDuration.Parent := FInspectorScroll;
+  FLblDuration.Top := 62;
+  FLblDuration.Left := 8;
+  FLblDuration.Caption := 'Duration: N/A';
+
+  FLblErrorHeader := TLabel.Create(Self);
+  FLblErrorHeader.Parent := FInspectorScroll;
+  FLblErrorHeader.Top := 80;
+  FLblErrorHeader.Left := 8;
+  FLblErrorHeader.Font.Style := [fsBold];
+  FLblErrorHeader.Caption := 'Errors / Stack Trace:';
+
+  FMemoError := TMemo.Create(Self);
+  FMemoError.Parent := FInspectorScroll;
+  FMemoError.Top := 98;
+  FMemoError.Left := 8;
+  FMemoError.Width := FInspectorScroll.ClientWidth - 16;
+  FMemoError.Height := 40;
+  FMemoError.Anchors := [akLeft, akTop, akRight, akBottom];
+  FMemoError.ReadOnly := True;
+  FMemoError.ScrollBars := ssBoth;
+
   if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
   begin
     if LThemingServices.IDEThemingEnabled then
@@ -337,6 +486,7 @@ begin
   FServer.Stop;
   FServer.Free;
   FSessions.Free;
+  FTestDetails.Free;
   if FormDextTestRunner = Self then
     FormDextTestRunner := nil;
   inherited Destroy;
@@ -360,8 +510,15 @@ begin
       // Custom theme overrides for background/foreground standard colors
       TestsTreeView.Color := LThemingServices.StyleServices.GetSystemColor(clWindow);
       TestsTreeView.Font.Color := LThemingServices.StyleServices.GetSystemColor(clWindowText);
+      // Match IDE font size (Project Explorer uses 9pt typically)
+      TestsTreeView.Font.Size := 9;
       DetailsMemo.Color := LThemingServices.StyleServices.GetSystemColor(clWindow);
       DetailsMemo.Font.Color := LThemingServices.StyleServices.GetSystemColor(clWindowText);
+      if Assigned(FMemoError) then
+      begin
+        FMemoError.Color := LThemingServices.StyleServices.GetSystemColor(clWindow);
+        FMemoError.Font.Color := LThemingServices.StyleServices.GetSystemColor(clWindowText);
+      end;
     end;
   end;
 end;
@@ -612,14 +769,46 @@ end;
 function TFormDextTestRunner.FindNodeByPath(const APath: string): TTreeNode;
 var
   I: Integer;
+  LNode: TTreeNode;
+  LSplit: TArray<string>;
 begin
   Result := nil;
-  for I := 0 to TestsTreeView.Items.Count - 1 do
+  
+  // If APath contains a dot, try to find the child node via ClassName.MethodName
+  if APath.Contains('.') then
   begin
-    if SameText(TestsTreeView.Items[I].Text, APath) then
+    LSplit := APath.Split(['.'], 2);
+    if Length(LSplit) = 2 then
     begin
-      Result := TestsTreeView.Items[I];
-      Exit;
+      for I := 0 to TestsTreeView.Items.Count - 1 do
+      begin
+        LNode := TestsTreeView.Items[I];
+        if (LNode.Parent = nil) and SameText(LNode.Text, LSplit[0]) then
+        begin
+          var J: Integer;
+          for J := 0 to LNode.Count - 1 do
+          begin
+            if SameText(LNode.Item[J].Text, LSplit[1]) then
+            begin
+              Result := LNode.Item[J];
+              Exit;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  // Fallback: search all nodes by text
+  if Result = nil then
+  begin
+    for I := 0 to TestsTreeView.Items.Count - 1 do
+    begin
+      if SameText(TestsTreeView.Items[I].Text, APath) then
+      begin
+        Result := TestsTreeView.Items[I];
+        Exit;
+      end;
     end;
   end;
 end;
@@ -631,7 +820,7 @@ var
   LErrorObj: TJSONObject;
   LEvent: string;
   LPassed, LFailed, LIgnored: Integer;
-  LDurationMs: Integer;
+  LDurationMs: Double;
 begin
   LJSON := TJSONObject.ParseJSONValue(AJSONData) as TJSONObject;
   if not Assigned(LJSON) then Exit;
@@ -646,8 +835,27 @@ begin
       DetailsMemo.Lines.Add('========================================');
       DetailsMemo.Lines.Add(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [LPassed, LFailed, LIgnored]));
       DetailsMemo.Lines.Add('========================================');
+      // Finalize progress bar
+      if Assigned(FProgressBar) then
+      begin
+        FProgressBar.Position := FProgressBar.Max;
+        FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, FTotalTests]);
+      end;
       TTelemetryTracker.AnalyzeHistory(FActiveProjectFile, DetailsMemo);
       TryLoadCoverage;
+      Exit;
+    end;
+    
+    if LJSON.TryGetValue<string>('event', LEvent) and SameText(LEvent, 'RunStart') then
+    begin
+      FTotalTests := LJSON.GetValue<Integer>('totalTests');
+      FCompletedTests := 0;
+      if Assigned(FProgressBar) then
+      begin
+        FProgressBar.Max := Max(1, FTotalTests);
+        FProgressBar.Position := 0;
+        FProgressLabel.Caption := Format('0/%d', [FTotalTests]);
+      end;
       Exit;
     end;
 
@@ -658,8 +866,18 @@ begin
     LStackTrace := '';
     LDurationMs := 0;
 
-    LJSON.TryGetValue<Integer>('durationMs', LDurationMs);
-    TTelemetryTracker.RecordTestResult(FActiveProjectFile, LTestName, LStatus, LDurationMs);
+    LJSON.TryGetValue<Double>('durationMs', LDurationMs);
+    
+    // Update progress bar
+    Inc(FCompletedTests);
+    if Assigned(FProgressBar) then
+    begin
+      FProgressBar.Max := Max(FProgressBar.Max, FCompletedTests);
+      FProgressBar.Position := FCompletedTests;
+      FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
+    end;
+    
+    TTelemetryTracker.RecordTestResult(FActiveProjectFile, LTestName, LStatus, Round(LDurationMs));
 
     if LJSON.TryGetValue<TJSONObject>('error', LErrorObj) and Assigned(LErrorObj) then
     begin
@@ -668,6 +886,35 @@ begin
     end;
 
     UpdateTestNode(LTestName, LStatus, LMsg, LStackTrace);
+
+    // Cache test details
+    var LInfo: TTestDetailInfo;
+    LInfo.TestName := LTestName;
+    LInfo.Status := LStatus;
+    LInfo.DurationMs := LDurationMs;
+    LInfo.ErrorMessage := LMsg;
+    LInfo.StackTrace := LStackTrace;
+    
+    var LNode := FindNodeByPath(LTestName);
+    if Assigned(LNode) and (LNode.Data <> nil) then
+    begin
+      var LIdx := Integer(LNode.Data);
+      if (LIdx >= 0) and (LIdx < FTestLocations.Count) then
+      begin
+        LInfo.FileName := FTestLocations[LIdx].FileName;
+        LInfo.Line := FTestLocations[LIdx].Line;
+      end;
+    end;
+    
+    FTestDetails.AddOrSetValue(LTestName, LInfo);
+    
+    // If this test is selected, update inspector tab
+    if (TestsTreeView.Selected <> nil) and 
+       (SameText(TestsTreeView.Selected.Text, LTestName) or 
+        (TestsTreeView.Selected.Parent <> nil) and SameText(TestsTreeView.Selected.Parent.Text + '.' + TestsTreeView.Selected.Text, LTestName)) then
+    begin
+      UpdateTestInspector(LTestName);
+    end;
   finally
     LJSON.Free;
   end;
@@ -718,11 +965,106 @@ begin
   end;
 end;
 
+procedure TFormDextTestRunner.TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
+var
+  LKey: string;
+begin
+  if not Assigned(Node) then Exit;
+  
+  if Node.Parent = nil then
+  begin
+    UpdateTestInspector(Node.Text);
+  end
+  else
+  begin
+    LKey := Node.Parent.Text + '.' + Node.Text;
+    UpdateTestInspector(LKey);
+    if FTestDetails.ContainsKey(LKey) then
+      FDetailsPageControl.ActivePage := FInspectorTab;
+  end;
+end;
+
+procedure TFormDextTestRunner.UpdateTestInspector(const ATestName: string);
+var
+  LInfo: TTestDetailInfo;
+  LStatusText: string;
+  LNode: TTreeNode;
+  LIdx: Integer;
+  LLoc: TTestLocation;
+begin
+  if not Assigned(FLblTestName) then Exit;
+  FLblTestName.Caption := 'Test Name: ' + ATestName;
+  FMemoError.Clear;
+  
+  // Set default Location
+  FLblLocation.Caption := 'Location: Unknown';
+  LNode := FindNodeByPath(ATestName);
+  if Assigned(LNode) and (LNode.Data <> nil) then
+  begin
+    LIdx := Integer(LNode.Data);
+    if (LIdx >= 0) and (LIdx < FTestLocations.Count) then
+    begin
+      LLoc := FTestLocations[LIdx];
+      FLblLocation.Caption := Format('Location: %s (Line %d)', [ExtractFileName(LLoc.FileName), LLoc.Line]);
+    end;
+  end;
+
+  if FTestDetails.TryGetValue(ATestName, LInfo) then
+  begin
+    LStatusText := LInfo.Status;
+    FLblStatus.Caption := 'Status: ' + LStatusText;
+    if SameText(LStatusText, 'Passed') then
+      FLblStatus.Font.Color := TColor($22C55E) // Green
+    else if SameText(LStatusText, 'Failed') or SameText(LStatusText, 'Error') then
+      FLblStatus.Font.Color := TColor($EF4444) // Red
+    else
+      FLblStatus.Font.Color := clWindowText;
+      
+    // Format duration intelligently: show sub-ms precision when needed
+    if LInfo.DurationMs < 1.0 then
+      FLblDuration.Caption := Format('Duration: %.3f ms', [LInfo.DurationMs])
+    else if LInfo.DurationMs < 100.0 then
+      FLblDuration.Caption := Format('Duration: %.2f ms', [LInfo.DurationMs])
+    else
+      FLblDuration.Caption := Format('Duration: %.0f ms', [LInfo.DurationMs]);
+    
+    if LInfo.ErrorMessage <> '' then
+    begin
+      FMemoError.Lines.Add('Error Message:');
+      FMemoError.Lines.Add(LInfo.ErrorMessage);
+      FMemoError.Lines.Add('');
+    end;
+    if LInfo.StackTrace <> '' then
+    begin
+      FMemoError.Lines.Add('Stack Trace:');
+      FMemoError.Lines.Add(LInfo.StackTrace);
+    end;
+  end
+  else
+  begin
+    FLblStatus.Caption := 'Status: Idle';
+    FLblStatus.Font.Color := clWindowText;
+    FLblDuration.Caption := 'Duration: N/A';
+  end;
+end;
+
 procedure TFormDextTestRunner.ClearTestStatus;
 var
   I: Integer;
   LNode: TTreeNode;
 begin
+  if Assigned(FTestDetails) then
+    FTestDetails.Clear;
+  if Assigned(FLblTestName) then
+  begin
+    FLblTestName.Caption := 'Test Name: Select a test...';
+    FLblStatus.Caption := 'Status: Idle';
+    FLblStatus.Font.Color := clWindowText;
+    FLblLocation.Caption := 'Location: N/A';
+    FLblDuration.Caption := 'Duration: N/A';
+    FMemoError.Clear;
+  end;
+
   TestsTreeView.Items.BeginUpdate;
   try
     for I := 0 to TestsTreeView.Items.Count - 1 do
@@ -749,13 +1091,36 @@ var
   LIsPackage: Boolean;
   LOutput: string;
   LSplit: TArray<string>;
+  LModuleServices: IOTAModuleServices;
+  LGroup: IOTAProjectGroup;
 begin
   if ProjectsComboBox.ItemIndex = -1 then Exit;
   LProj := IOTAProject(Pointer(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]));
   if not Assigned(LProj) then Exit;
 
+  // Synchronize IDE Active Project
+  if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) and Assigned(LModuleServices) then
+  begin
+    LGroup := LModuleServices.MainProjectGroup;
+    if Assigned(LGroup) and (LGroup.ActiveProject <> LProj) then
+    begin
+      LGroup.ActiveProject := LProj;
+    end;
+  end;
+
   ClearTestStatus;
   DetailsMemo.Clear;
+  FTotalTests := 0;
+  FCompletedTests := 0;
+  if Assigned(FProgressBar) then
+  begin
+    FProgressBar.Position := 0;
+    FProgressBar.Max := 100;
+    FProgressLabel.Caption := 'Running...';
+  end;
+  // Focus Console Log
+  if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
+    FDetailsPageControl.ActivePage := FConsoleTab;
   DetailsMemo.Lines.Add('Compiling project: ' + ExtractFileName(FActiveProjectFile));
 
   // Get dynamic executable path from project target info
@@ -833,6 +1198,84 @@ begin
   RunActiveProjectTests;
 end;
 
+procedure TFormDextTestRunner.RunAllProjectsClick(Sender: TObject);
+begin
+  RunAllProjectsTests;
+end;
+
+procedure TFormDextTestRunner.RunAllProjectsTests;
+var
+  I: Integer;
+  LProj: IOTAProject;
+  LProjFile: string;
+  LIsPackage: Boolean;
+  LOutput: string;
+  LExeFile: string;
+  LCmdLine: string;
+  LParams: string;
+  SI: TStartupInfo;
+  PI: TProcessInformation;
+begin
+  ClearTestStatus;
+  DetailsMemo.Clear;
+  FTotalTests := 0;
+  FCompletedTests := 0;
+  if Assigned(FProgressBar) then
+  begin
+    FProgressBar.Position := 0;
+    FProgressBar.Max := 100;
+    FProgressLabel.Caption := 'Running all...';
+  end;
+  // Focus Console Log
+  if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
+    FDetailsPageControl.ActivePage := FConsoleTab;
+  DetailsMemo.Lines.Add('=== Running All Test Projects ===');
+  
+  for I := 0 to ProjectsComboBox.Items.Count - 1 do
+  begin
+    LProj := IOTAProject(Pointer(ProjectsComboBox.Items.Objects[I]));
+    if Assigned(LProj) then
+    begin
+      LProjFile := LProj.FileName;
+      DetailsMemo.Lines.Add('');
+      DetailsMemo.Lines.Add('----------------------------------------');
+      DetailsMemo.Lines.Add('Compiling ' + ExtractFileName(LProjFile) + '...');
+      if not CompileProjectDirect(LProjFile) then
+      begin
+        DetailsMemo.Lines.Add('Direct DCC compile failed, building via MSBuild...');
+        LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
+      end;
+      
+      LIsPackage := False;
+      LOutput := '';
+      GetProjectTargetInfo(LProjFile, LIsPackage, LOutput);
+      LExeFile := ResolveExePath(LProjFile, LOutput);
+      
+      if FileExists(LExeFile) then
+      begin
+        DetailsMemo.Lines.Add('Executing ' + ExtractFileName(LExeFile) + '...');
+        FServer.SelectedTestsJSON := '[]';
+        LParams := Format('--port %d -no-wait', [FServer.Port]);
+        LCmdLine := Format('"%s" %s', [LExeFile, LParams]);
+        UniqueString(LCmdLine);
+        
+        FillChar(SI, SizeOf(SI), 0);
+        SI.cb := SizeOf(TStartupInfo);
+        FillChar(PI, SizeOf(PI), 0);
+        if CreateProcess(nil, PChar(LCmdLine), nil, nil, False, CREATE_NO_WINDOW, nil, PChar(ExtractFilePath(LExeFile)), SI, PI) then
+        begin
+          CloseHandle(PI.hProcess);
+          CloseHandle(PI.hThread);
+        end
+        else
+        begin
+          DetailsMemo.Lines.Add('Failed to launch runner: ' + LExeFile);
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TFormDextTestRunner.RunSelectedButtonClick(Sender: TObject);
 var
   LChecked: TArray<string>;
@@ -859,6 +1302,34 @@ begin
 end;
 
 procedure TFormDextTestRunner.TestsTreeViewDblClick(Sender: TObject);
+  function FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
+  var
+    LStrings: TStringList;
+    I: Integer;
+    LSearchStr1, LSearchStr2: string;
+    LLine: string;
+  begin
+    Result := ADefaultLine;
+    if not FileExists(AFileName) then Exit;
+    LStrings := TStringList.Create;
+    try
+      LStrings.LoadFromFile(AFileName);
+      LSearchStr1 := ('procedure ' + AClassName + '.' + AMethodName).ToLower;
+      LSearchStr2 := ('function ' + AClassName + '.' + AMethodName).ToLower;
+      for I := 0 to LStrings.Count - 1 do
+      begin
+        LLine := LStrings[I].ToLower.Trim;
+        if LLine.StartsWith(LSearchStr1) or LLine.StartsWith(LSearchStr2) then
+        begin
+          Result := I + 1;
+          Break;
+        end;
+      end;
+    finally
+      LStrings.Free;
+    end;
+  end;
+
 var
   LNode: TTreeNode;
   LIdx: Integer;
@@ -867,6 +1338,7 @@ var
   LModule: IOTAModule;
   LSourceEditor: IOTASourceEditor;
   LView: IOTAEditView;
+  LTargetLine: Integer;
 begin
   LNode := TestsTreeView.Selected;
   if not Assigned(LNode) or (LNode.Data = nil) then Exit;
@@ -876,6 +1348,8 @@ begin
 
   LLoc := FTestLocations[LIdx];
   if LLoc.FileName = '' then Exit;
+
+  LTargetLine := FindMethodImplementationLine(LLoc.FileName, LLoc.ClassName, LLoc.MethodName, LLoc.Line);
 
   // Navigate directly using the exact unit file path
   if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
@@ -889,7 +1363,7 @@ begin
         LView := LSourceEditor.GetEditView(0);
         if Assigned(LView) then
         begin
-          LView.Position.Move(LLoc.Line, 1);
+          LView.Position.Move(LTargetLine, 1);
         end;
       end;
     end;
@@ -1004,7 +1478,7 @@ begin
       LHitInfo := TestsTreeView.GetHitTestInfoAt(X, Y);
       if htOnStateIcon in LHitInfo then
       begin
-        TThread.ForceQueue(nil, procedure
+        TThread.ForceQueue(nil, TThreadProcedure(procedure
           var
             I: Integer;
             LState: Boolean;
@@ -1036,7 +1510,7 @@ begin
               LParent.Checked := LAnyChecked;
             end;
             TestsTreeView.Invalidate;
-          end);
+          end));
       end;
 
       if LNode.Parent <> nil then
@@ -1065,7 +1539,7 @@ begin
       LHitInfo := TestsTreeView.GetHitTestInfoAt(X, Y);
       if htOnStateIcon in LHitInfo then
       begin
-        TThread.ForceQueue(nil, procedure
+        TThread.ForceQueue(nil, TThreadProcedure(procedure
           var
             I: Integer;
             LState: Boolean;
@@ -1097,7 +1571,7 @@ begin
               LParent.Checked := LAnyChecked;
             end;
             TestsTreeView.Invalidate;
-          end);
+          end));
       end;
     end;
   end;
@@ -1135,6 +1609,8 @@ var
   LIsPackage: Boolean;
   LOutput: string;
   LExeFile: string;
+  LModuleServices: IOTAModuleServices;
+  LGroup: IOTAProjectGroup;
 begin
   LNode := TestsTreeView.Selected;
   if not Assigned(LNode) then Exit;
@@ -1143,8 +1619,29 @@ begin
   LProj := IOTAProject(Pointer(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]));
   if not Assigned(LProj) then Exit;
 
+  // Synchronize IDE Active Project
+  if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) and Assigned(LModuleServices) then
+  begin
+    LGroup := LModuleServices.MainProjectGroup;
+    if Assigned(LGroup) and (LGroup.ActiveProject <> LProj) then
+    begin
+      LGroup.ActiveProject := LProj;
+    end;
+  end;
+
   ClearTestStatus;
   DetailsMemo.Clear;
+  FTotalTests := 0;
+  FCompletedTests := 0;
+  if Assigned(FProgressBar) then
+  begin
+    FProgressBar.Position := 0;
+    FProgressBar.Max := 100;
+    FProgressLabel.Caption := 'Debugging...';
+  end;
+  // Focus Console Log
+  if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
+    FDetailsPageControl.ActivePage := FConsoleTab;
   DetailsMemo.Lines.Add('Compiling project (Debug): ' + ExtractFileName(FActiveProjectFile));
 
   LIsPackage := False;
@@ -1288,6 +1785,7 @@ begin
   LSession.TreeView.OnMouseUp := TestsTreeViewMouseUp;
   LSession.TreeView.OnAdvancedCustomDrawItem := TestsTreeViewAdvancedCustomDrawItem;
   LSession.TreeView.OnDblClick := TestsTreeViewDblClick;
+  LSession.TreeView.OnChange := TestsTreeViewChange;
   
   LIndex := FAddTab.PageIndex;
   LSession.TabSheet.PageIndex := LIndex;
@@ -1526,10 +2024,20 @@ begin
                            .Replace('$(BDSCOMMONDIR)', LCommonDir)
                            .Replace('$(DCC_UnitSearchPath)', '');
                            
-  LDefines := LDefines.Replace('$(DCC_Define)', '');
-  LNamespaces := LNamespaces.Replace('$(DCC_Namespace)', '');
-  LDcuOutput := LDcuOutput.Replace('$(Platform)', 'Win32').Replace('$(Config)', 'Debug');
-  LExeOutput := LExeOutput.Replace('$(Platform)', 'Win32').Replace('$(Config)', 'Debug');
+  LDefines := LDefines.Replace('$(DCC_Define)', '').Trim;
+  if LDefines.EndsWith(';') then
+    LDefines := LDefines.Substring(0, LDefines.Length - 1).Trim;
+
+  LNamespaces := LNamespaces.Replace('$(DCC_Namespace)', '').Trim;
+  if LNamespaces.EndsWith(';') then
+    LNamespaces := LNamespaces.Substring(0, LNamespaces.Length - 1).Trim;
+
+  LDcuOutput := LDcuOutput.Replace('$(ProductVersion)', LProductVer)
+                          .Replace('$(Platform)', 'Win32')
+                          .Replace('$(Config)', 'Debug');
+  LExeOutput := LExeOutput.Replace('$(ProductVersion)', LProductVer)
+                          .Replace('$(Platform)', 'Win32')
+                          .Replace('$(Config)', 'Debug');
 
   LSearchPath := ResolvePaths(LSearchPath);
   if LDcuOutput <> '' then
@@ -1553,8 +2061,8 @@ begin
   LCmdLine := Format('"%s" -Q -M -U"%s"', [LDccExe, LSearchPath]);
   if LDefines <> '' then LCmdLine := LCmdLine + ' -D' + LDefines;
   if LNamespaces <> '' then LCmdLine := LCmdLine + ' -NS' + LNamespaces;
-  if LDcuOutput <> '' then LCmdLine := LCmdLine + ' -N0' + LDcuOutput;
-  if LExeOutput <> '' then LCmdLine := LCmdLine + ' -E' + LExeOutput;
+  if LDcuOutput <> '' then LCmdLine := LCmdLine + ' -N0"' + LDcuOutput + '"';
+  if LExeOutput <> '' then LCmdLine := LCmdLine + ' -E"' + LExeOutput + '"';
   LCmdLine := LCmdLine + ' "' + LDprFile + '"';
 
   DetailsMemo.Lines.Add('DCC Command: ' + LCmdLine);
@@ -1644,9 +2152,77 @@ begin
   RunActiveProjectTests('');
 end;
 
+procedure TFormDextTestRunner.HandleFileSaved(const AFileName: string);
+var
+  LTests: TList<TTestLocation>;
+begin
+  if not SameText(ExtractFileExt(AFileName), '.pas') then Exit;
+  
+  LTests := nil;
+  if TTestASTScanner.ScanFile(AFileName, LTests) then
+  begin
+    TThread.Queue(nil, TThreadProcedure(procedure
+      var
+        LIdx: Integer;
+        LTest: TTestLocation;
+        LNode: TTreeNode;
+        LFixtureNode: TTreeNode;
+        LMethodNode: TTreeNode;
+      begin
+        TestsTreeView.Items.BeginUpdate;
+        try
+          // Remove existing tests in this file from our list and TreeView
+          for LIdx := FTestLocations.Count - 1 downto 0 do
+          begin
+            if SameText(FTestLocations[LIdx].FileName, AFileName) then
+            begin
+              LNode := FindNodeByPath(FTestLocations[LIdx].ClassName + '.' + FTestLocations[LIdx].MethodName);
+              if not Assigned(LNode) then
+                LNode := FindNodeByPath(FTestLocations[LIdx].MethodName);
+                
+              if Assigned(LNode) then
+              begin
+                var LParent := LNode.Parent;
+                LNode.Free;
+                if Assigned(LParent) and (LParent.Count = 0) then
+                  LParent.Free;
+              end;
+              FTestLocations.Delete(LIdx);
+            end;
+          end;
+          
+          // Add newly discovered tests
+          for LTest in LTests do
+          begin
+            FTestLocations.Add(LTest);
+            
+            LFixtureNode := FindNodeByPath(LTest.ClassName);
+            if not Assigned(LFixtureNode) then
+            begin
+              LFixtureNode := TestsTreeView.Items.AddChild(nil, LTest.ClassName);
+              LFixtureNode.ImageIndex := 3;
+              LFixtureNode.SelectedIndex := 3;
+            end;
+            
+            LMethodNode := TestsTreeView.Items.AddChild(LFixtureNode, LTest.MethodName);
+            LMethodNode.Data := Pointer(FTestLocations.Count - 1);
+            LMethodNode.ImageIndex := 0;
+            LMethodNode.SelectedIndex := 0;
+          end;
+          
+          if LTests.Count > 0 then
+            TestsTreeView.FullExpand;
+        finally
+          TestsTreeView.Items.EndUpdate;
+          LTests.Free;
+        end;
+      end));
+  end;
+end;
+
 { TTelemetryTracker }
 
-class procedure TTelemetryTracker.RecordTestResult(const AProjectFile, ATestName, AStatus: string; ADurationMs: Integer);
+class procedure TTelemetryTracker.RecordTestResult(const AProjectFile, ATestName, AStatus: string; ADurationMs: Integer); // ADurationMs remains Integer for storage
 var
   LDir, LFile: string;
   LArray: TJSONArray;
@@ -1792,14 +2368,14 @@ begin
             if not LHasHeader then
             begin
               AMemo.Lines.Add('');
-              AMemo.Lines.Add('📊 --- TEST ANALYTICS ENGINE REPORT ---');
+              AMemo.Lines.Add('[ANALYTICS] --- TEST ANALYTICS ENGINE REPORT ---');
               LHasHeader := True;
             end;
             
             if LIsFlaky then
-              AMemo.Lines.Add('   ⚠️ FLAKY TEST DETECTED: ' + LNameKey + ' (status changes between Pass and Fail)');
+              AMemo.Lines.Add('   [FLAKY] TEST DETECTED: ' + LNameKey + ' (status changes between Pass and Fail)');
             if LIsRegression then
-              AMemo.Lines.Add(Format('   📈 PERF REGRESSION: %s (Last: %dms, Avg: %.1fms)', [LNameKey, LLastDuration, LAvgDuration]));
+              AMemo.Lines.Add(Format('   [PERF REGRESSION] %s (Last: %dms, Avg: %.1fms)', [LNameKey, LLastDuration, LAvgDuration]));
           end;
         end;
         
