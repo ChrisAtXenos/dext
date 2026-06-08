@@ -418,6 +418,12 @@ var
   LImpactedTests: TList<string>;
 begin
   LFileName := FView.Buffer.FileName;
+  
+  if Assigned(FormDextTestRunner) then
+  begin
+    FormDextTestRunner.HandleFileSaved(LFileName);
+  end;
+
   LImpactedTests := TCoverageManager.GetInstance.GetTestsCoveringFile(LFileName);
   try
     if (LImpactedTests.Count > 0) and Assigned(FormDextTestRunner) then
