@@ -1,4 +1,4 @@
-unit Dext.Json.Utf8.Serializer.Tests;
+﻿unit Dext.Json.Utf8.Serializer.Tests;
 
 {***************************************************************************}
 {                                                                           }

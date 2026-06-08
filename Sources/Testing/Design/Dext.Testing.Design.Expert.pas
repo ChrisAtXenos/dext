@@ -27,7 +27,8 @@ uses
   Winapi.Windows,
   Vcl.Forms,
   Dext.Testing.Design.DockableForm,
-  Dext.Testing.Design.Gutter;
+  Dext.Testing.Design.Gutter,
+  Dext.Testing.Design.Coverage;
 
 type
   TDextMenuHelper = class
@@ -118,10 +119,10 @@ end;
 
 procedure TDextTestRunnerIDENotifier.AfterCompile(Succeeded: Boolean);
 begin
-  if Succeeded and Assigned(FormDextTestRunner) then
-  begin
-    // Compile finished, we can trigger tests here if continuous testing is enabled
-  end;
+  // Notify the test runner that the IDE compile has finished.
+  // If FWaitingForCompile is set, this triggers test execution.
+  if Assigned(FormDextTestRunner) then
+    FormDextTestRunner.NotifyCompileComplete(Succeeded);
 end;
 
 procedure TDextTestRunnerIDENotifier.AfterCompile(Succeeded, IsCodeInsight: Boolean);
@@ -139,7 +140,10 @@ end;
 
 procedure TDextTestRunnerIDENotifier.FileNotification(NotifyCode: TOTAFileNotification; const FileName: string; var CanModify: Boolean);
 begin
-  // File notifications stub
+  if NotifyCode = ofnFileOpened then
+  begin
+    TCoverageManager.GetInstance.RefreshActiveViews;
+  end;
 end;
 
 initialization

@@ -7,14 +7,34 @@ procedure UnregisterGutterVisualizer;
 
 implementation
 
+uses
+  System.SysUtils, ToolsAPI, Dext.Testing.Design.Coverage;
+
+var
+  FKeyboardBindingIndex: Integer = -1;
+
 procedure RegisterGutterVisualizer;
+var
+  LKeyboardServices: IOTAKeyboardServices;
 begin
-  // Stub for V1
+  if Supports(BorlandIDEServices, IOTAKeyboardServices, LKeyboardServices) then
+  begin
+    FKeyboardBindingIndex := LKeyboardServices.AddKeyboardBinding(TDextKeyboardBinding.Create);
+  end;
+
+  TCoverageManager.GetInstance.RefreshActiveViews;
 end;
 
 procedure UnregisterGutterVisualizer;
+var
+  LKeyboardServices: IOTAKeyboardServices;
 begin
-  // Stub for V1
+  if FKeyboardBindingIndex <> -1 then
+  begin
+    if Supports(BorlandIDEServices, IOTAKeyboardServices, LKeyboardServices) then
+      LKeyboardServices.RemoveKeyboardBinding(FKeyboardBindingIndex);
+    FKeyboardBindingIndex := -1;
+  end;
 end;
 
 end.

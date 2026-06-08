@@ -13,6 +13,7 @@ type
     ClassName: string;
     MethodName: string;
     Line: Integer;
+    FileName: string;
   end;
 
   TTestASTScanner = class
@@ -29,6 +30,8 @@ class function TTestASTScanner.ScanFile(const AFileName: string; out ATests: TLi
 var
   LFileContent: string;
   LStream: TStringList;
+  I: Integer;
+  LTest: TTestLocation;
 begin
   Result := False;
   ATests := TList<TTestLocation>.Create;
@@ -41,6 +44,15 @@ begin
       LStream.LoadFromFile(AFileName);
       LFileContent := LStream.Text;
       Result := ScanText(LFileContent, ATests);
+      if Result then
+      begin
+        for I := 0 to ATests.Count - 1 do
+        begin
+          LTest := ATests[I];
+          LTest.FileName := AFileName;
+          ATests[I] := LTest;
+        end;
+      end;
     except
       // Silent fail
     end;
@@ -61,12 +73,13 @@ var
   MatchObj: TMatch;
   TestLoc: TTestLocation;
   ClassRegex, MethodRegex: TRegEx;
+  LMethodName: string;
 begin
   Result := False;
   if not Assigned(ATests) then
     ATests := TList<TTestLocation>.Create;
 
-  Lines := AText.Split([#10, #13]);
+  Lines := AText.Split([#10]);
   CurrentClass := '';
   InTypeSection := False;
   InPublishedSection := False;
@@ -132,16 +145,16 @@ begin
         MatchObj := MethodRegex.Match(Trimmed);
         if MatchObj.Success then
         begin
-          // Test method candidates usually start with "Test" or the class has [TestFixture] attribute.
-          // To be safe, we match any procedure/function in the public/published section of classes 
-          // ending/descending from test structures, or simple naming convention of "Test"
-          if SameText(Copy(MatchObj.Groups[2].Value, 1, 4), 'Test') or 
-             CurrentClass.ToLower.Contains('test') or 
-             CurrentClass.ToLower.Contains('fixture') then
+          LMethodName := MatchObj.Groups[2].Value;
+          // Only matches if method starts with "Test" and isn't setup/teardown
+          if SameText(Copy(LMethodName, 1, 4), 'Test') and
+             (not SameText(LMethodName, 'setup')) and
+             (not SameText(LMethodName, 'teardown')) then
           begin
             TestLoc.ClassName := CurrentClass;
-            TestLoc.MethodName := MatchObj.Groups[2].Value;
+            TestLoc.MethodName := LMethodName;
             TestLoc.Line := I + 1;
+            TestLoc.FileName := '';
             ATests.Add(TestLoc);
             Result := True;
           end;
