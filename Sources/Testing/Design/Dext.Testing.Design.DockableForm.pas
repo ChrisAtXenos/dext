@@ -93,6 +93,7 @@ type
     procedure UpdateTestInspector(const ATestName: string);
     procedure SetActiveSession(ASession: TTestSession);
     procedure SessionsPageControlChange(Sender: TObject);
+    function FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
     procedure SessionTabContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure CloseActiveSessionClick(Sender: TObject);
     function CompileProjectDirect(const AProjFile: string): Boolean;
@@ -1016,7 +1017,8 @@ begin
     if (LIdx >= 0) and (LIdx < FTestLocations.Count) then
     begin
       LLoc := FTestLocations[LIdx];
-      FLblLocation.Caption := Format('Location: %s (Line %d)', [ExtractFileName(LLoc.FileName), LLoc.Line]);
+      var LRealLine := FindMethodImplementationLine(LLoc.FileName, LLoc.ClassName, LLoc.MethodName, LLoc.Line);
+      FLblLocation.Caption := Format('Location: %s (Line %d)', [ExtractFileName(LLoc.FileName), LRealLine]);
     end;
   end;
 
@@ -1314,35 +1316,35 @@ begin
   // Send cancel signals
 end;
 
-procedure TFormDextTestRunner.TestsTreeViewDblClick(Sender: TObject);
-  function FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
-  var
-    LStrings: TStringList;
-    I: Integer;
-    LSearchStr1, LSearchStr2: string;
-    LLine: string;
-  begin
-    Result := ADefaultLine;
-    if not FileExists(AFileName) then Exit;
-    LStrings := TStringList.Create;
-    try
-      LStrings.LoadFromFile(AFileName);
-      LSearchStr1 := ('procedure ' + AClassName + '.' + AMethodName).ToLower;
-      LSearchStr2 := ('function ' + AClassName + '.' + AMethodName).ToLower;
-      for I := 0 to LStrings.Count - 1 do
+function TFormDextTestRunner.FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
+var
+  LStrings: TStringList;
+  I: Integer;
+  LSearchStr1, LSearchStr2: string;
+  LLine: string;
+begin
+  Result := ADefaultLine;
+  if not FileExists(AFileName) then Exit;
+  LStrings := TStringList.Create;
+  try
+    LStrings.LoadFromFile(AFileName);
+    LSearchStr1 := ('procedure ' + AClassName + '.' + AMethodName).ToLower;
+    LSearchStr2 := ('function ' + AClassName + '.' + AMethodName).ToLower;
+    for I := 0 to LStrings.Count - 1 do
+    begin
+      LLine := LStrings[I].ToLower.Trim;
+      if LLine.StartsWith(LSearchStr1) or LLine.StartsWith(LSearchStr2) then
       begin
-        LLine := LStrings[I].ToLower.Trim;
-        if LLine.StartsWith(LSearchStr1) or LLine.StartsWith(LSearchStr2) then
-        begin
-          Result := I + 1;
-          Break;
-        end;
+        Result := I + 1;
+        Break;
       end;
-    finally
-      LStrings.Free;
     end;
+  finally
+    LStrings.Free;
   end;
+end;
 
+procedure TFormDextTestRunner.TestsTreeViewDblClick(Sender: TObject);
 var
   LNode: TTreeNode;
   LIdx: Integer;
