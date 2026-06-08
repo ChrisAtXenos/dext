@@ -188,7 +188,26 @@ implementation
 
 uses
   System.Math,
-  System.Threading;
+  System.Threading,
+  System.Diagnostics,
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows;
+  {$ELSE}
+  System.Classes;
+  {$ENDIF}
+
+function GetTickCount64: UInt64;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := Winapi.Windows.GetTickCount64;
+  {$ELSE}
+    {$IF CompilerVersion >= 35.0}
+    Result := TThread.GetTickCount64;
+    {$ELSE}
+    Result := TStopwatch.GetTimeStamp * 1000 div TStopwatch.Frequency;
+    {$ENDIF}
+  {$ENDIF}
+end;
 
 { TRetryPolicy }
 
@@ -269,7 +288,7 @@ begin
   try
     if FState = cbsOpen then
     begin
-      Elapsed := TThread.GetTickCount64 - FLastStateChange;
+      Elapsed := GetTickCount64 - FLastStateChange;
       if Elapsed >= FBreakDurationMs then
       begin
         FState := cbsHalfOpen;
@@ -310,7 +329,7 @@ begin
     if (FState = cbsHalfOpen) or (FFailures >= FFailureThreshold) then
     begin
       FState := cbsOpen;
-      FLastStateChange := TThread.GetTickCount64;
+      FLastStateChange := GetTickCount64;
     end;
   finally
     FLock.Leave;

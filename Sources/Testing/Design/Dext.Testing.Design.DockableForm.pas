@@ -1,4 +1,4 @@
-unit Dext.Testing.Design.DockableForm;
+﻿unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -43,19 +43,18 @@ type
   TTestExplorerLayout = (telCompact, telSplitBottom, telSplitRight);
 
   TFormDextTestRunner = class(TDockableForm)
-    ToolbarPanel: TPanel;
-    ProjectsComboBox: TComboBox;
-    RunAllButton: TButton;
-    RunSelectedButton: TButton;
-    StopButton: TButton;
-    RefreshButton: TButton;
-    ButtonsPanel: TPanel;
     SessionsPageControl: TPageControl;
     DefaultSessionTabSheet: TTabSheet;
     TestsTreeView: TTreeView;
     DetailsPanel: TPanel;
     DetailsMemo: TMemo;
     NameSplitter: TSplitter;
+    ProjectsComboBox: TComboBox;
+    ButtonsPanel: TPanel;
+    RefreshButton: TButton;
+    RunAllButton: TButton;
+    RunSelectedButton: TButton;
+    StopButton: TButton;
     procedure ProjectsComboBoxChange(Sender: TObject);
     procedure RunAllButtonClick(Sender: TObject);
     procedure RunSelectedButtonClick(Sender: TObject);
@@ -164,7 +163,76 @@ implementation
 {$R *.dfm}
 
 uses
-  DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles;
+  DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles,
+  Winapi.CommCtrl;
+
+{$IF CompilerVersion < 35.0}
+type
+  TTreeViewHelper = class helper for TTreeView
+  private
+    function GetCheckboxes: Boolean;
+    procedure SetCheckboxes(Value: Boolean);
+  public
+    property Checkboxes: Boolean read GetCheckboxes write SetCheckboxes;
+  end;
+
+  TTreeNodeHelper = class helper for TTreeNode
+  private
+    function GetChecked: Boolean;
+    procedure SetChecked(Value: Boolean);
+  public
+    property Checked: Boolean read GetChecked write SetChecked;
+  end;
+
+function TTreeViewHelper.GetCheckboxes: Boolean;
+begin
+  Result := (GetWindowLong(Handle, GWL_STYLE) and TVS_CHECKBOXES) <> 0;
+end;
+
+procedure TTreeViewHelper.SetCheckboxes(Value: Boolean);
+var
+  LStyle: Longint;
+begin
+  LStyle := GetWindowLong(Handle, GWL_STYLE);
+  if Value then
+    LStyle := LStyle or TVS_CHECKBOXES
+  else
+    LStyle := LStyle and not TVS_CHECKBOXES;
+  SetWindowLong(Handle, GWL_STYLE, LStyle);
+end;
+
+function TTreeNodeHelper.GetChecked: Boolean;
+var
+  TVItem: TTVItem;
+begin
+  Result := False;
+  if (TreeView <> nil) and (TreeView.HandleAllocated) then
+  begin
+    TVItem.mask := TVIF_STATE or TVIF_HANDLE;
+    TVItem.hItem := ItemId;
+    TVItem.stateMask := TVIS_STATEIMAGEMASK;
+    if TreeView_GetItem(TreeView.Handle, TVItem) then
+      Result := ((TVItem.state and TVIS_STATEIMAGEMASK) shr 12) = 2;
+  end;
+end;
+
+procedure TTreeNodeHelper.SetChecked(Value: Boolean);
+var
+  TVItem: TTVItem;
+begin
+  if (TreeView <> nil) and (TreeView.HandleAllocated) then
+  begin
+    TVItem.mask := TVIF_STATE or TVIF_HANDLE;
+    TVItem.hItem := ItemId;
+    TVItem.stateMask := TVIS_STATEIMAGEMASK;
+    if Value then
+      TVItem.state := 2 shl 12
+    else
+      TVItem.state := 1 shl 12;
+    TreeView_SetItem(TreeView.Handle, TVItem);
+  end;
+end;
+{$ENDIF}
 
 type
   TDextThemeNotifier = class(TNotifierObject, INTAIDEThemingServicesNotifier)

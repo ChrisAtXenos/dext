@@ -17,6 +17,8 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Config = "Debug",
     
+    [string]$DelphiVersion = "",
+    
     [switch]$Clean
 )
 
@@ -25,7 +27,7 @@ if (-not $PSScriptRoot) { $PSScriptRoot = Get-Location }
 
 # 1. Setup Environment from set_env.ps1
 $env:DEXT_PROJECT_TYPE = "Framework"
-. "$PSScriptRoot\set_env.ps1" -Platform $Platform -Config $Config
+. "$PSScriptRoot\set_env.ps1" -Platform $Platform -Config $Config -DelphiVersion $DelphiVersion
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "Building Dext Framework ($Platform $Config)" -ForegroundColor Cyan

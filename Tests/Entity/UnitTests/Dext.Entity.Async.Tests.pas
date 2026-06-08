@@ -1,4 +1,4 @@
-﻿unit Dext.Entity.Async.Tests;
+unit Dext.Entity.Async.Tests;
 
 interface
 
@@ -55,8 +55,10 @@ begin
   Query := TFluentQuery<TObject>.Create(nil, nil, nil, nil, nil, Conn.Instance);
 
   Should(procedure
+    var
+      LBuilder: TAsyncBuilder<IList<TObject>>;
     begin
-      Query.ToListAsync;
+      LBuilder := Query.ToListAsync;
     end).Throw(Exception);
 end;
 
@@ -67,12 +69,14 @@ var
 begin
   Conn := Mock<IDbConnection>.Create;
   Conn.Setup.Returns(False).When.IsPooled;
-  
+
   Ctx := TDbContext.Create(Conn.Instance);
   try
     Should(procedure
+      var
+        LBuilder: TAsyncBuilder<Integer>;
       begin
-        Ctx.SaveChangesAsync;
+        LBuilder := Ctx.SaveChangesAsync;
       end).Throw(Exception);
   finally
     Ctx.Free;
