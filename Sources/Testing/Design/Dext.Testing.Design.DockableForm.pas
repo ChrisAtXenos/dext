@@ -1124,7 +1124,6 @@ begin
       FCompletedTests := 0;
       if Assigned(FProgressPanel) then
       begin
-        FProgressBar.Style := pbstNormal;
         FProgressBar.Max := Max(1, FTotalTests);
         FProgressBar.Position := 0;
         FProgressLabel.Caption := Format('0/%d', [FTotalTests]);
@@ -1147,6 +1146,8 @@ begin
     Inc(FCompletedTests);
     if Assigned(FProgressPanel) and FProgressPanel.Visible then
     begin
+      if FProgressBar.Style = pbstMarquee then
+        FProgressBar.Style := pbstNormal;
       FProgressBar.Max := Max(FProgressBar.Max, FCompletedTests);
       FProgressBar.Position := FCompletedTests;
       FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
