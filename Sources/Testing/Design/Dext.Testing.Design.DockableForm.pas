@@ -1125,6 +1125,7 @@ begin
       FCompletedTests := 0;
       if Assigned(FProgressPanel) then
       begin
+        FProgressBar.Style := pbstNormal;
         FProgressBar.Max := Max(1, FTotalTests);
         FProgressBar.Position := 0;
         FProgressLabel.Caption := Format('0/%d', [FTotalTests]);
@@ -1383,6 +1384,7 @@ begin
   // Show progress immediately so the user knows something is happening
   if Assigned(FProgressPanel) then
   begin
+    FProgressBar.Style := pbstMarquee;
     FProgressBar.Position := 0;
     FProgressBar.Max := 100;
     FProgressLabel.Caption := 'Saving files...';
@@ -1472,6 +1474,7 @@ begin
   if Assigned(FProgressPanel) then
   begin
     FProgressLabel.Caption := '⏳ Executing tests...';
+    FProgressBar.Style := pbstMarquee;
     FProgressPanel.Visible := True;
     FProgressPanel.Update;
   end;
@@ -1562,6 +1565,7 @@ begin
   FCompletedTests := 0;
   if Assigned(FProgressPanel) then
   begin
+    FProgressBar.Style := pbstMarquee;
     FProgressBar.Position := 0;
     FProgressBar.Max := 100;
     FProgressLabel.Caption := '...';
