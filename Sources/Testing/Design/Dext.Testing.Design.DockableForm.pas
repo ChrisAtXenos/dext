@@ -1,4 +1,4 @@
-﻿unit Dext.Testing.Design.DockableForm;
+unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -20,6 +20,27 @@ type
     DurationMs: Double;
     ErrorMessage: string;
     StackTrace: string;
+  end;
+
+  TDextProjectInfo = class
+  public
+    FileName: string;
+    constructor Create(const AFileName: string);
+  end;
+
+  TDextProjectNotifier = class(TNotifierObject, IOTAModuleNotifier, IOTAProjectNotifier)
+  private
+    FForm: TFormDextTestRunner;
+    FProjectFile: string;
+  public
+    constructor Create(AForm: TFormDextTestRunner; const AProjectFile: string);
+    // IOTAModuleNotifier
+    function CheckOverwrite: Boolean;
+    procedure ModuleRenamed(const NewName: string); overload;
+    // IOTAProjectNotifier
+    procedure ModuleAdded(const AFileName: string);
+    procedure ModuleRemoved(const AFileName: string);
+    procedure ModuleRenamed(const AOldFileName, ANewFileName: string); overload;
   end;
 
   TTestSession = class
@@ -68,6 +89,13 @@ type
     FScanGeneration: Integer;
     FHoverNode: TTreeNode;
     
+    // Process handling
+    FRunningProcessHandle: THandle;
+    
+    // Project changes notification
+    FActiveProjectNotifierIndex: Integer;
+    FActiveProjectForNotifier: IOTAProject;
+    
     // Sessions
     FSessions: TObjectList<TTestSession>;
     FActiveSession: TTestSession;
@@ -100,6 +128,7 @@ type
     FWaitingForCompile: Boolean;
     FPendingProject: IOTAProject;
     FThemeNotifierIndex: Integer;
+    
     function ActiveFilterEdit: TEdit;
     procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
     procedure UpdateTestInspector(const ATestName: string);
@@ -120,7 +149,6 @@ type
     procedure CloseSession(ASession: TTestSession);
     procedure TryLoadCoverage;
     procedure ApplyIDETheme;
-    procedure RefreshProjects;
     procedure OnTestResultReceived(const AJSONData: string);
     procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
     function FindNodeByPath(const APath: string): TTreeNode;
@@ -138,6 +166,9 @@ type
     procedure LaunchTestExe(const ATestFilter: string);
     procedure LogMsg(const AMsg: string);
     procedure RebuildStatusImages;
+    
+    function GetProjectByFileName(const AFileName: string): IOTAProject;
+    procedure RefreshActiveProjectTestsList;
   protected
     procedure DoShow; override;
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
@@ -149,6 +180,7 @@ type
     procedure HandleFileSaved(const AFileName: string);
     // Called by the IDE AfterCompile notifier
     procedure NotifyCompileComplete(ASucceeded: Boolean);
+    procedure RefreshProjects;
   end;
 
 procedure ShowDextTestExplorer;
@@ -330,6 +362,60 @@ begin
   end;
 end;
 
+{ TDextProjectInfo }
+
+constructor TDextProjectInfo.Create(const AFileName: string);
+begin
+  inherited Create;
+  FileName := AFileName;
+end;
+
+{ TDextProjectNotifier }
+
+constructor TDextProjectNotifier.Create(AForm: TFormDextTestRunner; const AProjectFile: string);
+begin
+  inherited Create;
+  FForm := AForm;
+  FProjectFile := AProjectFile;
+end;
+
+function TDextProjectNotifier.CheckOverwrite: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TDextProjectNotifier.ModuleRenamed(const NewName: string);
+begin
+end;
+
+procedure TDextProjectNotifier.ModuleAdded(const AFileName: string);
+begin
+  if Assigned(FForm) then
+  begin
+    TThread.ForceQueue(nil, TThreadProcedure(procedure
+      begin
+        if Assigned(FormDextTestRunner) then
+          FormDextTestRunner.RefreshActiveProjectTestsList;
+      end));
+  end;
+end;
+
+procedure TDextProjectNotifier.ModuleRemoved(const AFileName: string);
+begin
+  if Assigned(FForm) then
+  begin
+    TThread.ForceQueue(nil, TThreadProcedure(procedure
+      begin
+        if Assigned(FormDextTestRunner) then
+          FormDextTestRunner.RefreshActiveProjectTestsList;
+      end));
+  end;
+end;
+
+procedure TDextProjectNotifier.ModuleRenamed(const AOldFileName, ANewFileName: string);
+begin
+end;
+
 { TTestSession }
 
 constructor TTestSession.Create(APageControl: TPageControl; const AName: string);
@@ -489,6 +575,9 @@ var
   LThemingServices: IOTAIDEThemingServices;
 begin
   FormDextTestRunner := Self;
+  FRunningProcessHandle := 0;
+  FActiveProjectNotifierIndex := -1;
+  FActiveProjectForNotifier := nil;
   inherited Create(AOwner);
   Caption := 'Dext Test Explorer (Compiled: ' + GetModuleBuildTime + ')';
   Name := 'FormDextTestRunner';
@@ -780,6 +869,23 @@ destructor TFormDextTestRunner.Destroy;
 var
   LThemingServices: IOTAIDEThemingServices;
 begin
+  if (FActiveProjectNotifierIndex <> -1) and Assigned(FActiveProjectForNotifier) then
+  begin
+    try
+      FActiveProjectForNotifier.RemoveNotifier(FActiveProjectNotifierIndex);
+    except
+    end;
+    FActiveProjectNotifierIndex := -1;
+    FActiveProjectForNotifier := nil;
+  end;
+
+  if FRunningProcessHandle <> 0 then
+  begin
+    TerminateProcess(FRunningProcessHandle, 0);
+    CloseHandle(FRunningProcessHandle);
+    FRunningProcessHandle := 0;
+  end;
+
   if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) and (FThemeNotifierIndex <> -1) then
   begin
     LThemingServices.RemoveNotifier(FThemeNotifierIndex);
@@ -790,9 +896,124 @@ begin
   FServer.Free;
   FSessions.Free;
   FTestDetails.Free;
+  
+  if Assigned(ProjectsComboBox) then
+  begin
+    for var I := 0 to ProjectsComboBox.Items.Count - 1 do
+      ProjectsComboBox.Items.Objects[I].Free;
+  end;
+
   if FormDextTestRunner = Self then
     FormDextTestRunner := nil;
   inherited Destroy;
+end;
+
+function TFormDextTestRunner.GetProjectByFileName(const AFileName: string): IOTAProject;
+var
+  LModuleServices: IOTAModuleServices;
+  LGroup: IOTAProjectGroup;
+  I: Integer;
+begin
+  Result := nil;
+  if not Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
+    Exit;
+  LGroup := LModuleServices.MainProjectGroup;
+  if Assigned(LGroup) then
+  begin
+    for I := 0 to LGroup.ProjectCount - 1 do
+    begin
+      if Assigned(LGroup.Projects[I]) and SameText(LGroup.Projects[I].FileName, AFileName) then
+      begin
+        Result := LGroup.Projects[I];
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+procedure TFormDextTestRunner.RefreshActiveProjectTestsList;
+var
+  LProj: IOTAProject;
+  I: Integer;
+  LFiles: TArray<string>;
+  LGeneration: Integer;
+begin
+  LProj := GetProjectByFileName(FActiveProjectFile);
+  if not Assigned(LProj) then Exit;
+
+  SetLength(LFiles, LProj.GetModuleCount);
+  for I := 0 to LProj.GetModuleCount - 1 do
+    LFiles[I] := LProj.GetModule(I).FileName;
+
+  TestsTreeView.Items.BeginUpdate;
+  try
+    TestsTreeView.Items.Clear;
+    FTestLocations.Clear;
+    TestsTreeView.Items.AddChild(nil, 'Loading tests asynchronously...');
+  finally
+    TestsTreeView.Items.EndUpdate;
+  end;
+
+  Inc(FScanGeneration);
+  LGeneration := FScanGeneration;
+
+  TTask.Run(TProc(procedure
+    var
+      LScanResults: TList<TTestLocation>;
+      LFile: string;
+      LTests: TList<TTestLocation>;
+      LTest: TTestLocation;
+    begin
+      LScanResults := TList<TTestLocation>.Create;
+      try
+        for LFile in LFiles do
+        begin
+          if SameText(ExtractFileExt(LFile), '.pas') then
+          begin
+            LTests := nil;
+            if TTestASTScanner.ScanFile(LFile, LTests) then
+            begin
+              for LTest in LTests do
+                LScanResults.Add(LTest);
+            end;
+            LTests.Free;
+          end;
+        end;
+
+        TThread.Queue(nil, TThreadProcedure(procedure
+          var
+            LIdx: Integer;
+          begin
+            if LGeneration <> FScanGeneration then
+            begin
+              LScanResults.Free;
+              Exit;
+            end;
+
+            TestsTreeView.Items.BeginUpdate;
+            try
+              TestsTreeView.Items.Clear;
+              FTestLocations.Clear;
+
+              for LIdx := 0 to LScanResults.Count - 1 do
+              begin
+                LTest := LScanResults[LIdx];
+                FTestLocations.Add(LTest);
+              end;
+
+              RefreshTreeView;
+            finally
+              TestsTreeView.Items.EndUpdate;
+              LScanResults.Free;
+            end;
+          end));
+      except
+        on E: Exception do
+        begin
+          LScanResults.Free;
+        end;
+      end;
+    end));
 end;
 
 procedure TFormDextTestRunner.DoShow;
@@ -973,8 +1194,16 @@ var
   LProjFile: string;
   LIsPackage: Boolean;
   LOutput: string;
+  LPrevSelectedFile: string;
+  LFoundIndex: Integer;
 begin
+  LPrevSelectedFile := FActiveProjectFile;
+
+  // Clear existing items and free their TDextProjectInfo objects
+  for I := 0 to ProjectsComboBox.Items.Count - 1 do
+    ProjectsComboBox.Items.Objects[I].Free;
   ProjectsComboBox.Items.Clear;
+
   if not Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
     Exit;
 
@@ -995,114 +1224,86 @@ begin
           if GetProjectTargetInfo(LProjFile, LIsPackage, LOutput) and LIsPackage then
             Continue;
 
-          ProjectsComboBox.Items.AddObject(ExtractFileName(LProjFile), TObject(Pointer(LProj)));
+          ProjectsComboBox.Items.AddObject(ExtractFileName(LProjFile), TDextProjectInfo.Create(LProjFile));
         end;
       end;
     end;
   end;
 
-  if ProjectsComboBox.Items.Count > 0 then
+  LFoundIndex := -1;
+  if LPrevSelectedFile <> '' then
+  begin
+    for I := 0 to ProjectsComboBox.Items.Count - 1 do
+    begin
+      var LInfo := TDextProjectInfo(ProjectsComboBox.Items.Objects[I]);
+      if Assigned(LInfo) and SameText(LInfo.FileName, LPrevSelectedFile) then
+      begin
+        LFoundIndex := I;
+        Break;
+      end;
+    end;
+  end;
+
+  if LFoundIndex <> -1 then
+  begin
+    ProjectsComboBox.ItemIndex := LFoundIndex;
+    ProjectsComboBoxChange(ProjectsComboBox);
+  end
+  else if ProjectsComboBox.Items.Count > 0 then
   begin
     ProjectsComboBox.ItemIndex := 0;
     ProjectsComboBoxChange(ProjectsComboBox);
+  end
+  else
+  begin
+    ProjectsComboBox.ItemIndex := -1;
+    FActiveProjectFile := '';
+    if FActiveSession <> nil then
+      FActiveSession.ActiveProjectFile := '';
+    TestsTreeView.Items.Clear;
+    FTestLocations.Clear;
   end;
 end;
 
 procedure TFormDextTestRunner.ProjectsComboBoxChange(Sender: TObject);
 var
   LProj: IOTAProject;
-  I: Integer;
-  LFiles: TArray<string>;
-  LGeneration: Integer;
+  LProjInfo: TDextProjectInfo;
 begin
   if ProjectsComboBox.ItemIndex = -1 then Exit;
 
-  LProj := IOTAProject(Pointer(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]));
+  LProjInfo := TDextProjectInfo(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]);
+  if not Assigned(LProjInfo) then Exit;
+
+  LProj := GetProjectByFileName(LProjInfo.FileName);
   if not Assigned(LProj) then Exit;
 
   FActiveProjectFile := LProj.FileName;
   if FActiveSession <> nil then
     FActiveSession.ActiveProjectFile := FActiveProjectFile;
 
-  // 1. Gather all files to scan on the main thread (safe for OTA)
-  SetLength(LFiles, LProj.GetModuleCount);
-  for I := 0 to LProj.GetModuleCount - 1 do
-    LFiles[I] := LProj.GetModule(I).FileName;
-
-  // Clear UI and locations immediately to show it is loading/updating
-  TestsTreeView.Items.BeginUpdate;
-  try
-    TestsTreeView.Items.Clear;
-    FTestLocations.Clear;
-    TestsTreeView.Items.AddChild(nil, 'Loading tests asynchronously...');
-  finally
-    TestsTreeView.Items.EndUpdate;
+  // Unregister old project notifier
+  if (FActiveProjectNotifierIndex <> -1) and Assigned(FActiveProjectForNotifier) then
+  begin
+    try
+      FActiveProjectForNotifier.RemoveNotifier(FActiveProjectNotifierIndex);
+    except
+      // ignore in case project was already destroyed
+    end;
+    FActiveProjectNotifierIndex := -1;
+    FActiveProjectForNotifier := nil;
   end;
 
-  // Increment scan generation to cancel/ignore stale scans
-  Inc(FScanGeneration);
-  LGeneration := FScanGeneration;
+  // Register notifier on new project
+  FActiveProjectForNotifier := LProj;
+  try
+    FActiveProjectNotifierIndex := LProj.AddNotifier(TDextProjectNotifier.Create(Self, LProj.FileName));
+  except
+    FActiveProjectNotifierIndex := -1;
+    FActiveProjectForNotifier := nil;
+  end;
 
-  // 2. Scan files asynchronously in a background task
-  TTask.Run(TProc(procedure
-    var
-      LScanResults: TList<TTestLocation>;
-      LFile: string;
-      LTests: TList<TTestLocation>;
-      LTest: TTestLocation;
-    begin
-      LScanResults := TList<TTestLocation>.Create;
-      try
-        for LFile in LFiles do
-        begin
-          if SameText(ExtractFileExt(LFile), '.pas') then
-          begin
-            LTests := nil;
-            if TTestASTScanner.ScanFile(LFile, LTests) then
-            begin
-              for LTest in LTests do
-                LScanResults.Add(LTest);
-            end;
-            LTests.Free;
-          end;
-        end;
-
-        // 3. Update the UI back on the main thread
-        TThread.Queue(nil, TThreadProcedure(procedure
-          var
-            LIdx: Integer;
-          begin
-            // Discard results if another scan has started in the meantime
-            if LGeneration <> FScanGeneration then
-            begin
-              LScanResults.Free;
-              Exit;
-            end;
-
-            TestsTreeView.Items.BeginUpdate;
-            try
-              TestsTreeView.Items.Clear;
-              FTestLocations.Clear;
-
-              for LIdx := 0 to LScanResults.Count - 1 do
-              begin
-                LTest := LScanResults[LIdx];
-                FTestLocations.Add(LTest);
-              end;
-
-              RefreshTreeView;
-            finally
-              TestsTreeView.Items.EndUpdate;
-              LScanResults.Free;
-            end;
-          end));
-      except
-        on E: Exception do
-        begin
-          LScanResults.Free;
-        end;
-      end;
-    end));
+  RefreshActiveProjectTestsList;
 end;
 
 function TFormDextTestRunner.FindNodeByPath(const APath: string): TTreeNode;
@@ -1194,6 +1395,11 @@ begin
             if Assigned(FProgressPanel) then
               FProgressPanel.Visible := False;
           end));
+      end;
+      if FRunningProcessHandle <> 0 then
+      begin
+        CloseHandle(FRunningProcessHandle);
+        FRunningProcessHandle := 0;
       end;
       TTelemetryTracker.AnalyzeHistory(FActiveProjectFile, DetailsMemo);
       TryLoadCoverage;
@@ -1447,7 +1653,7 @@ var
   LGroup: IOTAProjectGroup;
 begin
   if ProjectsComboBox.ItemIndex = -1 then Exit;
-  LProj := IOTAProject(Pointer(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]));
+  LProj := GetProjectByFileName(FActiveProjectFile);
   if not Assigned(LProj) then Exit;
 
   // Synchronize IDE Active Project
@@ -1580,9 +1786,16 @@ begin
   SI.cb := SizeOf(SI);
   ZeroMemory(@PI, SizeOf(PI));
 
+  if FRunningProcessHandle <> 0 then
+  begin
+    TerminateProcess(FRunningProcessHandle, 0);
+    CloseHandle(FRunningProcessHandle);
+    FRunningProcessHandle := 0;
+  end;
+
   if CreateProcess(nil, PChar(LCmdLine), nil, nil, False, CREATE_NO_WINDOW, nil, PChar(ExtractFilePath(LExeFile)), SI, PI) then
   begin
-    CloseHandle(PI.hProcess);
+    FRunningProcessHandle := PI.hProcess;
     CloseHandle(PI.hThread);
   end
   else
@@ -1733,7 +1946,24 @@ end;
 
 procedure TFormDextTestRunner.StopButtonClick(Sender: TObject);
 begin
-  // Send cancel signals
+  LogMsg('Stop clicked. Terminating running test runner process...');
+  if FRunningProcessHandle <> 0 then
+  begin
+    TerminateProcess(FRunningProcessHandle, 0);
+    CloseHandle(FRunningProcessHandle);
+    FRunningProcessHandle := 0;
+  end;
+
+  FWaitingForCompile := False;
+
+  if Assigned(FProgressPanel) then
+  begin
+    FProgressBar.Style := pbstNormal;
+    FProgressBar.Position := 0;
+    FProgressPanel.Visible := False;
+  end;
+  
+  LogMsg('Test execution stopped.');
 end;
 
 function TFormDextTestRunner.FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;

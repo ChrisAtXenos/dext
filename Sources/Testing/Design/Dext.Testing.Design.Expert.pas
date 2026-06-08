@@ -144,6 +144,20 @@ begin
   begin
     TCoverageManager.GetInstance.RefreshActiveViews;
   end;
+
+  if Assigned(FormDextTestRunner) then
+  begin
+    if (NotifyCode = ofnActiveProjectChanged) or 
+       ((NotifyCode in [ofnFileOpened, ofnFileClosing, ofnEndProjectGroupOpen, ofnEndProjectGroupClose]) and 
+        (SameText(ExtractFileExt(FileName), '.dproj') or SameText(ExtractFileExt(FileName), '.groupproj'))) then
+    begin
+      TThread.ForceQueue(nil, TThreadProcedure(procedure
+        begin
+          if Assigned(FormDextTestRunner) then
+            FormDextTestRunner.RefreshProjects;
+        end));
+    end;
+  end;
 end;
 
 initialization
