@@ -99,6 +99,7 @@
         <DCCReference Include="Net\Dext.Net.ConnectionPool.pas"/>
         <DCCReference Include="Net\Dext.Net.RestClient.pas"/>
         <DCCReference Include="Net\Dext.Net.RestRequest.pas"/>
+        <DCCReference Include="Net\Dext.Logging.Sinks.APM.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
