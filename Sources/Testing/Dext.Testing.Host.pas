@@ -407,6 +407,13 @@ begin
             begin
               var LJSONStr := LResp.ContentAsString(TEncoding.UTF8).Trim;
               LogDebug('TTestHost.Execute: Fetched selected tests: ' + LJSONStr);
+              if LJSONStr.StartsWith('{') then
+              begin
+                var LStart := LJSONStr.IndexOf('[');
+                var LEnd := LJSONStr.LastIndexOf(']');
+                if (LStart >= 0) and (LEnd > LStart) then
+                  LJSONStr := LJSONStr.Substring(LStart, LEnd - LStart + 1);
+              end;
               if LJSONStr.StartsWith('[') and LJSONStr.EndsWith(']') then
               begin
                 var LTestsList := TStringList.Create;

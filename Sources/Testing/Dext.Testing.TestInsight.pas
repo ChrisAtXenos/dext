@@ -72,37 +72,54 @@ implementation
 
 uses
   Winapi.Windows,
+  System.IOUtils,
   Dext.Utils;
+
+procedure LogDebug(const AMsg: string);
+begin
+  // disabled
+end;
 
 constructor TTestInsightListener.Create(const ABaseUrl: string);
 var
   ParentProcess: string;
   IsManualActivation: Boolean;
+  LPortStr: string;
+  LPort: Integer;
+  LUrl: string;
 begin
   inherited Create;
   
-  // 1. Process Precedence Check (Optimization: Don't even try network if not in IDE)
   ParentProcess := GetParentProcessName;
   IsManualActivation := FindCmdLineSwitch('X', ['-', '/'], True) or 
                            FindCmdLineSwitch('TestInsight', ['-', '/'], True);
                            
+  LogDebug('TTestInsightListener.Create: ParentProcess=' + ParentProcess + ', IsManual=' + IsManualActivation.ToString);
+
   if (not IsManualActivation) and (ParentProcess <> 'bds.exe') then
   begin
      FEnabled := False;
-     FFinishedEvent := TEvent.Create(nil, True, False, ''); // Needs to exist for WaitForCompletion even if disabled
+     FFinishedEvent := TEvent.Create(nil, True, False, '');
+     LogDebug('TTestInsightListener.Create: Not in IDE/Manual. Disabled.');
      Exit;
   end;
 
-  // Set the global flag EARLY so the runner knows we are in TestInsight mode
   TTestRunner.SetTestInsightActive(True);
 
-  // 2. Network Handshake (only if we are likely in the IDE)
+  LPort := 8102;
+  if FindCmdLineSwitch('port', LPortStr, True) then
+    LPort := StrToIntDef(LPortStr, 8102);
+
   if ABaseUrl = '' then
-    FClient := TTestInsightRestClient.Create('http://localhost:8102/')
+    LUrl := 'http://localhost:' + LPort.ToString + '/'
   else
-    FClient := TTestInsightRestClient.Create(ABaseUrl);
+    LUrl := ABaseUrl;
+
+  LogDebug('TTestInsightListener.Create: Connecting to ' + LUrl);
+  FClient := TTestInsightRestClient.Create(LUrl);
 
   FEnabled := (FClient <> nil) and (not FClient.HasError);
+  LogDebug('TTestInsightListener.Create: FClient created, Enabled=' + FEnabled.ToString);
   
   if FEnabled then
   begin
@@ -110,25 +127,23 @@ begin
        FClient.Options; 
        FEnabled := True;
        TTestRunner.SetTestInsightActive(True);
+       LogDebug('TTestInsightListener.Create: Handshake Options success.');
     except
        on E: Exception do
        begin
          FEnabled := False;
          TTestRunner.SetTestInsightActive(False);
+         LogDebug('TTestInsightListener.Create: Handshake Options failed: ' + E.Message);
        end;
     end;
   end;
 
   FFinishedEvent := TEvent.Create(nil, True, False, '');
-  
-  if FEnabled then
-  begin
-    // Handshake will happen on OnRunStart
-  end;
 end;
 
 destructor TTestInsightListener.Destroy;
 begin
+  LogDebug('TTestInsightListener.Destroy called.');
   FFinishedEvent.Free;
   inherited;
 end;
@@ -147,12 +162,20 @@ end;
 
 procedure TTestInsightListener.OnRunStart(TotalTests: Integer);
 begin
+  try
+    LogDebug('TTestInsightListener.OnRunStart: TotalTests = ' + TotalTests.ToString);
+  except
+  end;
   if FEnabled then
     FClient.StartedTesting(TotalTests);
 end;
 
 procedure TTestInsightListener.OnRunComplete(const Summary: TTestSummary);
 begin
+  try
+    LogDebug('TTestInsightListener.OnRunComplete: Completed');
+  except
+  end;
   try
     if FEnabled then
     begin
@@ -186,6 +209,11 @@ begin
   if not FEnabled then
     Exit;
 
+  try
+    LogDebug('TTestInsightListener.OnTestStart: ' + Fixture + '.' + Test);
+  except
+  end;
+
   LPath := UnitName + '.' + Fixture;
   
   { Send "Running" status so the IDE can show the progress bar and highlight the active test }
@@ -204,6 +232,10 @@ var
   TestResult: TTestInsightResult;
   LPath: string;
 begin
+  try
+    LogDebug('TTestInsightListener.OnTestComplete: ' + Info.ClassName + '.' + Info.DisplayName + ' - Result: ' + Integer(Info.Result).ToString);
+  except
+  end;
   // Removed suppression to ensure TotalTests count matches reported results
   // if (Info.Result = trSkipped) and (Info.ErrorMessage = 'Not in selection') then
   //   Exit;
@@ -248,21 +280,46 @@ begin
 end;
 
 function TTestInsightListener.GetSelectedTests: TArray<string>;
+var
+  LTest: string;
 begin
   Result := [];
-  if not FEnabled then Exit;
+  if not FEnabled then
+  begin
+    LogDebug('TTestInsightListener.GetSelectedTests: Not enabled, returning empty.');
+    Exit;
+  end;
   
   try
     Result := FClient.GetTests;
+    LogDebug('TTestInsightListener.GetSelectedTests: Fetched ' + Length(Result).ToString + ' tests:');
+    for LTest in Result do
+      LogDebug('  - ' + LTest);
   except
-    on E: Exception do Result := [];
+    on E: Exception do
+    begin
+      LogDebug('TTestInsightListener.GetSelectedTests: Failed to fetch: ' + E.Message);
+      Result := [];
+    end;
   end;
 end;
 
 function TTestInsightListener.GetOptions: TTestInsightOptions;
 begin
   if FEnabled then
-    Result := FClient.Options
+  begin
+    try
+      Result := FClient.Options;
+      LogDebug('TTestInsightListener.GetOptions: Options fetched successfully. ExecuteTests=' + Result.ExecuteTests.ToString);
+    except
+      on E: Exception do
+      begin
+        LogDebug('TTestInsightListener.GetOptions: Failed to fetch: ' + E.Message);
+        Result.ExecuteTests := True;
+        Result.ShowProgress := True;
+      end;
+    end;
+  end
   else
   begin
     Result.ExecuteTests := True;

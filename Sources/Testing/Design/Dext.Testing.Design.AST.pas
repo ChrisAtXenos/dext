@@ -72,8 +72,10 @@ var
   InPublishedSection: Boolean;
   MatchObj: TMatch;
   TestLoc: TTestLocation;
-  ClassRegex, MethodRegex: TRegEx;
+  TypeDeclRegex, MethodRegex: TRegEx;
   LMethodName: string;
+  LNestingDepth: Integer;
+  LKeyword: string;
 begin
   Result := False;
   if not Assigned(ATests) then
@@ -81,11 +83,12 @@ begin
 
   Lines := AText.Split([#10]);
   CurrentClass := '';
+  LNestingDepth := 0;
   InTypeSection := False;
   InPublishedSection := False;
 
   // Regex patterns
-  ClassRegex := TRegEx.Create('^\s*(\w+)\s*=\s*class\s*(\(([^)]+)\))?', [roIgnoreCase]);
+  TypeDeclRegex := TRegEx.Create('^\s*(\w+)\s*=\s*(class|record|interface|object)\b', [roIgnoreCase]);
   MethodRegex := TRegEx.Create('^\s*(procedure|function)\s+(\w+)\s*(\([^)]*\))?\s*;', [roIgnoreCase]);
 
   for I := 0 to Length(Lines) - 1 do
@@ -109,20 +112,41 @@ begin
 
     if InTypeSection then
     begin
-      // Look for Class Declarations
-      MatchObj := ClassRegex.Match(Trimmed);
-      if MatchObj.Success then
+      // Look for Class / Record / Interface declarations
+      MatchObj := TypeDeclRegex.Match(Trimmed);
+      if MatchObj.Success and (Pos('class of', LowerCase(Trimmed)) = 0) and
+         (not TRegEx.IsMatch(Trimmed, '\b(class|interface)\s*;', [roIgnoreCase])) then
       begin
-        CurrentClass := MatchObj.Groups[1].Value;
-        InPublishedSection := True; // Default to true for test runner methods
+        LKeyword := MatchObj.Groups[2].Value;
+        if CurrentClass = '' then
+        begin
+          if SameText(LKeyword, 'class') then
+          begin
+            CurrentClass := MatchObj.Groups[1].Value;
+            LNestingDepth := 1;
+            InPublishedSection := True; // Default to true for test runner methods
+          end;
+        end
+        else
+        begin
+          Inc(LNestingDepth);
+        end;
         Continue;
       end;
 
-      // Class termination
+      // Block/Class/Record/Interface termination
       if SameText(Trimmed, 'end;') then
       begin
-        CurrentClass := '';
-        InPublishedSection := False;
+        if CurrentClass <> '' then
+        begin
+          Dec(LNestingDepth);
+          if LNestingDepth <= 0 then
+          begin
+            CurrentClass := '';
+            LNestingDepth := 0;
+            InPublishedSection := False;
+          end;
+        end;
         Continue;
       end;
 
@@ -146,8 +170,8 @@ begin
         if MatchObj.Success then
         begin
           LMethodName := MatchObj.Groups[2].Value;
-          // Only matches if method starts with "Test" and isn't setup/teardown
-          if SameText(Copy(LMethodName, 1, 4), 'Test') and
+          // Matches if method starts with "Test" or "Should" and isn't setup/teardown
+          if (SameText(Copy(LMethodName, 1, 4), 'Test') or SameText(Copy(LMethodName, 1, 6), 'Should')) and
              (not SameText(LMethodName, 'setup')) and
              (not SameText(LMethodName, 'teardown')) then
           begin

@@ -21,6 +21,7 @@ type
     FOnTestResult: TTestResultEvent;
     FOnGetSelectedTests: TGetSelectedTestsEvent;
     procedure TriggerTestResult(const AData: string);
+    procedure QueueResult(const AJSON: string);
   protected
     procedure Execute; override;
   public
@@ -51,15 +52,8 @@ uses
   System.IOUtils;
 
 procedure LogServerDebug(const AMsg: string);
-var
-  LFile: string;
 begin
-  LFile := 'C:\dev\Dext\dext_server_debug.log';
-  try
-    TFile.AppendAllText(LFile, DateTimeToStr(Now) + ' [Thread:' + GetCurrentThreadId.ToString + ']: ' + AMsg + sLineBreak, TEncoding.UTF8);
-  except
-    // ignore
-  end;
+  // disabled
 end;
 
 { TTestRunnerServerThread }
@@ -87,6 +81,14 @@ procedure TTestRunnerServerThread.TriggerTestResult(const AData: string);
 begin
   if Assigned(FOnTestResult) then
     FOnTestResult(AData);
+end;
+
+procedure TTestRunnerServerThread.QueueResult(const AJSON: string);
+begin
+  TThread.Queue(nil, TThreadProcedure(procedure
+    begin
+      TriggerTestResult(AJSON);
+    end));
 end;
 
 procedure TTestRunnerServerThread.Execute;
@@ -208,15 +210,37 @@ begin
           end;
 
           LogServerDebug('JSONBody complete: ' + JSONBody);
+ 
+          if JSONBody = '' then
+          begin
+            if (Pos('/startrun', RequestStr) > 0) or (Pos('/start', RequestStr) > 0) then
+            begin
+              var LCountPos := Pos('count=', RequestStr);
+              if LCountPos > 0 then
+              begin
+                var LCountStr := '';
+                var LIdx := LCountPos + 6;
+                while (LIdx <= Length(RequestStr)) and CharInSet(RequestStr[LIdx], ['0'..'9']) do
+                begin
+                  LCountStr := LCountStr + RequestStr[LIdx];
+                  Inc(LIdx);
+                end;
+                var LCount := StrToIntDef(LCountStr, 0);
+                if LCount > 0 then
+                  JSONBody := '{"event":"RunStart","totalTests":' + LCount.ToString + '}';
+              end;
+            end
+            else if (Pos('/finishedrun', RequestStr) > 0) or (Pos('/finished', RequestStr) > 0) then
+            begin
+              JSONBody := '{"event":"RunComplete","passed":0,"failed":0,"ignored":0}';
+            end;
+          end;
 
           // Dispatch result to Main UI Thread
           if JSONBody <> '' then
           begin
             LogServerDebug('Queueing TriggerTestResult to main thread');
-            TThread.Queue(nil, TThreadProcedure(procedure
-              begin
-                TriggerTestResult(JSONBody);
-              end));
+            QueueResult(JSONBody);
           end;
         end;
 
@@ -236,7 +260,7 @@ begin
           ResponseStr := 'HTTP/1.1 200 OK'#13#10 +
                         'Content-Type: application/json'#13#10 +
                         'Connection: close'#13#10#13#10 +
-                        '{"executeTests":true,"showProgress":true}';
+                        '{"ExecuteTests":true,"ShowProgress":true}';
           send(ClientSock, PAnsiChar(AnsiString(ResponseStr))[0], Length(ResponseStr), 0);
         end
         else if Pos('/tests', RequestStr) > 0 then
@@ -244,6 +268,8 @@ begin
           JSONBody := '[]';
           if Assigned(FOnGetSelectedTests) then
             JSONBody := FOnGetSelectedTests();
+
+          JSONBody := '{"SelectedTests":' + JSONBody + '}';
 
           ResponseStr := 'HTTP/1.1 200 OK'#13#10 +
                         'Content-Type: application/json'#13#10 +
