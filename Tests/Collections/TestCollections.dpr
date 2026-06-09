@@ -59,7 +59,7 @@ begin
     WriteLn('=== Dext.Collections Unit Tests ===');
     WriteLn;
 
-    TTest.SetExitCode(
+    RunTests(
       TTest.Configure
         .Verbose
         .RegisterFixtures([
@@ -90,8 +90,7 @@ begin
           TTestQueuesAndStacks,
           TRobustnessTests,
           TListPersonTests
-        ]).Run
-    );
+        ]));
   except
     on E: Exception do
     begin

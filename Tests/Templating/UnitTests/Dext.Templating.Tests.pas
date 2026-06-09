@@ -10,7 +10,7 @@ uses
   System.SysUtils;
 
 type
-  [TestFixture]
+  [TestClass]
   TTemplatingTests = class
   public
     [Test] procedure Test_Advanced_Filters_With_Params;

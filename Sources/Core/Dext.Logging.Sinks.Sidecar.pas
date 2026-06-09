@@ -7,20 +7,21 @@ unit Dext.Logging.Sinks.Sidecar;
 interface
 
 uses
-  System.SysUtils,
   System.Classes,
-  System.SyncObjs,
-  System.TypInfo,
+  System.DateUtils,
+  System.Generics.Collections,
+  System.JSON,
   System.Net.HttpClient,
   System.Net.URLClient,
   System.NetConsts,
-  System.DateUtils,
+  System.SyncObjs,
+  System.SysUtils,
+  System.TypInfo,
   Dext.Logging,
   Dext.Logging.Async,
   Dext.Logging.RingBuffer,
   Dext.Logging.Telemetry,
   Dext.Types.UUID,
-  System.JSON,
   Dext.Utils;
 
 type

@@ -671,18 +671,24 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
 
-  // Create progress bar at the top of the form (below toolbar)
+  // Progress bar sits at the very top of the form (above the project combobox).
+  // It is created as an alTop child of Self, then BringToFront forces it to
+  // the beginning of the Controls array so it is stacked above all other
+  // alTop controls (ProjectsComboBox, ButtonsPanel) that were added by the DFM.
   FProgressPanel := TPanel.Create(Self);
   FProgressPanel.Parent := Self;
   FProgressPanel.Align := alTop;
-  FProgressPanel.Height := 20;
+  FProgressPanel.Height := 18;
   FProgressPanel.BevelOuter := bvNone;
   FProgressPanel.Visible := False; // only shown when tests are running
   FProgressPanel.AlignWithMargins := True;
-  FProgressPanel.Margins.Left := 5;
-  FProgressPanel.Margins.Right := 5;
+  FProgressPanel.Margins.Left := 4;
+  FProgressPanel.Margins.Right := 4;
   FProgressPanel.Margins.Top := 2;
-  FProgressPanel.Margins.Bottom := 4;
+  FProgressPanel.Margins.Bottom := 2;
+  // Force this panel to the top of the alTop stack so it appears ABOVE the
+  // ProjectsComboBox and ButtonsPanel (which were created earlier via DFM).
+  FProgressPanel.BringToFront;
 
   FProgressLabel := TLabel.Create(Self);
   FProgressLabel.Parent := FProgressPanel;
