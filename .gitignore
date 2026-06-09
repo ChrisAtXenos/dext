@@ -33,4 +33,4 @@ node_modules/
 test-results.xml
 /Sources/*.dext
 /scratch/**
-/Tests/Templating/UnitTests/.dext/testing/history.json
+history.json

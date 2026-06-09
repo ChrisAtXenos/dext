@@ -1,4 +1,4 @@
-unit Dext.Testing.Design.DockableForm;
+﻿unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
   Vcl.ExtCtrls, DockForm, ToolsAPI, Dext.Testing.Design.Server, Dext.Testing.Design.AST,
   System.JSON, System.Generics.Collections, System.IOUtils, System.Threading,
-  System.ImageList, Vcl.ImgList, Vcl.Menus, System.Math;
+  System.ImageList, Vcl.ImgList, Vcl.Menus, System.Math, System.Diagnostics, System.TimeSpan;
 
 type
   TFormDextTestRunner = class;
@@ -55,6 +55,14 @@ type
     destructor Destroy; override;
   end;
 
+  TFileScanCache = class
+  public
+    Timestamp: TDateTime;
+    Tests: TList<TTestLocation>;
+    constructor Create(ATimestamp: TDateTime; ATests: TList<TTestLocation>);
+    destructor Destroy; override;
+  end;
+
   TTelemetryTracker = class
   public
     class procedure RecordTestResult(const AProjectFile, ATestName, AStatus: string; ADurationMs: Integer);
@@ -71,12 +79,38 @@ type
     DetailsPanel: TPanel;
     DetailsMemo: TMemo;
     NameSplitter: TSplitter;
-    ProjectsComboBox: TComboBox;
     ButtonsPanel: TPanel;
     RefreshButton: TButton;
     RunAllButton: TButton;
     RunSelectedButton: TButton;
     StopButton: TButton;
+    SummaryPanel: TPanel;
+    SummaryTotalLabel: TLabel;
+    SummarySelectedLabel: TLabel;
+    SummarySuccessLabel: TLabel;
+    SummaryFailedLabel: TLabel;
+    SummarySkippedLabel: TLabel;
+    SummaryTimeLabel: TLabel;
+    ProjectsComboBox: TComboBox;
+    ActionsButton: TButton;
+    ActionsPopupMenu: TPopupMenu;
+    ClearMenuItem: TMenuItem;
+    LayoutSeparator: TMenuItem;
+    TabbedLayoutMenuItem: TMenuItem;
+    SplitBottomLayoutMenuItem: TMenuItem;
+    SplitRightLayoutMenuItem: TMenuItem;
+    ExportSeparator: TMenuItem;
+    ExportToJUnitXmlMenutem: TMenuItem;
+    ExportToXUnitXMLMenutem: TMenuItem;
+    ExportToJsonMenutem: TMenuItem;
+    ExportToSonarQubeXmlMenutem: TMenuItem;
+    ExportToHtmlReportMenuItem: TMenuItem;
+    ClearSeparator: TMenuItem;
+    GroupByClassMenuItem: TMenuItem;
+    GroupByTestStatusMenuItem: TMenuItem;
+    CreateaNewSessionMenuItem: TMenuItem;
+    EnableDisableTestExplorerMenuItem: TMenuItem;
+    procedure ActionsButtonClick(Sender: TObject);
     procedure ProjectsComboBoxChange(Sender: TObject);
     procedure RunAllButtonClick(Sender: TObject);
     procedure RunSelectedButtonClick(Sender: TObject);
@@ -100,7 +134,6 @@ type
     // Sessions
     FSessions: TObjectList<TTestSession>;
     FActiveSession: TTestSession;
-    AddSessionButton: TButton;
     
     // Test Inspector components
     FTestDetails: TDictionary<string, TTestDetailInfo>;
@@ -120,16 +153,39 @@ type
     FProgressPanel: TPanel;
     FTotalTests: Integer;
     FCompletedTests: Integer;
-    FLayoutPopupMenu: TPopupMenu;
     FInspectorSplitter: TSplitter;
     FCurrentLayout: TTestExplorerLayout;
-    LayoutButton: TButton;
+    //LayoutButton: TButton;
     // Async compile state
     FPendingTestFilter: string;
     FWaitingForCompile: Boolean;
     FPendingProject: IOTAProject;
     FThemeNotifierIndex: Integer;
     FGroupingMode: TTestGroupingMode;
+    FRunningTests: Boolean;
+
+    // Disabled/Enabled Mode
+    FEnabled: Boolean;
+    FDisabledPanel: TPanel;
+    FDisabledContainer: TPanel;
+
+    // Configurations/Startup Tab
+    FConfigTab: TTabSheet;
+    FCustomParamsEdit: TEdit;
+    FChkRunOnSave: TCheckBox;
+    FChkRunOnIdle: TCheckBox;
+    FChkEnabled: TCheckBox;
+    FIdleTimer: TTimer;
+
+    // Execution Stopwatch & Counts
+    FStopwatch: TStopwatch;
+    FPassedCount: Integer;
+    FFailedCount: Integer;
+    FSkippedCount: Integer;
+
+    // File scan AST cache (thread-safe performance optimization)
+    FScanCache: TObjectDictionary<string, TFileScanCache>;
+
     procedure CollapseSuccessAndFocusFailures;
     procedure NotifyProcessExited;
     procedure GroupingMenuClick(Sender: TObject);
@@ -138,7 +194,6 @@ type
     procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
     procedure UpdateTestInspector(const ATestName: string);
     procedure FilterEditChange(Sender: TObject);
-    procedure LayoutButtonClick(Sender: TObject);
     procedure LayoutMenuClick(Sender: TObject);
     procedure ApplyLayout(ALayout: TTestExplorerLayout);
     procedure RefreshTreeView;
@@ -173,6 +228,16 @@ type
     procedure RebuildStatusImages;
     procedure UpdateTabVisibility;
     procedure AddSessionButtonClick(Sender: TObject);
+
+    procedure SetEnabledState(AValue: Boolean);
+    procedure ToggleEnabledClick(Sender: TObject);
+    procedure EnableBtnClick(Sender: TObject);
+    procedure ClearLogsClick(Sender: TObject);
+    procedure ExportMenuClick(Sender: TObject);
+    procedure RunFailedTestsClick(Sender: TObject);
+    procedure ExportResults(const ExportFormat, FileName: string);
+    procedure IdleTimerTimer(Sender: TObject);
+    procedure ConfigChangeHandler(Sender: TObject);
     
     // Process handling
     function GetProjectByFileName(const AFileName: string): IOTAProject;
@@ -180,10 +245,11 @@ type
   protected
     procedure DoShow; override;
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
+    procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure RunActiveProjectTests(const ATestFilter: string = '');
+    procedure RunActiveProjectTests(const ATestFilter: string = ''; AAutoSave: Boolean = True);
     procedure RunImpactedTests(const ATests: TArray<string>);
     procedure HandleFileSaved(const AFileName: string);
     // Called by the IDE AfterCompile notifier
@@ -204,7 +270,7 @@ implementation
 
 uses
   DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles,
-  Winapi.CommCtrl;
+  Winapi.CommCtrl, Dext.Testing.Report, Dext.Testing.Runner;
 
 {$IF CompilerVersion < 35.0}
 type
@@ -430,7 +496,7 @@ constructor TTestSession.Create(APageControl: TPageControl; const AName: string)
 begin
   inherited Create;
   TestLocations := TList<TTestLocation>.Create;
-  
+
   TabSheet := TTabSheet.Create(APageControl.Owner);
   TabSheet.PageControl := APageControl;
   TabSheet.Caption := AName;
@@ -542,7 +608,7 @@ begin
   LBitmap := TBitmap.Create;
   try
     LBitmap.SetSize(16, 16);
-    
+
     // 0: Idle (Gray circle)
     DrawSmoothCircle(clGray, LBitmap);
     LImageList.AddMasked(LBitmap, LBgColor);
@@ -576,16 +642,34 @@ begin
     LOldImages.Free;
 end;
 
+{ TFileScanCache }
+
+constructor TFileScanCache.Create(ATimestamp: TDateTime; ATests: TList<TTestLocation>);
+begin
+  inherited Create;
+  Timestamp := ATimestamp;
+  Tests := ATests;
+end;
+
+destructor TFileScanCache.Destroy;
+begin
+  Tests.Free;
+  inherited Destroy;
+end;
+
 { TFormDextTestRunner }
 
 constructor TFormDextTestRunner.Create(AOwner: TComponent);
 var
-  LThemingServices: IOTAIDEThemingServices;
+  ThemingServices: IOTAIDEThemingServices;
 begin
   FormDextTestRunner := Self;
   FRunningProcessHandle := 0;
   FActiveProjectNotifierIndex := -1;
   FActiveProjectForNotifier := nil;
+  FStopwatch := TStopwatch.Create;
+  FScanCache := TObjectDictionary<string, TFileScanCache>.Create([doOwnsValues]);
+  
   inherited Create(AOwner);
   Caption := 'Dext Test Explorer (Compiled: ' + GetModuleBuildTime + ')';
   Name := 'FormDextTestRunner';
@@ -612,7 +696,12 @@ begin
   LRunAllItem2.Caption := 'Run All Test Projects';
   LRunAllItem2.OnClick := RunAllProjectsClick;
   LRunAllMenu.Items.Add(LRunAllItem2);
-  
+
+  var LRunAllItem3 := TMenuItem.Create(LRunAllMenu);
+  LRunAllItem3.Caption := 'Run Failed Tests';
+  LRunAllItem3.OnClick := RunFailedTestsClick;
+  LRunAllMenu.Items.Add(LRunAllItem3);
+
   RunAllButton.Style := bsSplitButton;
   RunAllButton.DropDownMenu := LRunAllMenu;
   
@@ -637,7 +726,7 @@ begin
   TestsTreeView.OnAdvancedCustomDrawItem := TestsTreeViewAdvancedCustomDrawItem;
   TestsTreeView.OnChange := TestsTreeViewChange;
 
-  // Build Context Menu
+  // Build context menu for TreeView
   var LPopupMenu := TPopupMenu.Create(Self);
   var LItem := TMenuItem.Create(LPopupMenu);
   LItem.Caption := #$25B6 + ' Run';
@@ -671,23 +760,18 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
 
-  // Progress bar sits at the very top of the form (above the project combobox).
-  // It is created as an alTop child of Self, then BringToFront forces it to
-  // the beginning of the Controls array so it is stacked above all other
-  // alTop controls (ProjectsComboBox, ButtonsPanel) that were added by the DFM.
+  // Progress bar panel
   FProgressPanel := TPanel.Create(Self);
   FProgressPanel.Parent := Self;
   FProgressPanel.Align := alTop;
   FProgressPanel.Height := 18;
   FProgressPanel.BevelOuter := bvNone;
-  FProgressPanel.Visible := False; // only shown when tests are running
+  FProgressPanel.Visible := False;
   FProgressPanel.AlignWithMargins := True;
   FProgressPanel.Margins.Left := 4;
   FProgressPanel.Margins.Right := 4;
   FProgressPanel.Margins.Top := 2;
   FProgressPanel.Margins.Bottom := 2;
-  // Force this panel to the top of the alTop stack so it appears ABOVE the
-  // ProjectsComboBox and ButtonsPanel (which were created earlier via DFM).
   FProgressPanel.BringToFront;
 
   FProgressLabel := TLabel.Create(Self);
@@ -707,16 +791,19 @@ begin
   FProgressBar.Position := 0;
   FProgressBar.Style := pbstNormal;
 
+  SummaryTotalLabel.Caption := 'Total: 0';
+  SummarySelectedLabel.Caption := 'Selected: 0';
+  SummarySuccessLabel.Caption := 'Passed: 0';
+  SummaryFailedLabel.Caption := 'Failed: 0';
+  SummarySkippedLabel.Caption := 'Skipped: 0';
+  SummaryTimeLabel.Caption := 'Time: 0.00 s';
+
+  EnableDisableTestExplorerMenuItem.OnClick := ToggleEnabledClick;
+  ClearMenuItem.OnClick := ClearLogsClick;
+
   FDetailsPageControl := TPageControl.Create(Self);
   FDetailsPageControl.Parent := DetailsPanel;
   FDetailsPageControl.Align := alClient;
-
-  FConsoleTab := TTabSheet.Create(Self);
-  FConsoleTab.PageControl := FDetailsPageControl;
-  FConsoleTab.Caption := 'Console Log';
-
-  DetailsMemo.Parent := FConsoleTab;
-  DetailsMemo.Align := alClient;
 
   FInspectorTab := TTabSheet.Create(Self);
   FInspectorTab.PageControl := FDetailsPageControl;
@@ -785,111 +872,191 @@ begin
   FMemoError.ReadOnly := True;
   FMemoError.ScrollBars := ssBoth;
 
-  if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
+  // Configurations Tab
+  FConfigTab := TTabSheet.Create(Self);
+  FConfigTab.PageControl := FDetailsPageControl;
+  FConfigTab.Caption := 'Configurations';
+
+  var LConfigScroll := TScrollBox.Create(Self);
+  LConfigScroll.Parent := FConfigTab;
+  LConfigScroll.Align := alClient;
+  LConfigScroll.BorderStyle := bsNone;
+
+  var FLblCustomParams := TLabel.Create(Self);
+  FLblCustomParams.Parent := LConfigScroll;
+  FLblCustomParams.Left := 10;
+  FLblCustomParams.Top := 10;
+  FLblCustomParams.Caption := 'Custom Command Line Parameters:';
+
+  FCustomParamsEdit := TEdit.Create(Self);
+  FCustomParamsEdit.Parent := LConfigScroll;
+  FCustomParamsEdit.Left := 10;
+  FCustomParamsEdit.Top := 28;
+  FCustomParamsEdit.Width := 350;
+  FCustomParamsEdit.TextHint := 'e.g. --filter mytest* --verbose';
+  FCustomParamsEdit.OnChange := ConfigChangeHandler;
+
+  FChkRunOnSave := TCheckBox.Create(Self);
+  FChkRunOnSave.Parent := LConfigScroll;
+  FChkRunOnSave.Left := 10;
+  FChkRunOnSave.Top := 65;
+  FChkRunOnSave.Width := 200;
+  FChkRunOnSave.Caption := 'Run tests automatically on Save';
+  FChkRunOnSave.OnClick := ConfigChangeHandler;
+
+  FChkRunOnIdle := TCheckBox.Create(Self);
+  FChkRunOnIdle.Parent := LConfigScroll;
+  FChkRunOnIdle.Left := 10;
+  FChkRunOnIdle.Top := 90;
+  FChkRunOnIdle.Width := 200;
+  FChkRunOnIdle.Caption := 'Run tests automatically on Idle';
+  FChkRunOnIdle.OnClick := ConfigChangeHandler;
+
+  FChkEnabled := TCheckBox.Create(Self);
+  FChkEnabled.Parent := LConfigScroll;
+  FChkEnabled.Left := 10;
+  FChkEnabled.Top := 115;
+  FChkEnabled.Width := 200;
+  FChkEnabled.Caption := 'Enable Dext Test Explorer';
+  FChkEnabled.OnClick := ToggleEnabledClick;
+
+  FConsoleTab := TTabSheet.Create(Self);
+  FConsoleTab.PageControl := FDetailsPageControl;
+  FConsoleTab.Caption := 'Console Log';
+
+  DetailsMemo.Parent := FConsoleTab;
+  DetailsMemo.Align := alClient;
+
+  ExportToJUnitXmlMenutem.OnClick := ExportMenuClick;
+  ExportToXUnitXMLMenutem.OnClick := ExportMenuClick;
+  ExportToJsonMenutem.OnClick := ExportMenuClick;
+  ExportToSonarQubeXmlMenutem.OnClick := ExportMenuClick;
+  ExportToHtmlReportMenuItem.OnClick := ExportMenuClick;
+
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemingServices) then
   begin
-    if LThemingServices.IDEThemingEnabled then
-      LThemingServices.ApplyTheme(Self);
+    if ThemingServices.IDEThemingEnabled then
+      ThemingServices.ApplyTheme(Self);
   end;
 
-  // Reposition buttons with enough room for Unicode symbol + label
-  // ButtonsPanel is alRight and ~325px wide in the DFM
+  // Reposition layout & session buttons
   RefreshButton.Left   := 2;
   RefreshButton.Top    := 5;
-  RefreshButton.Width  := 80;
+  RefreshButton.Width  := 75;
   RefreshButton.Height := 25;
 
-  RunAllButton.Left   := 85;
+  RunAllButton.Left   := 80;
   RunAllButton.Top    := 5;
   RunAllButton.Width  := 85;
   RunAllButton.Height := 25;
 
-  RunSelectedButton.Left   := 173;
+  RunSelectedButton.Left   := 168;
   RunSelectedButton.Top    := 5;
-  RunSelectedButton.Width  := 80;
+  RunSelectedButton.Width  := 75;
   RunSelectedButton.Height := 25;
 
-  StopButton.Left   := 256;
+  StopButton.Left   := 246;
   StopButton.Top    := 5;
-  StopButton.Width  := 55;
+  StopButton.Width  := 50;
   StopButton.Height := 25;
 
-  LayoutButton := TButton.Create(Self);
-  LayoutButton.Parent := ButtonsPanel;
-  LayoutButton.Left   := 314;
-  LayoutButton.Top    := 5;
-  LayoutButton.Width  := 60;
-  LayoutButton.Height := 25;
-  LayoutButton.Caption := 'Layout';
-  LayoutButton.OnClick := LayoutButtonClick;
+  CreateaNewSessionMenuItem.OnClick := AddSessionButtonClick;
 
-  AddSessionButton := TButton.Create(Self);
-  AddSessionButton.Parent := ButtonsPanel;
-  AddSessionButton.Left   := 379;
-  AddSessionButton.Top    := 5;
-  AddSessionButton.Width  := 25;
-  AddSessionButton.Height := 25;
-  AddSessionButton.Caption := '+';
-  AddSessionButton.Hint := 'Create a New Session';
-  AddSessionButton.ShowHint := True;
-  AddSessionButton.OnClick := AddSessionButtonClick;
+  TabbedLayoutMenuItem.Tag := Ord(telCompact);
+  TabbedLayoutMenuItem.OnClick := LayoutMenuClick;
+  TabbedLayoutMenuItem.Checked := True;
+  SplitBottomLayoutMenuItem.Tag := Ord(telSplitBottom);
+  SplitBottomLayoutMenuItem.OnClick := LayoutMenuClick;
+  SplitBottomLayoutMenuItem.Checked := True;
+  SplitRightLayoutMenuItem.Tag := Ord(telSplitRight);
+  SplitRightLayoutMenuItem.OnClick := LayoutMenuClick;
+  SplitRightLayoutMenuItem.Checked := True;
 
-  FLayoutPopupMenu := TPopupMenu.Create(Self);
-  var LItem1 := TMenuItem.Create(FLayoutPopupMenu);
-  LItem1.Caption := 'Tabbed (Bottom)';
-  LItem1.Tag := Ord(telCompact);
-  LItem1.OnClick := LayoutMenuClick;
-  FLayoutPopupMenu.Items.Add(LItem1);
-
-  var LItem2 := TMenuItem.Create(FLayoutPopupMenu);
-  LItem2.Caption := 'Split (Bottom)';
-  LItem2.Tag := Ord(telSplitBottom);
-  LItem2.OnClick := LayoutMenuClick;
-  FLayoutPopupMenu.Items.Add(LItem2);
-
-  var LItem3 := TMenuItem.Create(FLayoutPopupMenu);
-  LItem3.Caption := 'Split (Right)';
-  LItem3.Tag := Ord(telSplitRight);
-  LItem3.OnClick := LayoutMenuClick;
-  FLayoutPopupMenu.Items.Add(LItem3);
-
-  // Separator
-  var LSep := TMenuItem.Create(FLayoutPopupMenu);
-  LSep.Caption := '-';
-  FLayoutPopupMenu.Items.Add(LSep);
-
-  var LItemStruct := TMenuItem.Create(FLayoutPopupMenu);
-  LItemStruct.Caption := 'Group by Code Structure';
-  LItemStruct.Tag := 100 + Ord(tgmCodeStructure);
-  LItemStruct.OnClick := GroupingMenuClick;
-  FLayoutPopupMenu.Items.Add(LItemStruct);
-
-  var LItemStatus := TMenuItem.Create(FLayoutPopupMenu);
-  LItemStatus.Caption := 'Group by Test Status';
-  LItemStatus.Tag := 100 + Ord(tgmStatus);
-  LItemStatus.OnClick := GroupingMenuClick;
-  FLayoutPopupMenu.Items.Add(LItemStatus);
+  GroupByClassMenuItem.Tag := 100 + Ord(tgmCodeStructure);
+  GroupByClassMenuItem.OnClick := GroupingMenuClick;
+  GroupByClassMenuItem.Checked := True;
+  GroupbyTestStatusMenuItem.Tag := 100 + Ord(tgmStatus);
+  GroupbyTestStatusMenuItem.OnClick := GroupingMenuClick;
+  GroupbyTestStatusMenuItem.Checked := False;
 
   FInspectorSplitter := TSplitter.Create(Self);
   FInspectorSplitter.Parent := DetailsPanel;
   FInspectorSplitter.Visible := False;
   FCurrentLayout := telCompact;
 
-  // Load layout from ini file
+  // Disabled overlay banner/panel
+  FDisabledPanel := TPanel.Create(Self);
+  FDisabledPanel.Parent := Self;
+  FDisabledPanel.Align := alClient;
+  FDisabledPanel.BevelOuter := bvNone;
+  FDisabledPanel.Visible := False;
+  FDisabledPanel.Color := clWindow;
+  FDisabledPanel.ParentBackground := False;
+
+  FDisabledContainer := TPanel.Create(Self);
+  FDisabledContainer.Parent := FDisabledPanel;
+  FDisabledContainer.Width := 300;
+  FDisabledContainer.Height := 100;
+  FDisabledContainer.BevelOuter := bvNone;
+  FDisabledContainer.ParentBackground := True;
+
+  var FLblDisabledMsg := TLabel.Create(Self);
+  FLblDisabledMsg.Parent := FDisabledContainer;
+  FLblDisabledMsg.Align := alTop;
+  FLblDisabledMsg.Alignment := taCenter;
+  FLblDisabledMsg.Caption := 'Dext Test Explorer is currently disabled.' + #13#10 + 'Enable it to load projects and run tests.';
+  FLblDisabledMsg.Font.Size := 10;
+  FLblDisabledMsg.Height := 40;
+
+  var FBtnEnable := TButton.Create(Self);
+  FBtnEnable.Parent := FDisabledContainer;
+  FBtnEnable.Left := (FDisabledContainer.Width - 120) div 2;
+  FBtnEnable.Top := 50;
+  FBtnEnable.Width := 120;
+  FBtnEnable.Height := 30;
+  FBtnEnable.Caption := 'Enable';
+  FBtnEnable.OnClick := EnableBtnClick;
+  EnableDisableTestExplorerMenuItem.OnClick := ToggleEnabledClick;
+  EnableDisableTestExplorerMenuItem.Visible := True;
+
+  // Initialize Idle Timer
+  FIdleTimer := TTimer.Create(Self);
+  FIdleTimer.Interval := 2500; // 2.5 seconds debounce
+  FIdleTimer.Enabled := False;
+  FIdleTimer.OnTimer := IdleTimerTimer;
+
+  // Load layout and configs from ini file
   var LLayoutMode := Ord(telCompact);
   var LGroupingMode := Ord(tgmCodeStructure);
+  var LIniFile := TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini');
   try
-    var LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+    var LIni := TMemIniFile.Create(LIniFile);
     try
+      FEnabled := LIni.ReadBool('General', 'Enabled', True);
       LLayoutMode := LIni.ReadInteger('Layout', 'Mode', Ord(telCompact));
       LGroupingMode := LIni.ReadInteger('Grouping', 'Mode', Ord(tgmCodeStructure));
+      FCustomParamsEdit.Text := LIni.ReadString('General', 'CustomParams', '');
+      FChkRunOnSave.Checked := LIni.ReadBool('General', 'RunOnSave', False);
+      FChkRunOnIdle.Checked := LIni.ReadBool('General', 'RunOnIdle', False);
     finally
       LIni.Free;
     end;
   except
-    // ignore
+    FEnabled := True;
   end;
+
+  SetEnabledState(FEnabled);
   ApplyLayout(TTestExplorerLayout(LLayoutMode));
   FGroupingMode := TTestGroupingMode(LGroupingMode);
+  FIdleTimer.Enabled := FChkRunOnIdle.Checked;
+
+  // Sync menu Checked states based on loaded configurations
+  TabbedLayoutMenuItem.Checked := TTestExplorerLayout(LLayoutMode) = telCompact;
+  SplitBottomLayoutMenuItem.Checked := TTestExplorerLayout(LLayoutMode) = telSplitBottom;
+  SplitRightLayoutMenuItem.Checked := TTestExplorerLayout(LLayoutMode) = telSplitRight;
+
+  GroupByClassMenuItem.Checked := TTestGroupingMode(LGroupingMode) = tgmCodeStructure;
+  GroupByTestStatusMenuItem.Checked := TTestGroupingMode(LGroupingMode) = tgmStatus;
 
   Self.KeyPreview := True;
   Self.OnKeyDown := FormKeyDown;
@@ -897,12 +1064,15 @@ begin
   FThemeNotifierIndex := -1;
   ApplyIDETheme;
   
-  if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemingServices) then
   begin
-    FThemeNotifierIndex := LThemingServices.AddNotifier(TDextThemeNotifier.Create(Self) as INTAIDEThemingServicesNotifier);
+    FThemeNotifierIndex := ThemingServices.AddNotifier(TDextThemeNotifier.Create(Self) as INTAIDEThemingServicesNotifier);
   end;
 
-  RefreshProjects;
+  if FEnabled then
+  begin
+    RefreshProjects;
+  end;
   UpdateTabVisibility;
   FServer.Start(OnTestResultReceived);
 end;
@@ -939,6 +1109,11 @@ begin
   FSessions.Free;
   FTestDetails.Free;
   
+  if Assigned(FIdleTimer) then
+    FIdleTimer.Free;
+  if Assigned(FScanCache) then
+    FScanCache.Free;
+
   if Assigned(ProjectsComboBox) then
   begin
     for var I := 0 to ProjectsComboBox.Items.Count - 1 do
@@ -948,6 +1123,12 @@ begin
   if FormDextTestRunner = Self then
     FormDextTestRunner := nil;
   inherited Destroy;
+end;
+
+procedure TFormDextTestRunner.DoShow;
+begin
+  inherited DoShow;
+  ApplyIDETheme;
 end;
 
 function TFormDextTestRunner.GetProjectByFileName(const AFileName: string): IOTAProject;
@@ -978,8 +1159,13 @@ var
   LProj: IOTAProject;
   I: Integer;
   LFiles: TArray<string>;
+  LFilesToScan: TList<string>;
+  LFilesToScanArray: TArray<string>;
+  LModifiedTimes: TArray<TDateTime>;
+  LCacheDict: TObjectDictionary<string, TFileScanCache>;
   LGeneration: Integer;
 begin
+  if not FEnabled then Exit;
   LProj := GetProjectByFileName(FActiveProjectFile);
   if not Assigned(LProj) then Exit;
 
@@ -999,70 +1185,92 @@ begin
   Inc(FScanGeneration);
   LGeneration := FScanGeneration;
 
+  // Query modified times and determine what needs to be scanned
+  LCacheDict := TObjectDictionary<string, TFileScanCache>(FScanCache);
+  LFilesToScan := TList<string>.Create;
+  try
+    for var LFile in LFiles do
+    begin
+      if SameText(ExtractFileExt(LFile), '.pas') and FileExists(LFile) then
+      begin
+        var LCache: TFileScanCache := nil;
+        var LTime := TFile.GetLastWriteTime(LFile);
+        if LCacheDict.TryGetValue(LFile, LCache) then
+        begin
+          if LCache.Timestamp <> LTime then
+            LFilesToScan.Add(LFile);
+        end
+        else
+          LFilesToScan.Add(LFile);
+      end;
+    end;
+    LFilesToScanArray := LFilesToScan.ToArray;
+  finally
+    LFilesToScan.Free;
+  end;
+
+  SetLength(LModifiedTimes, Length(LFilesToScanArray));
+  for I := 0 to Length(LFilesToScanArray) - 1 do
+    LModifiedTimes[I] := TFile.GetLastWriteTime(LFilesToScanArray[I]);
+
   TTask.Run(TProc(procedure
     var
-      LScanResults: TList<TTestLocation>;
-      LFile: string;
-      LTests: TList<TTestLocation>;
-      LTest: TTestLocation;
+      LScannedLists: TArray<TList<TTestLocation>>;
+      LInnerIdx: Integer;
     begin
-      LScanResults := TList<TTestLocation>.Create;
-      try
-        for LFile in LFiles do
-        begin
-          if SameText(ExtractFileExt(LFile), '.pas') then
-          begin
-            LTests := nil;
-            if TTestASTScanner.ScanFile(LFile, LTests) then
-            begin
-              for LTest in LTests do
-                LScanResults.Add(LTest);
-            end;
-            LTests.Free;
-          end;
-        end;
-
-        TThread.Queue(nil, TThreadProcedure(procedure
-          var
-            LIdx: Integer;
-          begin
-            if LGeneration <> FScanGeneration then
-            begin
-              LScanResults.Free;
-              Exit;
-            end;
-
-            TestsTreeView.Items.BeginUpdate;
-            try
-              TestsTreeView.Items.Clear;
-              FTestLocations.Clear;
-
-              for LIdx := 0 to LScanResults.Count - 1 do
-              begin
-                LTest := LScanResults[LIdx];
-                FTestLocations.Add(LTest);
-              end;
-
-              RefreshTreeView;
-            finally
-              TestsTreeView.Items.EndUpdate;
-              LScanResults.Free;
-            end;
-          end));
-      except
-        on E: Exception do
-        begin
-          LScanResults.Free;
-        end;
+      SetLength(LScannedLists, Length(LFilesToScanArray));
+      
+      for LInnerIdx := 0 to Length(LFilesToScanArray) - 1 do
+      begin
+        var LTests: TList<TTestLocation> := nil;
+        if TTestASTScanner.ScanFile(LFilesToScanArray[LInnerIdx], LTests) then
+          LScannedLists[LInnerIdx] := LTests
+        else
+          LScannedLists[LInnerIdx] := nil;
       end;
-    end));
-end;
 
-procedure TFormDextTestRunner.DoShow;
-begin
-  inherited DoShow;
-  RefreshProjects;
-  ApplyIDETheme;
+      TThread.Queue(nil, TThreadProcedure(procedure
+        var
+          LInnerIdx: Integer;
+        begin
+          if LGeneration <> FScanGeneration then
+          begin
+            for LInnerIdx := 0 to Length(LScannedLists) - 1 do
+              if Assigned(LScannedLists[LInnerIdx]) then
+                LScannedLists[LInnerIdx].Free;
+            Exit;
+          end;
+
+          for LInnerIdx := 0 to Length(LFilesToScanArray) - 1 do
+          begin
+            var LFile := LFilesToScanArray[LInnerIdx];
+            var LTests := LScannedLists[LInnerIdx];
+            if LTests = nil then
+              LTests := TList<TTestLocation>.Create;
+            LCacheDict.AddOrSetValue(LFile, TFileScanCache.Create(LModifiedTimes[LInnerIdx], LTests));
+          end;
+
+          TestsTreeView.Items.BeginUpdate;
+          try
+            TestsTreeView.Items.Clear;
+            FTestLocations.Clear;
+
+            for var LFile in LFiles do
+            begin
+              var LCache: TFileScanCache := nil;
+              if LCacheDict.TryGetValue(LFile, LCache) then
+              begin
+                for var LTest in LCache.Tests do
+                  FTestLocations.Add(LTest);
+              end;
+            end;
+
+            RefreshTreeView;
+          finally
+            TestsTreeView.Items.EndUpdate;
+          end;
+        end));
+    end));
 end;
 
 procedure TFormDextTestRunner.ApplyIDETheme;
@@ -1132,6 +1340,10 @@ begin
         FMemoError.Font.Color := LFgColor;
       end;
 
+      if Assigned(SummaryTotalLabel) then SummaryTotalLabel.Font.Color := LFgColor;
+      if Assigned(SummarySelectedLabel) then SummarySelectedLabel.Font.Color := LFgColor;
+      if Assigned(SummaryTimeLabel) then SummaryTimeLabel.Font.Color := LFgColor;
+
       // 5. Form background color
       Self.Color := LThemingServices.StyleServices.GetSystemColor(clBtnFace);
 
@@ -1147,6 +1359,408 @@ begin
     begin
       ApplyIDETheme;
     end));
+end;
+
+procedure TFormDextTestRunner.Resize;
+begin
+  inherited;
+  if Assigned(FDisabledContainer) and Assigned(FDisabledPanel) then
+  begin
+    FDisabledContainer.Left := (FDisabledPanel.ClientWidth - FDisabledContainer.Width) div 2;
+    FDisabledContainer.Top := (FDisabledPanel.ClientHeight - FDisabledContainer.Height) div 2;
+  end;
+end;
+
+procedure TFormDextTestRunner.SetEnabledState(AValue: Boolean);
+begin
+  FEnabled := AValue;
+  FDisabledPanel.Visible := not AValue;
+  
+  if Assigned(FChkEnabled) then
+  begin
+    var LHandler := FChkEnabled.OnClick;
+    FChkEnabled.OnClick := nil;
+    try
+      FChkEnabled.Checked := AValue;
+    finally
+      FChkEnabled.OnClick := LHandler;
+    end;
+  end;
+
+  ProjectsComboBox.Enabled := AValue;
+  ButtonsPanel.Enabled := AValue;
+  SessionsPageControl.Enabled := AValue;
+  DetailsPanel.Enabled := AValue;
+
+  if AValue then
+  begin
+    if ProjectsComboBox.Items.Count = 0 then
+      RefreshProjects
+    else if FActiveProjectFile <> '' then
+      RefreshActiveProjectTestsList;
+  end
+  else
+  begin
+    TestsTreeView.Items.Clear;
+    FTestLocations.Clear;
+  end;
+
+  if Assigned(EnableDisableTestExplorerMenuItem) then
+  begin
+    if AValue then
+      EnableDisableTestExplorerMenuItem.Caption := 'Disable Test Explorer'
+    else
+      EnableDisableTestExplorerMenuItem.Caption := 'Enable Test Explorer';
+  end;
+end;
+
+procedure TFormDextTestRunner.ToggleEnabledClick(Sender: TObject);
+var
+  IniFile: TMemIniFile;
+begin
+  SetEnabledState(not FEnabled);
+  IniFile := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+  try
+    IniFile.WriteBool('General', 'Enabled', FEnabled);
+    IniFile.UpdateFile;
+  finally
+    IniFile.Free;
+  end;
+end;
+
+procedure TFormDextTestRunner.EnableBtnClick(Sender: TObject);
+var
+  IniFile : TMemIniFile;
+begin
+  SetEnabledState(True);
+  IniFile := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+  try
+    IniFile.WriteBool('General', 'Enabled', True);
+    IniFile.UpdateFile;
+  finally
+    IniFile.Free;
+  end;
+end;
+
+procedure TFormDextTestRunner.ClearLogsClick(Sender: TObject);
+begin
+  DetailsMemo.Clear;
+  ClearTestStatus;
+end;
+
+procedure TFormDextTestRunner.RunFailedTestsClick(Sender: TObject);
+var
+  LFailedTests: TList<string>;
+  LKey: string;
+  LInfo: TTestDetailInfo;
+begin
+  LFailedTests := TList<string>.Create;
+  try
+    for LKey in FTestDetails.Keys do
+    begin
+      LInfo := FTestDetails[LKey];
+      if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
+      begin
+        LFailedTests.Add(LKey);
+      end;
+    end;
+    
+    if LFailedTests.Count > 0 then
+    begin
+      LogMsg(Format('Running %d failed tests...', [LFailedTests.Count]));
+      RunImpactedTests(LFailedTests.ToArray);
+    end
+    else
+    begin
+      LogMsg('No failed tests to run.');
+    end;
+  finally
+    LFailedTests.Free;
+  end;
+end;
+
+procedure TFormDextTestRunner.ExportMenuClick(Sender: TObject);
+var
+  DefaultExtension: string;
+  ExportFormat: string;
+  Filter: string;
+  SaveDialog: TSaveDialog;
+  Text: string;
+begin
+  if not (Sender is TMenuItem) then Exit;
+  Text := TMenuItem(Sender).Caption;
+
+  if Text = 'Export to JUnit XML' then
+  begin
+    ExportFormat := 'junit';
+    DefaultExtension := 'xml';
+    Filter := 'XML Files (*.xml)|*.xml';
+  end
+  else if Text = 'Export to XUnit XML' then
+  begin
+    ExportFormat := 'xunit';
+    DefaultExtension := 'xml';
+    Filter := 'XML Files (*.xml)|*.xml';
+  end
+  else if Text = 'Export to JSON' then
+  begin
+    ExportFormat := 'json';
+    DefaultExtension := 'json';
+    Filter := 'JSON Files (*.json)|*.json';
+  end
+  else if Text = 'Export to SonarQube XML' then
+  begin
+    ExportFormat := 'sonar';
+    DefaultExtension := 'xml';
+    Filter := 'XML Files (*.xml)|*.xml';
+  end
+  else if Text = 'Export to HTML Report' then
+  begin
+    ExportFormat := 'html';
+    DefaultExtension := 'html';
+    Filter := 'HTML Files (*.html)|*.html';
+  end
+  else
+    Exit;
+
+  SaveDialog := TSaveDialog.Create(Self);
+  try
+    SaveDialog.DefaultExt := DefaultExtension;
+    SaveDialog.Filter := Filter;
+    SaveDialog.Title := 'Export Test Report';
+    if SaveDialog.Execute then
+    begin
+      ExportResults(ExportFormat, SaveDialog.FileName);
+    end;
+  finally
+    SaveDialog.Free;
+  end;
+end;
+
+procedure TFormDextTestRunner.ExportResults(const ExportFormat, FileName: string);
+var
+  HTMLReporter: THTMLReporter;
+  JsonReporter: TJsonReporter;
+  JUnitReporter: TJUnitReporter;
+  SonarReporter: TSonarQubeReporter;
+  SuiteName: string;
+  TestDetailInfo: TTestDetailInfo;
+  TestInfo: TTestInfo;
+  XUnitReporter: TXUnitReporter;
+begin
+  SuiteName := ExtractFileName(ChangeFileExt(FActiveProjectFile, ''));
+  if SuiteName = '' then SuiteName := 'DextTests';
+
+  if SameText(ExportFormat, 'junit') then
+  begin
+    JUnitReporter := TJUnitReporter.Create;
+    try
+      JUnitReporter.BeginSuite(SuiteName);
+      for var LKey in FTestDetails.Keys do
+      begin
+        TestDetailInfo := FTestDetails[LKey];
+        FillChar(TestInfo, SizeOf(TestInfo), 0);
+        var LParts := TestDetailInfo.TestName.Split(['.']);
+        if Length(LParts) >= 2 then
+        begin
+          TestInfo.FixtureName := LParts[0];
+          TestInfo.TestName := LParts[1];
+        end
+        else
+        begin
+          TestInfo.FixtureName := 'Default';
+          TestInfo.TestName := TestDetailInfo.TestName;
+        end;
+        TestInfo.DisplayName := TestDetailInfo.TestName;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
+        else TestInfo.Result := trNone;
+        TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
+        TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
+        TestInfo.StackTrace := TestDetailInfo.StackTrace;
+        JUnitReporter.AddTestCase(TestInfo);
+      end;
+      JUnitReporter.EndSuite;
+      JUnitReporter.SaveToFile(FileName);
+      LogMsg('Results exported to JUnit format: ' + FileName);
+    finally
+      JUnitReporter.Free;
+    end;
+  end
+  else if SameText(ExportFormat, 'xunit') then
+  begin
+    XUnitReporter := TXUnitReporter.Create;
+    try
+      XUnitReporter.BeginSuite(SuiteName);
+      for var LKey in FTestDetails.Keys do
+      begin
+        TestDetailInfo := FTestDetails[LKey];
+        FillChar(TestInfo, SizeOf(TestInfo), 0);
+        var LParts := TestDetailInfo.TestName.Split(['.']);
+        if Length(LParts) >= 2 then
+        begin
+          TestInfo.FixtureName := LParts[0];
+          TestInfo.TestName := LParts[1];
+        end
+        else
+        begin
+          TestInfo.FixtureName := 'Default';
+          TestInfo.TestName := TestDetailInfo.TestName;
+        end;
+        TestInfo.DisplayName := TestDetailInfo.TestName;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
+        else TestInfo.Result := trNone;
+        TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
+        TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
+        TestInfo.StackTrace := TestDetailInfo.StackTrace;
+        XUnitReporter.AddTestCase(TestInfo);
+      end;
+      XUnitReporter.EndSuite;
+      XUnitReporter.SaveToFile(FileName);
+      LogMsg('Results exported to XUnit format: ' + FileName);
+    finally
+      XUnitReporter.Free;
+    end;
+  end;
+  if SameText(ExportFormat, 'json') then
+  begin
+    JsonReporter := TJsonReporter.Create;
+    try
+      JsonReporter.BeginSuite(SuiteName);
+      for var LKey in FTestDetails.Keys do
+      begin
+        TestDetailInfo := FTestDetails[LKey];
+        FillChar(TestInfo, SizeOf(TestInfo), 0);
+        var LParts := TestDetailInfo.TestName.Split(['.']);
+        if Length(LParts) >= 2 then
+        begin
+          TestInfo.FixtureName := LParts[0];
+          TestInfo.TestName := LParts[1];
+        end
+        else
+        begin
+          TestInfo.FixtureName := 'Default';
+          TestInfo.TestName := TestDetailInfo.TestName;
+        end;
+        TestInfo.DisplayName := TestDetailInfo.TestName;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
+        else TestInfo.Result := trNone;
+        TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
+        TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
+        TestInfo.StackTrace := TestDetailInfo.StackTrace;
+        JsonReporter.AddTestCase(TestInfo);
+      end;
+      JsonReporter.EndSuite;
+      JsonReporter.SaveToFile(FileName);
+      LogMsg('Results exported to JSON format: ' + FileName);
+    finally
+      JsonReporter.Free;
+    end;
+  end
+  else if SameText(ExportFormat, 'sonar') then
+  begin
+    SonarReporter := TSonarQubeReporter.Create;
+    try
+      for var LKey in FTestDetails.Keys do
+      begin
+        TestDetailInfo := FTestDetails[LKey];
+        FillChar(TestInfo, SizeOf(TestInfo), 0);
+        var LParts := TestDetailInfo.TestName.Split(['.']);
+        if Length(LParts) >= 2 then
+        begin
+          TestInfo.FixtureName := LParts[0];
+          TestInfo.TestName := LParts[1];
+        end
+        else
+        begin
+          TestInfo.FixtureName := 'Default';
+          TestInfo.TestName := TestDetailInfo.TestName;
+        end;
+        TestInfo.DisplayName := TestDetailInfo.TestName;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
+        else TestInfo.Result := trNone;
+        TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
+        TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
+        TestInfo.StackTrace := TestDetailInfo.StackTrace;
+        SonarReporter.AddTestCase(TestInfo);
+      end;
+      SonarReporter.SaveToFile(FileName);
+      LogMsg('Results exported to SonarQube format: ' + FileName);
+    finally
+      SonarReporter.Free;
+    end;
+  end
+  else if SameText(ExportFormat, 'html') then
+  begin
+    HTMLReporter := THTMLReporter.Create;
+    try
+      HTMLReporter.SetTitle(SuiteName);
+      HTMLReporter.BeginSuite(SuiteName);
+      for var LKey in FTestDetails.Keys do
+      begin
+        TestDetailInfo := FTestDetails[LKey];
+        FillChar(TestInfo, SizeOf(TestInfo), 0);
+        var LParts := TestDetailInfo.TestName.Split(['.']);
+        if Length(LParts) >= 2 then
+        begin
+          TestInfo.FixtureName := LParts[0];
+          TestInfo.TestName := LParts[1];
+        end
+        else
+        begin
+          TestInfo.FixtureName := 'Default';
+          TestInfo.TestName := TestDetailInfo.TestName;
+        end;
+        TestInfo.DisplayName := TestDetailInfo.TestName;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
+        else TestInfo.Result := trNone;
+        TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
+        TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
+        TestInfo.StackTrace := TestDetailInfo.StackTrace;
+        HTMLReporter.AddTestCase(TestInfo);
+      end;
+      HTMLReporter.EndSuite;
+      HTMLReporter.SaveToFile(FileName);
+      LogMsg('Results exported to HTML format: ' + FileName);
+    finally
+      HTMLReporter.Free;
+    end;
+  end;
+end;
+
+procedure TFormDextTestRunner.IdleTimerTimer(Sender: TObject);
+begin
+  FIdleTimer.Enabled := False;
+  if FEnabled and FChkRunOnIdle.Checked and (FActiveProjectFile <> '') then
+  begin
+    LogMsg('Idle auto-run triggered.');
+    RunActiveProjectTests;
+  end;
+end;
+
+procedure TFormDextTestRunner.ConfigChangeHandler(Sender: TObject);
+begin
+  var LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+  try
+    LIni.WriteString('General', 'CustomParams', FCustomParamsEdit.Text);
+    LIni.WriteBool('General', 'RunOnSave', FChkRunOnSave.Checked);
+    LIni.WriteBool('General', 'RunOnIdle', FChkRunOnIdle.Checked);
+    LIni.UpdateFile;
+  finally
+    LIni.Free;
+  end;
+
+  if Assigned(FIdleTimer) then
+    FIdleTimer.Enabled := FChkRunOnIdle.Checked;
 end;
 
 function GetProjectTargetInfo(const ADprojPath: string; out AIsPackage: Boolean; out AExeOutput: string): Boolean;
@@ -1455,6 +2069,11 @@ var
       LogMsg(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [LPassed, LFailed, LIgnored]));
       LogMsg('========================================');
       
+      // Stop the stopwatch
+      TStopwatch(FStopwatch).Stop;
+      var LElapsedSecs := TStopwatch(FStopwatch).Elapsed.TotalSeconds;
+      SummaryTimeLabel.Caption := Format('Time: %.2fs', [LElapsedSecs]);
+
       // Mark any remaining 'Idle' tests as 'Skipped'
       var LIdx: Integer;
       var LTest: TTestLocation;
@@ -1470,6 +2089,7 @@ var
           begin
             LInfo.Status := 'Skipped';
             FTestDetails.AddOrSetValue(LFullTestName, LInfo);
+            Inc(FSkippedCount);
           end;
         end
         else
@@ -1482,8 +2102,14 @@ var
           LInfo.FileName := LTest.FileName;
           LInfo.Line := LTest.Line;
           FTestDetails.AddOrSetValue(LFullTestName, LInfo);
+          Inc(FSkippedCount);
         end;
       end;
+
+      // Update final labels
+      SummarySuccessLabel.Caption := 'Passed: ' + FPassedCount.ToString;
+      SummaryFailedLabel.Caption := 'Failed: ' + FFailedCount.ToString;
+      SummarySkippedLabel.Caption := 'Skipped: ' + FSkippedCount.ToString;
 
       // Complete and then hide the progress panel
       if Assigned(FProgressPanel) then
@@ -1502,6 +2128,7 @@ var
         CloseHandle(FRunningProcessHandle);
         FRunningProcessHandle := 0;
       end;
+      FRunningTests := False;
       TTelemetryTracker.AnalyzeHistory(FActiveProjectFile, DetailsMemo);
       CollapseSuccessAndFocusFailures;
       TryLoadCoverage;
@@ -1512,6 +2139,9 @@ var
     begin
       FTotalTests := LJSON.GetValue<Integer>('totalTests');
       FCompletedTests := 0;
+      FPassedCount := 0;
+      FFailedCount := 0;
+      FSkippedCount := 0;
 
       // Ensure all test locations exist in FTestDetails as Idle
       var LIdx: Integer;
@@ -1539,6 +2169,18 @@ var
         FProgressLabel.Caption := Format('0/%d', [FTotalTests]);
         FProgressPanel.Visible := True;
       end;
+
+      // Update summary counts
+      var LChecked := GetCheckedTests;
+      var LSelectedCount := Length(LChecked);
+      if LSelectedCount = 0 then
+        LSelectedCount := FTestLocations.Count;
+      SummarySelectedLabel.Caption := 'Selected: ' + LSelectedCount.ToString;
+      SummaryTotalLabel.Caption := 'Total: ' + FTestLocations.Count.ToString;
+      SummarySuccessLabel.Caption := 'Passed: 0';
+      SummaryFailedLabel.Caption := 'Failed: 0';
+      SummarySkippedLabel.Caption := 'Skipped: 0';
+      SummaryTimeLabel.Caption := 'Time: 0.00s';
 
       if FGroupingMode = tgmStatus then
         RefreshTreeView;
@@ -1585,7 +2227,7 @@ var
         LDurationMs := LTempDur;
 
       LJSON.TryGetValue<string>('exceptionmessage', LMsg);
-      LJSON.TryGetValue<string>('status', LStackTrace); // In TestInsight, stackTrace/custom status details are in the 'status' property
+      LJSON.TryGetValue<string>('status', LStackTrace);
     end;
 
     if LTestName = '' then Exit;
@@ -1604,6 +2246,18 @@ var
         FProgressBar.Position := Min(FCompletedTests, FProgressBar.Max);
         FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, FTotalTests]);
       end;
+
+      if SameText(LStatus, 'Passed') then
+        Inc(FPassedCount)
+      else if SameText(LStatus, 'Failed') or SameText(LStatus, 'Error') then
+        Inc(FFailedCount)
+      else if SameText(LStatus, 'Skipped') then
+        Inc(FSkippedCount);
+
+      SummarySuccessLabel.Caption := 'Passed: ' + FPassedCount.ToString;
+      SummaryFailedLabel.Caption := 'Failed: ' + FFailedCount.ToString;
+      SummarySkippedLabel.Caption := 'Skipped: ' + FSkippedCount.ToString;
+      SummaryTimeLabel.Caption := Format('Time: %.2fs', [TStopwatch(FStopwatch).Elapsed.TotalSeconds]);
     end;
     
     TTelemetryTracker.RecordTestResult(FActiveProjectFile, LTestName, LStatus, Round(LDurationMs));
@@ -1740,6 +2394,7 @@ end;
 
 procedure TFormDextTestRunner.NotifyProcessExited;
 begin
+  FRunningTests := False;
   if FRunningProcessHandle <> 0 then
   begin
     LogMsg('');
@@ -1751,7 +2406,7 @@ begin
     begin
       FProgressBar.Position := FProgressBar.Max;
       FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
-      TThread.ForceQueue(nil, TThreadProcedure(procedure
+      TThread.Queue(nil, TThreadProcedure(procedure
         begin
           if Assigned(FProgressPanel) then
             FProgressPanel.Visible := False;
@@ -1934,7 +2589,7 @@ begin
   end;
 end;
 
-procedure TFormDextTestRunner.RunActiveProjectTests(const ATestFilter: string);
+procedure TFormDextTestRunner.RunActiveProjectTests(const ATestFilter: string; AAutoSave: Boolean);
 var
   LProj: IOTAProject;
   LModuleServices: IOTAModuleServices;
@@ -1943,6 +2598,8 @@ begin
   if ProjectsComboBox.ItemIndex = -1 then Exit;
   LProj := GetProjectByFileName(FActiveProjectFile);
   if not Assigned(LProj) then Exit;
+
+  FRunningTests := True;
 
   // Synchronize IDE Active Project
   if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) and Assigned(LModuleServices) then
@@ -1956,6 +2613,10 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
+
+  // Start stopwatch
+  TStopwatch(FStopwatch).Reset;
+  TStopwatch(FStopwatch).Start;
 
   // Show progress immediately so the user knows something is happening
   if Assigned(FProgressPanel) then
@@ -1975,7 +2636,7 @@ begin
 
   // Step 1: Save all editor buffers so IDE's make sees up-to-date timestamps
   var LSaveServices: IOTAModuleServices;
-  if Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
+  if AAutoSave and Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
   begin
     LogMsg('[1/3] Saving all modified files...');
     LSaveServices.SaveAll;
@@ -2056,6 +2717,10 @@ begin
   DetailsMemo.Update;
 
   LParams := Format('--port %d -no-wait', [FServer.Port]);
+  var LCustomParams := FCustomParamsEdit.Text;
+  if LCustomParams <> '' then
+    LParams := LParams + ' ' + LCustomParams;
+
   if ATestFilter <> '' then
   begin
     FServer.SelectedTestsJSON := '["' + ATestFilter + '"]';
@@ -2085,11 +2750,11 @@ begin
     TThread.CreateAnonymousThread(procedure
       begin
         WaitForSingleObject(LProcessHandle, 120000); // 120s timeout max
-        TThread.ForceQueue(nil, procedure
+        TThread.Queue(nil, TThreadProcedure(procedure
           begin
             if Assigned(FormDextTestRunner) then
               FormDextTestRunner.NotifyProcessExited;
-          end);
+          end));
       end).Start;
   end
   else
@@ -2112,6 +2777,7 @@ begin
 
   if not ASucceeded then
   begin
+    FRunningTests := False;
     LogMsg('❌ Compile failed — tests not executed.');
     if Assigned(FProgressPanel) then
     begin
@@ -2148,6 +2814,7 @@ var
   SI: TStartupInfo;
   PI: TProcessInformation;
 begin
+  FRunningTests := True;
   ClearTestStatus;
   DetailsMemo.Clear;
   FTotalTests := 0;
@@ -2220,6 +2887,7 @@ begin
       end;
     end;
   end;
+  FRunningTests := False;
 end;
 
 procedure TFormDextTestRunner.RunSelectedButtonClick(Sender: TObject);
@@ -2241,6 +2909,7 @@ end;
 
 procedure TFormDextTestRunner.StopButtonClick(Sender: TObject);
 begin
+  FRunningTests := False;
   LogMsg('Stop clicked. Terminating running test runner process...');
   if FRunningProcessHandle <> 0 then
   begin
@@ -2578,36 +3247,35 @@ begin
   RefreshTreeView;
 end;
 
-procedure TFormDextTestRunner.LayoutButtonClick(Sender: TObject);
-var
-  LPoint: TPoint;
-begin
-  if Assigned(FLayoutPopupMenu) then
-  begin
-    LPoint := LayoutButton.ClientToScreen(Point(0, LayoutButton.Height));
-    FLayoutPopupMenu.Popup(LPoint.X, LPoint.Y);
-  end;
-end;
-
 procedure TFormDextTestRunner.LayoutMenuClick(Sender: TObject);
 begin
   if Sender is TMenuItem then
+  begin
+    TabbedLayoutMenuItem.Checked := Sender = TabbedLayoutMenuItem;
+    SplitBottomLayoutMenuItem.Checked := Sender = SplitBottomLayoutMenuItem;
+    SplitRightLayoutMenuItem.Checked := Sender = SplitRightLayoutMenuItem;
     ApplyLayout(TTestExplorerLayout(TMenuItem(Sender).Tag));
+  end;
 end;
 
 procedure TFormDextTestRunner.GroupingMenuClick(Sender: TObject);
+var
+  IniFile: TMemIniFile;
 begin
   if Sender is TMenuItem then
   begin
+    GroupByClassMenuItem.Checked := Sender = GroupByClassMenuItem;
+    GroupByTestStatusMenuItem.Checked := Sender = GroupByTestStatusMenuItem;
+
     FGroupingMode := TTestGroupingMode(TMenuItem(Sender).Tag - 100);
-    
+
     // Save grouping mode to ini file
     try
-      var LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+      IniFile := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
       try
-        LIni.WriteInteger('Grouping', 'Mode', Ord(FGroupingMode));
+        IniFile.WriteInteger('Grouping', 'Mode', Ord(FGroupingMode));
       finally
-        LIni.Free;
+        IniFile.Free;
       end;
     except
     end;
@@ -2626,14 +3294,14 @@ end;
 
 procedure TFormDextTestRunner.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 var
-  LActiveFilter: TEdit;
+  ActiveFilter: TEdit;
 begin
   if (Key = Ord('F')) and (ssCtrl in Shift) then
   begin
-    LActiveFilter := ActiveFilterEdit;
-    if Assigned(LActiveFilter) then
+    ActiveFilter := ActiveFilterEdit;
+    if Assigned(ActiveFilter) then
     begin
-      LActiveFilter.SetFocus;
+      ActiveFilter.SetFocus;
       Key := 0;
     end;
   end;
@@ -2641,17 +3309,17 @@ end;
 
 procedure TFormDextTestRunner.ApplyLayout(ALayout: TTestExplorerLayout);
 var
-  LIni: TMemIniFile;
+  IniFile: TMemIniFile;
 begin
   FCurrentLayout := ALayout;
   
   try
-    LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
+    IniFile := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
     try
-      LIni.WriteInteger('Layout', 'Mode', Ord(ALayout));
-      LIni.UpdateFile;
+      IniFile.WriteInteger('Layout', 'Mode', Ord(ALayout));
+      IniFile.UpdateFile;
     finally
-      LIni.Free;
+      IniFile.Free;
     end;
   except
     // ignore
@@ -2667,7 +3335,7 @@ begin
       NameSplitter.Align := alBottom;
       NameSplitter.Cursor := crVSplit;
       DetailsPanel.Align := alBottom;
-      DetailsPanel.Height := 150;
+      DetailsPanel.Height := 220;
 
       FDetailsPageControl.Visible := True;
       DetailsMemo.Parent := FConsoleTab;
@@ -3637,6 +4305,12 @@ begin
   LTests := nil;
   if TTestASTScanner.ScanFile(AFileName, LTests) then
   begin
+    // Reset/Debounce the Idle timer upon saving a file
+    if FChkRunOnIdle.Checked and Assigned(FIdleTimer) then
+    begin
+      FIdleTimer.Enabled := False;
+      FIdleTimer.Enabled := True;
+    end;
     TThread.Queue(nil, TThreadProcedure(procedure
       var
         LIdx: Integer;
@@ -3691,6 +4365,15 @@ begin
         finally
           TestsTreeView.Items.EndUpdate;
           LTests.Free;
+        end;
+        
+        if FChkRunOnSave.Checked and not FRunningTests and not FWaitingForCompile and (FRunningProcessHandle = 0) then
+        begin
+          TThread.ForceQueue(nil, TThreadProcedure(procedure
+            begin
+              if Assigned(FormDextTestRunner) then
+                FormDextTestRunner.RunActiveProjectTests('', False);
+            end));
         end;
       end));
   end;
@@ -3871,6 +4554,14 @@ begin
   end;
 end;
 
+procedure TFormDextTestRunner.ActionsButtonClick(Sender: TObject);
+var
+  ClickPoint: TPoint;
+begin
+  ClickPoint := ActionsButton.ClientToScreen(Point(0, ActionsButton.Height));
+  ActionsPopupMenu.Popup(ClickPoint.X, ClickPoint.Y);
+end;
+
 procedure TFormDextTestRunner.UpdateTabVisibility;
 begin
   SessionsPageControl.Pages[0].TabVisible := SessionsPageControl.PageCount > 1;
@@ -3880,8 +4571,7 @@ end;
 
 procedure TFormDextTestRunner.AddSessionButtonClick(Sender: TObject);
 begin
-  var LName := 'Session ' + (FSessions.Count + 1).ToString;
-  CreateNewSession(LName);
+  CreateNewSession('Session ' + (FSessions.Count + 1).ToString);
 end;
 
 initialization
