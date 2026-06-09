@@ -262,6 +262,9 @@ var
   {$IFDEF MSWINDOWS}
   IsUI: Boolean;
   {$ENDIF}
+  {$IFNDEF MSWINDOWS}
+  i: Integer;
+  {$ENDIF}
   {$IFDEF DEXT_TESTINSIGHT}
   Listener: ITestListener;
   Selected: TArray<string>;
