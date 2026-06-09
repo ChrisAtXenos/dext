@@ -1,4 +1,4 @@
-unit Dext.Testing.Design.AST;
+﻿unit Dext.Testing.Design.AST;
 
 interface
 
@@ -28,36 +28,36 @@ implementation
 
 class function TTestASTScanner.ScanFile(const AFileName: string; out ATests: TList<TTestLocation>): Boolean;
 var
-  LFileContent: string;
-  LStream: TStringList;
-  I: Integer;
-  LTest: TTestLocation;
+  FileContent: string;
+  Stream: TStringList;
+  i: Integer;
+  Test: TTestLocation;
 begin
   Result := False;
   ATests := TList<TTestLocation>.Create;
   if not FileExists(AFileName) then
     Exit;
 
-  LStream := TStringList.Create;
+  Stream := TStringList.Create;
   try
     try
-      LStream.LoadFromFile(AFileName);
-      LFileContent := LStream.Text;
-      Result := ScanText(LFileContent, ATests);
+      Stream.LoadFromFile(AFileName);
+      FileContent := Stream.Text;
+      Result := ScanText(FileContent, ATests);
       if Result then
       begin
-        for I := 0 to ATests.Count - 1 do
+        for i := 0 to ATests.Count - 1 do
         begin
-          LTest := ATests[I];
-          LTest.FileName := AFileName;
-          ATests[I] := LTest;
+          Test := ATests[i];
+          Test.FileName := AFileName;
+          ATests[i] := Test;
         end;
       end;
     except
       // Silent fail
     end;
   finally
-    LStream.Free;
+    Stream.Free;
   end;
 end;
 
@@ -67,13 +67,13 @@ end;
 /// </summary>
 function IsFixtureAttribute(const ATrimmed: string): Boolean;
 var
-  LLower: string;
+  Lower: string;
 begin
-  LLower := LowerCase(ATrimmed);
+  Lower := LowerCase(ATrimmed);
   Result :=
-    (LLower = '[testfixture]') or LLower.StartsWith('[testfixture(') or
-    (LLower = '[fixture]')     or LLower.StartsWith('[fixture(') or
-    (LLower = '[testclass]')   or LLower.StartsWith('[testclass(');
+    (Lower = '[testfixture]') or Lower.StartsWith('[testfixture(') or
+    (Lower = '[fixture]')     or Lower.StartsWith('[fixture(') or
+    (Lower = '[testclass]')   or Lower.StartsWith('[testclass(');
 end;
 
 /// <summary>
@@ -84,22 +84,22 @@ end;
 /// </summary>
 function IsTestAttribute(const ATrimmed: string): Boolean;
 var
-  LLower: string;
+  Lower: string;
 begin
-  LLower := LowerCase(ATrimmed);
+  Lower := LowerCase(ATrimmed);
   Result :=
-    (LLower = '[test]') or
-    (LLower = '[fact]') or
-    LLower.StartsWith('[test(') or
-    LLower.StartsWith('[testcase') or
-    LLower.StartsWith('[testcasesource') or
-    LLower.StartsWith('[fact(');
+    (Lower = '[test]') or
+    (Lower = '[fact]') or
+    Lower.StartsWith('[test(') or
+    Lower.StartsWith('[testcase') or
+    Lower.StartsWith('[testcasesource') or
+    Lower.StartsWith('[fact(');
 end;
 
 class function TTestASTScanner.ScanText(const AText: string; out ATests: TList<TTestLocation>): Boolean;
 var
   Lines: TArray<string>;
-  I: Integer;
+  i: Integer;
   Line: string;
   Trimmed: string;
   CurrentClass: string;
@@ -110,9 +110,13 @@ var
   MatchObj: TMatch;
   TestLoc: TTestLocation;
   TypeDeclRegex, MethodRegex: TRegEx;
-  LMethodName: string;
-  LNestingDepth: Integer;
-  LKeyword: string;
+  MethodName: string;
+  NestingDepth: Integer;
+  Keyword: string;
+  BracketEnd: Integer;
+  AttrPart: string;
+  Remainder: string;
+  Accept: Boolean;
 begin
   Result := False;
   if not Assigned(ATests) then
@@ -120,7 +124,7 @@ begin
 
   Lines := AText.Split([#10]);
   CurrentClass := '';
-  LNestingDepth := 0;
+  NestingDepth := 0;
   InTypeSection := False;
   InPublishedSection := False;
   NextLineIsFixture := False;
@@ -132,9 +136,9 @@ begin
   // Matches: procedure/function Name(...); or procedure/function Name;
   MethodRegex := TRegEx.Create('^\s*(procedure|function)\s+(\w+)\s*(\([^)]*\))?\s*;', [roIgnoreCase]);
 
-  for I := 0 to Length(Lines) - 1 do
+  for i := 0 to Length(Lines) - 1 do
   begin
-    Line := Lines[I];
+    Line := Lines[i];
     Trimmed := Line.Trim;
 
     if Trimmed = '' then Continue;
@@ -165,31 +169,31 @@ begin
     // -----------------------------------------------------------------------
     if (Length(Trimmed) >= 2) and (Trimmed[1] = '[') then
     begin
-      var LBracketEnd := Pos(']', Trimmed);
-      if LBracketEnd > 0 then
+      BracketEnd := Pos(']', Trimmed);
+      if BracketEnd > 0 then
       begin
         // Extract the attribute part: from '[' up to and including ']'
-        var LAttrPart := Copy(Trimmed, 1, LBracketEnd);
+        AttrPart := Copy(Trimmed, 1, BracketEnd);
         // Everything after the attribute on the same line (trimmed)
-        var LRemainder := Trim(Copy(Trimmed, LBracketEnd + 1, MaxInt));
+        Remainder := Trim(Copy(Trimmed, BracketEnd + 1, MaxInt));
 
-        if IsFixtureAttribute(LAttrPart) then
+        if IsFixtureAttribute(AttrPart) then
         begin
           NextLineIsFixture := True;
           // If the class declaration is also on this line (unusual but handle it):
           // fall through so the TypeDeclRegex can match the remainder below.
-          if LRemainder <> '' then
-            Trimmed := LRemainder  // parse the remainder as a normal line below
+          if Remainder <> '' then
+            Trimmed := Remainder  // parse the remainder as a normal line below
           else
             Continue;
         end
-        else if IsTestAttribute(LAttrPart) then
+        else if IsTestAttribute(AttrPart) then
         begin
           NextMethodIsTest := True;
           // If the method declaration is also on this line (e.g. [Test] procedure Foo;):
           // parse the remainder as a normal line so we match it immediately.
-          if LRemainder <> '' then
-            Trimmed := LRemainder  // fall through to method regex below
+          if Remainder <> '' then
+            Trimmed := Remainder  // fall through to method regex below
           else
             Continue;
         end
@@ -197,10 +201,10 @@ begin
         begin
           // Some other attribute — clear method flag only if the attribute
           // itself is on its own line (no remainder following it)
-          if LRemainder = '' then
+          if Remainder = '' then
             Continue;
           // Otherwise there might be a declaration after the attribute — fall through
-          Trimmed := LRemainder;
+          Trimmed := Remainder;
         end;
       end;
     end;
@@ -217,13 +221,13 @@ begin
     if MatchObj.Success and (Pos('class of', LowerCase(Trimmed)) = 0) and
        (not TRegEx.IsMatch(Trimmed, '\b(class|interface)\s*;', [roIgnoreCase])) then
     begin
-      LKeyword := MatchObj.Groups[2].Value;
+      Keyword := MatchObj.Groups[2].Value;
       if CurrentClass = '' then
       begin
-        if SameText(LKeyword, 'class') then
+        if SameText(Keyword, 'class') then
         begin
           CurrentClass := MatchObj.Groups[1].Value;
-          LNestingDepth := 1;
+          NestingDepth := 1;
 
           // Decide whether this class is a test fixture:
           //   1. Preceded by a fixture attribute ([TestFixture], [TestClass], …)
@@ -241,7 +245,7 @@ begin
       else
       begin
         // Nested type inside current class — track depth
-        Inc(LNestingDepth);
+        Inc(NestingDepth);
         NextLineIsFixture := False;
       end;
       NextMethodIsTest := False;
@@ -253,11 +257,11 @@ begin
     begin
       if CurrentClass <> '' then
       begin
-        Dec(LNestingDepth);
-        if LNestingDepth <= 0 then
+        Dec(NestingDepth);
+        if NestingDepth <= 0 then
         begin
           CurrentClass := '';
-          LNestingDepth := 0;
+          NestingDepth := 0;
           InPublishedSection := False;
         end;
       end;
@@ -289,30 +293,30 @@ begin
       MatchObj := MethodRegex.Match(Trimmed);
       if MatchObj.Success then
       begin
-        LMethodName := MatchObj.Groups[2].Value;
+        MethodName := MatchObj.Groups[2].Value;
 
         // Accept if:
         //   (A) The line was preceded by [Test] / [Fact] attribute, OR
         //   (B) Heuristic: public section + name starts with Test/Should
         //       and is not Setup/TearDown
-        var LAccept := False;
+        Accept := False;
 
         if NextMethodIsTest then
-          LAccept := True
+          Accept := True
         else if InPublishedSection then
         begin
-          LAccept :=
-            (SameText(Copy(LMethodName, 1, 4), 'Test') or
-             SameText(Copy(LMethodName, 1, 6), 'Should')) and
-            (not SameText(LMethodName, 'setup')) and
-            (not SameText(LMethodName, 'teardown'));
+          Accept :=
+            (SameText(Copy(MethodName, 1, 4), 'Test') or
+             SameText(Copy(MethodName, 1, 6), 'Should')) and
+            (not SameText(MethodName, 'setup')) and
+            (not SameText(MethodName, 'teardown'));
         end;
 
-        if LAccept then
+        if Accept then
         begin
           TestLoc.ClassName := CurrentClass;
-          TestLoc.MethodName := LMethodName;
-          TestLoc.Line := I + 1;
+          TestLoc.MethodName := MethodName;
+          TestLoc.Line := i + 1;
           TestLoc.FileName := '';
           ATests.Add(TestLoc);
           Result := True;

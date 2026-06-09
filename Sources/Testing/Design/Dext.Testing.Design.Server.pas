@@ -106,6 +106,10 @@ var
   LenStr: string;
   ResponseStr: string;
   AddrLen: Integer;
+  CountPos: Integer;
+  CountStr: string;
+  idx: Integer;
+  Count: Integer;
 begin
   LogServerDebug('Execute started. Port: ' + FPort.ToString);
   if WSAStartup(MakeWord(2, 2), WSAData) <> 0 then
@@ -215,19 +219,19 @@ begin
           begin
             if (Pos('/startrun', RequestStr) > 0) or (Pos('/start', RequestStr) > 0) then
             begin
-              var LCountPos := Pos('count=', RequestStr);
-              if LCountPos > 0 then
+              CountPos := Pos('count=', RequestStr);
+              if CountPos > 0 then
               begin
-                var LCountStr := '';
-                var LIdx := LCountPos + 6;
-                while (LIdx <= Length(RequestStr)) and CharInSet(RequestStr[LIdx], ['0'..'9']) do
+                CountStr := '';
+                idx := CountPos + 6;
+                while (idx <= Length(RequestStr)) and CharInSet(RequestStr[idx], ['0'..'9']) do
                 begin
-                  LCountStr := LCountStr + RequestStr[LIdx];
-                  Inc(LIdx);
+                  CountStr := CountStr + RequestStr[idx];
+                  Inc(idx);
                 end;
-                var LCount := StrToIntDef(LCountStr, 0);
-                if LCount > 0 then
-                  JSONBody := '{"event":"RunStart","totalTests":' + LCount.ToString + '}';
+                Count := StrToIntDef(CountStr, 0);
+                if Count > 0 then
+                  JSONBody := '{"event":"RunStart","totalTests":' + Count.ToString + '}';
               end;
             end
             else if (Pos('/finishedrun', RequestStr) > 0) or (Pos('/finished', RequestStr) > 0) then

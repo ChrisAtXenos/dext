@@ -15,6 +15,8 @@ type
     FFileCoverage: TDictionary<string, TDictionary<Integer, TCoverageLineState>>;
     FLineCoveringTests: TDictionary<string, TDictionary<Integer, TList<string>>>;
     FNotifiers: TDictionary<IOTAEditView, Integer>;
+  var
+    FTest: Integer;
     procedure ClearCoverage;
   public
     constructor Create;
@@ -28,6 +30,7 @@ type
     procedure UnregisterView(const AView: IOTAEditView);
     procedure RefreshActiveViews;
     procedure ShowCoveringTestsPopup(const AView: IOTAEditView; const ATests: TArray<string>);
+    property Test: Integer read FTest write FTest;
   end;
 
   TEditorViewNotifier = class(TInterfacedObject, IOTANotifier, INTAEditViewNotifier)
@@ -125,140 +128,167 @@ begin
 end;
 
 procedure TCoverageManager.ClearCoverage;
+var
+  pair: TPair<string, TDictionary<Integer, TCoverageLineState>>;
+  pairCovering: TPair<string, TDictionary<Integer, TList<string>>>;
+  innerPair: TPair<Integer, TList<string>>;
 begin
-  for var LPair in FFileCoverage do
-    LPair.Value.Free;
+  for pair in FFileCoverage do
+    pair.Value.Free;
   FFileCoverage.Clear;
 
-  for var LPair in FLineCoveringTests do
+  for pairCovering in FLineCoveringTests do
   begin
-    for var LInnerPair in LPair.Value do
-      LInnerPair.Value.Free;
-    LPair.Value.Free;
+    for innerPair in pairCovering.Value do
+      innerPair.Value.Free;
+    pairCovering.Value.Free;
   end;
   FLineCoveringTests.Clear;
 end;
 
 procedure TCoverageManager.LoadCoverageFromXML(const AXmlPath: string);
 var
-  LContent: string;
-  LPos, LEndPos: Integer;
-  LFilePos, LFileEndPos: Integer;
-  LFileBlock, LFilePath: string;
-  LState: TCoverageLineState;
-  LLineNum: Integer;
-  LIsCovered: Boolean;
-  LFileLines: TDictionary<Integer, TCoverageLineState>;
+  Content: string;
+  PosIdx: Integer;
+  EndPos: Integer;
+  FilePos: Integer;
+  FileEndPos: Integer;
+  FileBlock: string;
+  FilePath: string;
+  State: TCoverageLineState;
+  LineNum: Integer;
+  IsCovered: Boolean;
+  FileLines: TDictionary<Integer, TCoverageLineState>;
+  LinePos: Integer;
+  LineEnd: Integer;
+  Tag: string;
+  NumStart: Integer;
+  NumEnd: Integer;
+  CovStart: Integer;
+  CovEnd: Integer;
+  BranchStart: Integer;
+  BranchEnd: Integer;
+  BranchesToCover: Integer;
+  BranchCovStart: Integer;
+  BranchCovEnd: Integer;
+  BranchesCovered: Integer;
+  TestsStart: Integer;
+  TestsEnd: Integer;
+  TestsStr: string;
+  TestsList: TList<string>;
+  SplitTests: TArray<string>;
+  TestName: string;
+  LineDict: TDictionary<Integer, TList<string>>;
 begin
   ClearCoverage;
   if not FileExists(AXmlPath) then Exit;
 
   try
-    LContent := TFile.ReadAllText(AXmlPath, TEncoding.UTF8);
+    Content := TFile.ReadAllText(AXmlPath, TEncoding.UTF8);
     
-    LPos := 1;
+    PosIdx := 1;
     while True do
     begin
-      LFilePos := LContent.IndexOf('<file path="', LPos - 1);
-      if LFilePos < 0 then Break;
+      FilePos := Content.IndexOf('<file path="', PosIdx - 1);
+      if FilePos < 0 then Break;
       
-      Inc(LFilePos, 12);
-      LFileEndPos := LContent.IndexOf('"', LFilePos);
-      if LFileEndPos < 0 then Break;
+      Inc(FilePos, 12);
+      FileEndPos := Content.IndexOf('"', FilePos);
+      if FileEndPos < 0 then Break;
       
-      LFilePath := LContent.Substring(LFilePos, LFileEndPos - LFilePos);
-      LFilePath := TPath.GetFullPath(LFilePath);
+      FilePath := Content.Substring(FilePos, FileEndPos - FilePos);
+      FilePath := TPath.GetFullPath(FilePath);
       
-      LFileLines := TDictionary<Integer, TCoverageLineState>.Create;
-      FFileCoverage.Add(LFilePath, LFileLines);
+      FileLines := TDictionary<Integer, TCoverageLineState>.Create;
+      FFileCoverage.Add(FilePath, FileLines);
       
-      LEndPos := LContent.IndexOf('</file>', LFileEndPos);
-      if LEndPos < 0 then LEndPos := Length(LContent);
+      EndPos := Content.IndexOf('</file>', FileEndPos);
+      if EndPos < 0 then EndPos := Length(Content);
       
-      LFileBlock := LContent.Substring(LFileEndPos, LEndPos - LFileEndPos);
+      FileBlock := Content.Substring(FileEndPos, EndPos - FileEndPos);
       
-      var LLinePos := 0;
+      LinePos := 0;
       while True do
       begin
-        LLinePos := LFileBlock.IndexOf('<lineToCover', LLinePos);
-        if LLinePos < 0 then Break;
+        LinePos := FileBlock.IndexOf('<lineToCover', LinePos);
+        if LinePos < 0 then Break;
         
-        var LLineEnd := LFileBlock.IndexOf('/>', LLinePos);
-        if LLineEnd < 0 then Break;
+        LineEnd := FileBlock.IndexOf('/>', LinePos);
+        if LineEnd < 0 then Break;
         
-        var LTag := LFileBlock.Substring(LLinePos, LLineEnd - LLinePos);
+        Tag := FileBlock.Substring(LinePos, LineEnd - LinePos);
         
-        var LNumStart := LTag.IndexOf('lineNumber="');
-        if LNumStart >= 0 then
+        NumStart := Tag.IndexOf('lineNumber="');
+        if NumStart >= 0 then
         begin
-          Inc(LNumStart, 12);
-          var LNumEnd := LTag.IndexOf('"', LNumStart);
-          LLineNum := StrToIntDef(LTag.Substring(LNumStart, LNumEnd - LNumStart), 0);
+          Inc(NumStart, 12);
+          NumEnd := Tag.IndexOf('"', NumStart);
+          LineNum := StrToIntDef(Tag.Substring(NumStart, NumEnd - NumStart), 0);
           
-          LState := clsNone;
-          var LCovStart := LTag.IndexOf('covered="');
-          if LCovStart >= 0 then
+          State := clsNone;
+          CovStart := Tag.IndexOf('covered="');
+          if CovStart >= 0 then
           begin
-            Inc(LCovStart, 9);
-            var LCovEnd := LTag.IndexOf('"', LCovStart);
-            LIsCovered := SameText(LTag.Substring(LCovStart, LCovEnd - LCovStart), 'true');
-            if LIsCovered then
-              LState := clsCovered
+            Inc(CovStart, 9);
+            CovEnd := Tag.IndexOf('"', CovStart);
+            IsCovered := SameText(Tag.Substring(CovStart, CovEnd - CovStart), 'true');
+            if IsCovered then
+              State := clsCovered
             else
-              LState := clsUncovered;
+              State := clsUncovered;
           end;
           
-          var LBranchStart := LTag.IndexOf('branchesToCover="');
-          if LBranchStart >= 0 then
+          BranchStart := Tag.IndexOf('branchesToCover="');
+          if BranchStart >= 0 then
           begin
-            Inc(LBranchStart, 17);
-            var LBranchEnd := LTag.IndexOf('"', LBranchStart);
-            var LBranchesToCover := StrToIntDef(LTag.Substring(LBranchStart, LBranchEnd - LBranchStart), 0);
+            Inc(BranchStart, 17);
+            BranchEnd := Tag.IndexOf('"', BranchStart);
+            BranchesToCover := StrToIntDef(Tag.Substring(BranchStart, BranchEnd - BranchStart), 0);
             
-            var LBranchCovStart := LTag.IndexOf('branchesCovered="');
-            if LBranchCovStart >= 0 then
+            BranchCovStart := Tag.IndexOf('branchesCovered="');
+            if BranchCovStart >= 0 then
             begin
-              Inc(LBranchCovStart, 17);
-              var LBranchCovEnd := LTag.IndexOf('"', LBranchCovStart);
-              var LBranchesCovered := StrToIntDef(LTag.Substring(LBranchCovStart, LBranchCovEnd - LBranchCovStart), 0);
+              Inc(BranchCovStart, 17);
+              BranchCovEnd := Tag.IndexOf('"', BranchCovStart);
+              BranchesCovered := StrToIntDef(Tag.Substring(BranchCovStart, BranchCovEnd - BranchCovStart), 0);
               
-              if (LBranchesToCover > 0) and (LBranchesCovered < LBranchesToCover) and (LBranchesCovered > 0) then
-                LState := clsPartiallyCovered;
+              if (BranchesToCover > 0) and (BranchesCovered < BranchesToCover) and (BranchesCovered > 0) then
+                State := clsPartiallyCovered;
             end;
           end;
           
-          if LLineNum > 0 then
-            LFileLines.AddOrSetValue(LLineNum, LState);
+          if LineNum > 0 then
+            FileLines.AddOrSetValue(LineNum, State);
             
           // Parse covering tests attribute
-          var LTestsStart := LTag.IndexOf('tests="');
-          if (LTestsStart >= 0) and (LLineNum > 0) then
+          TestsStart := Tag.IndexOf('tests="');
+          if (TestsStart >= 0) and (LineNum > 0) then
           begin
-            Inc(LTestsStart, 7);
-            var LTestsEnd := LTag.IndexOf('"', LTestsStart);
-            var LTestsStr := LTag.Substring(LTestsStart, LTestsEnd - LTestsStart).Trim;
-            if LTestsStr <> '' then
+            Inc(TestsStart, 7);
+            TestsEnd := Tag.IndexOf('"', TestsStart);
+            TestsStr := Tag.Substring(TestsStart, TestsEnd - TestsStart).Trim;
+            if TestsStr <> '' then
             begin
-              var LTestsList := TList<string>.Create;
-              var LSplitTests := LTestsStr.Split([',']);
-              for var LTestName in LSplitTests do
-                LTestsList.Add(LTestName.Trim);
-              
-              var LLineDict: TDictionary<Integer, TList<string>> := nil;
-              if not FLineCoveringTests.TryGetValue(LFilePath, LLineDict) then
+              TestsList := TList<string>.Create;
+              SplitTests := TestsStr.Split([',']);
+              for TestName in SplitTests do
+                TestsList.Add(TestName.Trim);
+
+              LineDict := nil;
+              if not FLineCoveringTests.TryGetValue(FilePath, LineDict) then
               begin
-                LLineDict := TDictionary<Integer, TList<string>>.Create;
-                FLineCoveringTests.Add(LFilePath, LLineDict);
+                LineDict := TDictionary<Integer, TList<string>>.Create;
+                FLineCoveringTests.Add(FilePath, LineDict);
               end;
-              LLineDict.AddOrSetValue(LLineNum, LTestsList);
+              LineDict.AddOrSetValue(LineNum, TestsList);
             end;
           end;
         end;
         
-        Inc(LLinePos);
+        Inc(LinePos);
       end;
       
-      LPos := LEndPos + 7;
+      PosIdx := EndPos + 7;
     end;
   except
     // ignore parsing errors
@@ -270,42 +300,43 @@ end;
 
 function TCoverageManager.GetLineState(const AFileName: string; ALineNumber: Integer): TCoverageLineState;
 var
-  LDict: TDictionary<Integer, TCoverageLineState>;
+  Dict: TDictionary<Integer, TCoverageLineState>;
 begin
   Result := clsNone;
-  if FFileCoverage.TryGetValue(AFileName, LDict) then
+  if FFileCoverage.TryGetValue(AFileName, Dict) then
   begin
-    LDict.TryGetValue(ALineNumber, Result);
+    Dict.TryGetValue(ALineNumber, Result);
   end;
 end;
 
 function TCoverageManager.GetCoveringTests(const AFileName: string; ALineNumber: Integer): TArray<string>;
 var
-  LDict: TDictionary<Integer, TList<string>>;
-  LList: TList<string>;
+  Dict: TDictionary<Integer, TList<string>>;
+  List: TList<string>;
 begin
   Result := [];
-  if FLineCoveringTests.TryGetValue(AFileName, LDict) then
+  if FLineCoveringTests.TryGetValue(AFileName, Dict) then
   begin
-    if LDict.TryGetValue(ALineNumber, LList) then
-      Result := LList.ToArray;
+    if Dict.TryGetValue(ALineNumber, List) then
+      Result := List.ToArray;
   end;
 end;
 
 function TCoverageManager.GetTestsCoveringFile(const AFileName: string): TList<string>;
 var
-  LDict: TDictionary<Integer, TList<string>>;
-  LTest: string;
+  Dict: TDictionary<Integer, TList<string>>;
+  TestName: string;
+  Pair: TPair<Integer, TList<string>>;
 begin
   Result := TList<string>.Create;
-  if FLineCoveringTests.TryGetValue(AFileName, LDict) then
+  if FLineCoveringTests.TryGetValue(AFileName, Dict) then
   begin
-    for var LPair in LDict do
+    for Pair in Dict do
     begin
-      for LTest in LPair.Value do
+      for TestName in Pair.Value do
       begin
-        if not Result.Contains(LTest) then
-          Result.Add(LTest);
+        if not Result.Contains(TestName) then
+          Result.Add(TestName);
       end;
     end;
   end;
@@ -333,9 +364,11 @@ end;
 
 procedure TCoverageManager.ShowCoveringTestsPopup(const AView: IOTAEditView; const ATests: TArray<string>);
 var
-  LPopupMenu: TPopupMenu;
-  LItem: TMenuItem;
-  LScreenPos: TPoint;
+  PopupMenu: TPopupMenu;
+  Item: TMenuItem;
+  ScreenPos: TPoint;
+  Test: string;
+  PopupMenuHelper: TPopupMenuHelper;
 begin
   if Length(ATests) = 0 then
   begin
@@ -343,23 +376,23 @@ begin
     Exit;
   end;
 
-  LPopupMenu := TPopupMenu.Create(nil);
+  PopupMenu := TPopupMenu.Create(nil);
   try
-    for var LTest in ATests do
+    for Test in ATests do
     begin
-      var LHelper := TPopupMenuHelper.CreateHelper(LPopupMenu, LTest);
-      LItem := TMenuItem.Create(LPopupMenu);
-      LItem.Caption := LTest;
-      LItem.OnClick := LHelper.OnClick;
-      LPopupMenu.Items.Add(LItem);
+      PopupMenuHelper := TPopupMenuHelper.CreateHelper(PopupMenu, Test);
+      Item := TMenuItem.Create(PopupMenu);
+      Item.Caption := Test;
+      Item.OnClick := PopupMenuHelper.OnClick;
+      PopupMenu.Items.Add(Item);
     end;
     
-    LScreenPos := Mouse.CursorPos;
-    LPopupMenu.Popup(LScreenPos.X, LScreenPos.Y);
+    ScreenPos := Mouse.CursorPos;
+    PopupMenu.Popup(ScreenPos.X, ScreenPos.Y);
   finally
     TThread.ForceQueue(nil, TThreadProcedure(procedure
       begin
-        LPopupMenu.Free;
+        PopupMenu.Free;
       end));
   end;
 end;
@@ -394,27 +427,27 @@ procedure TEditorViewNotifier.PaintLine(const View: IOTAEditView; LineNumber: In
   const LineAttributes: TOTAAttributeArray; const Canvas: TCanvas;
   const TextRect: TRect; const LineRect: TRect; const CellSize: TSize);
 var
-  LFileName: string;
-  LState: TCoverageLineState;
-  LGutterRect: TRect;
+  FileName: string;
+  State: TCoverageLineState;
+  GutterRect: TRect;
 begin
-  LFileName := View.Buffer.FileName;
-  LState := TCoverageManager.GetInstance.GetLineState(LFileName, LineNumber);
+  FileName := View.Buffer.FileName;
+  State := TCoverageManager.GetInstance.GetLineState(FileName, LineNumber);
   
-  if LState <> clsNone then
+  if State <> clsNone then
   begin
-    LGutterRect.Left := LineRect.Left + 1;
-    LGutterRect.Top := LineRect.Top;
-    LGutterRect.Right := LGutterRect.Left + 3;
-    LGutterRect.Bottom := LineRect.Bottom;
+    GutterRect.Left := LineRect.Left + 1;
+    GutterRect.Top := LineRect.Top;
+    GutterRect.Right := GutterRect.Left + 3;
+    GutterRect.Bottom := LineRect.Bottom;
     
     Canvas.Pen.Style := psSolid;
-    if LState = clsCovered then
+    if State = clsCovered then
     begin
       Canvas.Brush.Color := TColor($22C55E); // Green
       Canvas.Pen.Color := TColor($22C55E);
     end
-    else if LState = clsPartiallyCovered then
+    else if State = clsPartiallyCovered then
     begin
       Canvas.Brush.Color := TColor($EAB308); // Yellow
       Canvas.Pen.Color := TColor($EAB308);
@@ -425,7 +458,7 @@ begin
       Canvas.Pen.Color := TColor($EF4444);
     end;
     
-    Canvas.FillRect(LGutterRect);
+    Canvas.FillRect(GutterRect);
   end;
 end;
 
@@ -468,22 +501,22 @@ end;
 
 procedure TDextKeyboardBinding.ShowCoveringTestsProc(const Context: IOTAKeyContext; KeyCode: TShortcut; var BindingResult: TKeyBindingResult);
 var
-  LEditView: IOTAEditView;
-  LFileName: string;
-  LLine: Integer;
-  LTests: TArray<string>;
+  EditView: IOTAEditView;
+  FileName: string;
+  Line: Integer;
+  Tests: TArray<string>;
 begin
   BindingResult := krHandled;
   if Context.EditBuffer = nil then Exit;
   
-  LEditView := Context.EditBuffer.EditViews[0];
-  if LEditView = nil then Exit;
+  EditView := Context.EditBuffer.EditViews[0];
+  if EditView = nil then Exit;
   
-  LFileName := LEditView.Buffer.FileName;
-  LLine := LEditView.CursorPos.Line;
+  FileName := EditView.Buffer.FileName;
+  Line := EditView.CursorPos.Line;
   
-  LTests := TCoverageManager.GetInstance.GetCoveringTests(LFileName, LLine);
-  TCoverageManager.GetInstance.ShowCoveringTestsPopup(LEditView, LTests);
+  Tests := TCoverageManager.GetInstance.GetCoveringTests(FileName, Line);
+  TCoverageManager.GetInstance.ShowCoveringTestsPopup(EditView, Tests);
 end;
 
 initialization

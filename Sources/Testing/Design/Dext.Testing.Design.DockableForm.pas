@@ -1,4 +1,4 @@
-unit Dext.Testing.Design.DockableForm;
+﻿unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -300,14 +300,14 @@ end;
 
 procedure TTreeViewHelper.SetCheckboxes(Value: Boolean);
 var
-  LStyle: Longint;
+  Style: Longint;
 begin
-  LStyle := GetWindowLong(Handle, GWL_STYLE);
+  Style := GetWindowLong(Handle, GWL_STYLE);
   if Value then
-    LStyle := LStyle or TVS_CHECKBOXES
+    Style := Style or TVS_CHECKBOXES
   else
-    LStyle := LStyle and not TVS_CHECKBOXES;
-  SetWindowLong(Handle, GWL_STYLE, LStyle);
+    Style := Style and not TVS_CHECKBOXES;
+  SetWindowLong(Handle, GWL_STYLE, Style);
 end;
 
 function TTreeNodeHelper.GetChecked: Boolean;
@@ -384,14 +384,14 @@ end;
 
 procedure RegisterDockableForm;
 var
-  LThemingServices: IOTAIDEThemingServices;
+  ThemingServices: IOTAIDEThemingServices;
 begin
   if @RegisterFieldAddress <> nil then
     RegisterFieldAddress('FormDextTestRunner', @FormDextTestRunner);
   RegisterDesktopFormClass(TFormDextTestRunner, 'FormDextTestRunner', 'FormDextTestRunner');
   
-  if Supports(BorlandIDEServices, IOTAIDEThemingServices, LThemingServices) then
-    LThemingServices.RegisterFormClass(TFormDextTestRunner);
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemingServices) then
+    ThemingServices.RegisterFormClass(TFormDextTestRunner);
 end;
 
 procedure UnregisterDockableForm;
@@ -407,33 +407,33 @@ end;
 
 function GetModuleBuildTime: string;
 var
-  LFilePath: array[0..MAX_PATH] of Char;
-  LFileTime: TFileTime;
-  LSystemTime: TSystemTime;
-  LLocalTime: TSystemTime;
-  LHandle: THandle;
+  FilePath: array[0..MAX_PATH] of Char;
+  FileTime: TFileTime;
+  SystemTime: TSystemTime;
+  LocalTime: TSystemTime;
+  Handle: THandle;
 begin
   Result := '';
-  if GetModuleFileName(HInstance, LFilePath, Length(LFilePath)) > 0 then
+  if GetModuleFileName(HInstance, FilePath, Length(FilePath)) > 0 then
   begin
-    LHandle := CreateFile(LFilePath, GENERIC_READ, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    if LHandle <> INVALID_HANDLE_VALUE then
+    Handle := CreateFile(FilePath, GENERIC_READ, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    if Handle <> INVALID_HANDLE_VALUE then
     begin
       try
-        if GetFileTime(LHandle, nil, nil, @LFileTime) then
+        if GetFileTime(Handle, nil, nil, @FileTime) then
         begin
-          if FileTimeToSystemTime(LFileTime, LSystemTime) then
+          if FileTimeToSystemTime(FileTime, SystemTime) then
           begin
-            if SystemTimeToTzSpecificLocalTime(nil, LSystemTime, LLocalTime) then
+            if SystemTimeToTzSpecificLocalTime(nil, SystemTime, LocalTime) then
             begin
               Result := Format('%.4d-%.2d-%.2d %.2d:%.2d:%.2d',
-                [LLocalTime.wYear, LLocalTime.wMonth, LLocalTime.wDay,
-                 LLocalTime.wHour, LLocalTime.wMinute, LLocalTime.wSecond]);
+                [LocalTime.wYear, LocalTime.wMonth, LocalTime.wDay,
+                 LocalTime.wHour, LocalTime.wMinute, LocalTime.wSecond]);
             end;
           end;
         end;
       finally
-        CloseHandle(LHandle);
+        CloseHandle(Handle);
       end;
     end;
   end;
@@ -569,80 +569,81 @@ end;
 
 procedure TFormDextTestRunner.RebuildStatusImages;
 var
-  LBgColor: TColor;
-  LImageList: TImageList;
-  LBitmap: TBitmap;
+  BgColor: TColor;
+  Bitmap: TBitmap;
+  ImageList: TImageList;
+  OldImages: TCustomImageList;
 
   procedure DrawSmoothCircle(AColor: TColor; ADest: TBitmap);
   var
-    LLargeBmp: TBitmap;
+    LargeBmp: TBitmap;
   begin
-    LLargeBmp := TBitmap.Create;
+    LargeBmp := TBitmap.Create;
     try
-      LLargeBmp.SetSize(64, 64);
-      LLargeBmp.Canvas.Brush.Color := LBgColor;
-      LLargeBmp.Canvas.FillRect(Rect(0, 0, 64, 64));
-      
-      LLargeBmp.Canvas.Pen.Color := AColor;
-      LLargeBmp.Canvas.Brush.Color := AColor;
-      LLargeBmp.Canvas.Ellipse(16, 16, 48, 48);
-      
-      ADest.Canvas.Brush.Color := LBgColor;
+      LargeBmp.SetSize(64, 64);
+      LargeBmp.Canvas.Brush.Color := BgColor;
+      LargeBmp.Canvas.FillRect(Rect(0, 0, 64, 64));
+
+      LargeBmp.Canvas.Pen.Color := AColor;
+      LargeBmp.Canvas.Brush.Color := AColor;
+      LargeBmp.Canvas.Ellipse(16, 16, 48, 48);
+
+      ADest.Canvas.Brush.Color := BgColor;
       ADest.Canvas.FillRect(Rect(0, 0, 16, 16));
       
       SetStretchBltMode(ADest.Canvas.Handle, HALFTONE);
       SetBrushOrgEx(ADest.Canvas.Handle, 0, 0, nil);
-      StretchBlt(ADest.Canvas.Handle, 0, 0, 16, 16, LLargeBmp.Canvas.Handle, 0, 0, 64, 64, SRCCOPY);
+      StretchBlt(ADest.Canvas.Handle, 0, 0, 16, 16, LargeBmp.Canvas.Handle, 0, 0, 64, 64, SRCCOPY);
     finally
-      LLargeBmp.Free;
+      LargeBmp.Free;
     end;
   end;
 
 begin
   if TestsTreeView <> nil then
-    LBgColor := TestsTreeView.Color
+    BgColor := TestsTreeView.Color
   else
-    LBgColor := clWindow;
+    BgColor := clWindow;
 
-  LImageList := TImageList.Create(Self);
-  LImageList.Width := 16;
-  LImageList.Height := 16;
-  
-  LBitmap := TBitmap.Create;
+  ImageList := TImageList.Create(Self);
+  ImageList.Width := 16;
+  ImageList.Height := 16;
+
+  Bitmap := TBitmap.Create;
   try
-    LBitmap.SetSize(16, 16);
+    Bitmap.SetSize(16, 16);
 
     // 0: Idle (Gray circle)
-    DrawSmoothCircle(clGray, LBitmap);
-    LImageList.AddMasked(LBitmap, LBgColor);
-    
+    DrawSmoothCircle(clGray, Bitmap);
+    ImageList.AddMasked(Bitmap, BgColor);
+
     // 1: Pass (Green circle)
-    DrawSmoothCircle(TColor($5EC522), LBitmap);
-    LImageList.AddMasked(LBitmap, LBgColor);
+    DrawSmoothCircle(TColor($5EC522), Bitmap);
+    ImageList.AddMasked(Bitmap, BgColor);
 
     // 2: Fail (Red circle)
-    DrawSmoothCircle(TColor($4444EF), LBitmap);
-    LImageList.AddMasked(LBitmap, LBgColor);
+    DrawSmoothCircle(TColor($4444EF), Bitmap);
+    ImageList.AddMasked(Bitmap, BgColor);
 
     // 3: Fixture (Blue circle)
-    DrawSmoothCircle(TColor($F6823B), LBitmap);
-    LImageList.AddMasked(LBitmap, LBgColor);
+    DrawSmoothCircle(TColor($F6823B), Bitmap);
+    ImageList.AddMasked(Bitmap, BgColor);
   finally
-    LBitmap.Free;
+    Bitmap.Free;
   end;
-  
-  var LOldImages := TestsTreeView.Images;
-  TestsTreeView.Images := LImageList;
-  
+
+  OldImages := TestsTreeView.Images;
+  TestsTreeView.Images := ImageList;
+
   if Assigned(FSessions) then
   begin
     for var I := 0 to FSessions.Count - 1 do
       if Assigned(FSessions[I].TreeView) then
-        FSessions[I].TreeView.Images := LImageList;
+        FSessions[I].TreeView.Images := ImageList;
   end;
 
-  if Assigned(LOldImages) then
-    LOldImages.Free;
+  if Assigned(OldImages) then
+    OldImages.Free;
 end;
 
 { TFileScanCache }
