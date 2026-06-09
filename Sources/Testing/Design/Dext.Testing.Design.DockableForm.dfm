@@ -75,7 +75,7 @@ object FormDextTestRunner: TFormDextTestRunner
         Left = 3
         Top = 6
         Width = 55
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -86,14 +86,13 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = [fsBold]
         ParentFont = False
-        ExplicitHeight = 13
       end
       object SummarySelectedLabel: TLabel
         AlignWithMargins = True
         Left = 64
         Top = 6
         Width = 73
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -104,14 +103,13 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
-        ExplicitHeight = 13
       end
       object SummarySuccessLabel: TLabel
         AlignWithMargins = True
         Left = 143
         Top = 6
         Width = 66
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -124,14 +122,13 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Style = [fsBold]
         ParentColor = False
         ParentFont = False
-        ExplicitHeight = 13
       end
       object SummaryFailedLabel: TLabel
         AlignWithMargins = True
         Left = 215
         Top = 6
         Width = 61
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -144,14 +141,13 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Style = [fsBold]
         ParentColor = False
         ParentFont = False
-        ExplicitHeight = 13
       end
       object SummarySkippedLabel: TLabel
         AlignWithMargins = True
         Left = 282
         Top = 6
         Width = 72
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -162,14 +158,13 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
-        ExplicitHeight = 13
       end
       object SummaryTimeLabel: TLabel
         AlignWithMargins = True
         Left = 360
         Top = 6
         Width = 87
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -180,14 +175,13 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = [fsBold]
         ParentFont = False
-        ExplicitHeight = 13
       end
       object SummaryTotalTimeLabel: TLabel
         AlignWithMargins = True
         Left = 453
         Top = 6
         Width = 112
-        Height = 18
+        Height = 13
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -198,7 +192,6 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
-        ExplicitHeight = 13
       end
     end
   end
