@@ -270,13 +270,7 @@ end;
 procedure TDextModuleNotifier.AfterSave;
 begin
   if Assigned(FormDextTestRunner) then
-  begin
-    TThread.ForceQueue(nil, TThreadProcedure(procedure
-      begin
-        if Assigned(FormDextTestRunner) then
-          FormDextTestRunner.HandleFileSaved(FFileName);
-      end));
-  end;
+    FormDextTestRunner.HandleFileSaved(FFileName);
 end;
 
 procedure TDextModuleNotifier.BeforeSave;

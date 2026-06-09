@@ -1,4 +1,4 @@
-﻿unit Dext.Testing.Design.DockableForm;
+unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -176,6 +176,8 @@ type
     FChkRunOnIdle: TCheckBox;
     FChkEnabled: TCheckBox;
     FIdleTimer: TTimer;
+    FSaveTimer: TTimer;
+    FPendingSaveFiles: TStringList;
 
     // Execution Stopwatch & Counts
     FStopwatch: TStopwatch;
@@ -237,6 +239,7 @@ type
     procedure RunFailedTestsClick(Sender: TObject);
     procedure ExportResults(const ExportFormat, FileName: string);
     procedure IdleTimerTimer(Sender: TObject);
+    procedure SaveTimerTimer(Sender: TObject);
     procedure ConfigChangeHandler(Sender: TObject);
     
     // Process handling
@@ -1025,6 +1028,16 @@ begin
   FIdleTimer.Enabled := False;
   FIdleTimer.OnTimer := IdleTimerTimer;
 
+  // Initialize Save Timer and list
+  FSaveTimer := TTimer.Create(Self);
+  FSaveTimer.Interval := 250; // 250ms debounce
+  FSaveTimer.Enabled := False;
+  FSaveTimer.OnTimer := SaveTimerTimer;
+
+  FPendingSaveFiles := TStringList.Create;
+  FPendingSaveFiles.Sorted := True;
+  FPendingSaveFiles.Duplicates := dupIgnore;
+
   // Load layout and configs from ini file
   var LLayoutMode := Ord(telCompact);
   var LGroupingMode := Ord(tgmCodeStructure);
@@ -1111,6 +1124,10 @@ begin
   
   if Assigned(FIdleTimer) then
     FIdleTimer.Free;
+  if Assigned(FSaveTimer) then
+    FSaveTimer.Free;
+  if Assigned(FPendingSaveFiles) then
+    FPendingSaveFiles.Free;
   if Assigned(FScanCache) then
     FScanCache.Free;
 
@@ -3026,9 +3043,9 @@ var
   LTextRect: TRect;
 begin
   LTextRect := ANode.DisplayRect(True);
-  Result.Left := LTextRect.Right + 12;
+  Result.Left := LTextRect.Right + 3;
   Result.Top := LTextRect.Top + (LTextRect.Height - 14) div 2;
-  Result.Right := Result.Left + 20;
+  Result.Right := Result.Left + 16;
   Result.Bottom := Result.Top + 14;
 end;
 
@@ -4297,34 +4314,49 @@ begin
 end;
 
 procedure TFormDextTestRunner.HandleFileSaved(const AFileName: string);
-var
-  LTests: TList<TTestLocation>;
 begin
   if not SameText(ExtractFileExt(AFileName), '.pas') then Exit;
+  if not Assigned(FPendingSaveFiles) then Exit;
   
-  LTests := nil;
-  if TTestASTScanner.ScanFile(AFileName, LTests) then
+  if FPendingSaveFiles.IndexOf(AFileName) < 0 then
+    FPendingSaveFiles.Add(AFileName);
+    
+  if Assigned(FSaveTimer) then
   begin
-    // Reset/Debounce the Idle timer upon saving a file
-    if FChkRunOnIdle.Checked and Assigned(FIdleTimer) then
+    FSaveTimer.Enabled := False;
+    FSaveTimer.Enabled := True;
+  end;
+end;
+
+procedure TFormDextTestRunner.SaveTimerTimer(Sender: TObject);
+var
+  LTests: TList<TTestLocation>;
+  LTest: TTestLocation;
+  LIdx: Integer;
+  LNode: TTreeNode;
+  LFixtureNode: TTreeNode;
+  LMethodNode: TTreeNode;
+  LFile: string;
+  I: Integer;
+begin
+  if not Assigned(FSaveTimer) then Exit;
+  FSaveTimer.Enabled := False;
+  
+  if not Assigned(FPendingSaveFiles) or (FPendingSaveFiles.Count = 0) then Exit;
+  
+  TestsTreeView.Items.BeginUpdate;
+  try
+    for I := 0 to FPendingSaveFiles.Count - 1 do
     begin
-      FIdleTimer.Enabled := False;
-      FIdleTimer.Enabled := True;
-    end;
-    TThread.Queue(nil, TThreadProcedure(procedure
-      var
-        LIdx: Integer;
-        LTest: TTestLocation;
-        LNode: TTreeNode;
-        LFixtureNode: TTreeNode;
-        LMethodNode: TTreeNode;
+      LFile := FPendingSaveFiles[I];
+      LTests := nil;
+      if TTestASTScanner.ScanFile(LFile, LTests) then
       begin
-        TestsTreeView.Items.BeginUpdate;
         try
           // Remove existing tests in this file from our list and TreeView
           for LIdx := FTestLocations.Count - 1 downto 0 do
           begin
-            if SameText(FTestLocations[LIdx].FileName, AFileName) then
+            if SameText(FTestLocations[LIdx].FileName, LFile) then
             begin
               LNode := FindNodeByPath(FTestLocations[LIdx].ClassName + '.' + FTestLocations[LIdx].MethodName);
               if not Assigned(LNode) then
@@ -4359,23 +4391,29 @@ begin
             LMethodNode.ImageIndex := 0;
             LMethodNode.SelectedIndex := 0;
           end;
-          
-          if LTests.Count > 0 then
-            TestsTreeView.FullExpand;
         finally
-          TestsTreeView.Items.EndUpdate;
           LTests.Free;
         end;
-        
-        if FChkRunOnSave.Checked and not FRunningTests and not FWaitingForCompile and (FRunningProcessHandle = 0) then
-        begin
-          TThread.ForceQueue(nil, TThreadProcedure(procedure
-            begin
-              if Assigned(FormDextTestRunner) then
-                FormDextTestRunner.RunActiveProjectTests('', False);
-            end));
-        end;
-      end));
+      end;
+    end;
+    
+    if FPendingSaveFiles.Count > 0 then
+      TestsTreeView.FullExpand;
+  finally
+    TestsTreeView.Items.EndUpdate;
+    FPendingSaveFiles.Clear;
+  end;
+  
+  // Reset/Debounce the Idle timer upon saving a file
+  if FChkRunOnIdle.Checked and Assigned(FIdleTimer) then
+  begin
+    FIdleTimer.Enabled := False;
+    FIdleTimer.Enabled := True;
+  end;
+
+  if FChkRunOnSave.Checked and not FRunningTests and not FWaitingForCompile and (FRunningProcessHandle = 0) then
+  begin
+    RunActiveProjectTests('', False);
   end;
 end;
 
