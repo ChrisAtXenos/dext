@@ -110,6 +110,7 @@ type
     GroupByTestStatusMenuItem: TMenuItem;
     CreateaNewSessionMenuItem: TMenuItem;
     EnableDisableTestExplorerMenuItem: TMenuItem;
+    SummaryTotalTimeLabel: TLabel;
     procedure ActionsButtonClick(Sender: TObject);
     procedure ProjectsComboBoxChange(Sender: TObject);
     procedure RunAllButtonClick(Sender: TObject);
@@ -181,6 +182,7 @@ type
 
     // Execution Stopwatch & Counts
     FStopwatch: TStopwatch;
+    FTestExecutionDurationMs: Double;
     FPassedCount: Integer;
     FFailedCount: Integer;
     FSkippedCount: Integer;
@@ -212,6 +214,8 @@ type
     procedure TryLoadCoverage;
     procedure ApplyIDETheme;
     procedure OnTestResultReceived(const AJSONData: string);
+    function FormatTestDuration(const ADurationMs: Double): string;
+    procedure UpdateTimingLabels;
     procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
     function FindNodeByPath(const APath: string): TTreeNode;
     procedure ClearTestStatus;
@@ -800,7 +804,9 @@ begin
   SummarySuccessLabel.Caption := 'Passed: 0';
   SummaryFailedLabel.Caption := 'Failed: 0';
   SummarySkippedLabel.Caption := 'Skipped: 0';
-  SummaryTimeLabel.Caption := 'Time: 0.00 s';
+  SummaryTimeLabel.Caption := 'Tests: 0.0000 ms';
+  SummaryTotalTimeLabel.Caption := 'Total: 0.00 s';
+  FTestExecutionDurationMs := 0;
 
   EnableDisableTestExplorerMenuItem.OnClick := ToggleEnabledClick;
   ClearMenuItem.OnClick := ClearLogsClick;
@@ -2089,8 +2095,7 @@ var
       
       // Stop the stopwatch
       TStopwatch(FStopwatch).Stop;
-      var LElapsedSecs := TStopwatch(FStopwatch).Elapsed.TotalSeconds;
-      SummaryTimeLabel.Caption := Format('Time: %.2fs', [LElapsedSecs]);
+      UpdateTimingLabels;
 
       // Mark any remaining 'Idle' tests as 'Skipped'
       var LIdx: Integer;
@@ -2160,6 +2165,7 @@ var
       FPassedCount := 0;
       FFailedCount := 0;
       FSkippedCount := 0;
+      FTestExecutionDurationMs := 0;
 
       // Ensure all test locations exist in FTestDetails as Idle
       var LIdx: Integer;
@@ -2198,7 +2204,7 @@ var
       SummarySuccessLabel.Caption := 'Passed: 0';
       SummaryFailedLabel.Caption := 'Failed: 0';
       SummarySkippedLabel.Caption := 'Skipped: 0';
-      SummaryTimeLabel.Caption := 'Time: 0.00s';
+      UpdateTimingLabels;
 
       if FGroupingMode = tgmStatus then
         RefreshTreeView;
@@ -2275,7 +2281,8 @@ var
       SummarySuccessLabel.Caption := 'Passed: ' + FPassedCount.ToString;
       SummaryFailedLabel.Caption := 'Failed: ' + FFailedCount.ToString;
       SummarySkippedLabel.Caption := 'Skipped: ' + FSkippedCount.ToString;
-      SummaryTimeLabel.Caption := Format('Time: %.2fs', [TStopwatch(FStopwatch).Elapsed.TotalSeconds]);
+      FTestExecutionDurationMs := FTestExecutionDurationMs + LDurationMs;
+      UpdateTimingLabels;
     end;
     
     TTelemetryTracker.RecordTestResult(FActiveProjectFile, LTestName, LStatus, Round(LDurationMs));
@@ -2433,6 +2440,8 @@ begin
     
     CloseHandle(FRunningProcessHandle);
     FRunningProcessHandle := 0;
+    TStopwatch(FStopwatch).Stop;
+    UpdateTimingLabels;
     
     TTelemetryTracker.AnalyzeHistory(FActiveProjectFile, DetailsMemo);
     CollapseSuccessAndFocusFailures;
@@ -2631,10 +2640,12 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
+  FTestExecutionDurationMs := 0;
 
   // Start stopwatch
   TStopwatch(FStopwatch).Reset;
   TStopwatch(FStopwatch).Start;
+  UpdateTimingLabels;
 
   // Show progress immediately so the user knows something is happening
   if Assigned(FProgressPanel) then
@@ -2697,6 +2708,8 @@ begin
   if not FileExists(LExeFile) then
   begin
     LogMsg('Error: Executable not found at ' + LExeFile);
+    TStopwatch(FStopwatch).Stop;
+    UpdateTimingLabels;
     if Assigned(FProgressPanel) then FProgressPanel.Visible := False;
     Exit;
   end;
@@ -2788,6 +2801,20 @@ begin
   DetailsMemo.Update;
 end;
 
+procedure TFormDextTestRunner.UpdateTimingLabels;
+begin
+  SummaryTimeLabel.Caption := 'Tests: ' + FormatTestDuration(FTestExecutionDurationMs);
+  SummaryTotalTimeLabel.Caption := Format('Total: %.2fs', [TStopwatch(FStopwatch).Elapsed.TotalSeconds]);
+end;
+
+function TFormDextTestRunner.FormatTestDuration(const ADurationMs: Double): string;
+begin
+  if ADurationMs < 1000 then
+    Result := Format('%.4f ms', [ADurationMs])
+  else
+    Result := Format('%.2fs', [ADurationMs / 1000]);
+end;
+
 procedure TFormDextTestRunner.NotifyCompileComplete(ASucceeded: Boolean);
 begin
   if not FWaitingForCompile then Exit;
@@ -2797,6 +2824,8 @@ begin
   begin
     FRunningTests := False;
     LogMsg('❌ Compile failed — tests not executed.');
+    TStopwatch(FStopwatch).Stop;
+    UpdateTimingLabels;
     if Assigned(FProgressPanel) then
     begin
       FProgressLabel.Caption := 'Compile failed';
@@ -2900,6 +2929,8 @@ begin
           else
           begin
             LogMsg('Failed to launch runner: ' + LExeFile);
+            TStopwatch(FStopwatch).Stop;
+            UpdateTimingLabels;
           end;
         end;
       end;
@@ -2944,6 +2975,8 @@ begin
     FProgressBar.Position := 0;
     FProgressPanel.Visible := False;
   end;
+  TStopwatch(FStopwatch).Stop;
+  UpdateTimingLabels;
   
   LogMsg('Test execution stopped.');
 end;

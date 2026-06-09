@@ -3,7 +3,7 @@ object FormDextTestRunner: TFormDextTestRunner
   Top = 0
   Caption = 'Dext Test Explorer'
   ClientHeight = 500
-  ClientWidth = 541
+  ClientWidth = 571
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,7 +14,7 @@ object FormDextTestRunner: TFormDextTestRunner
   object NameSplitter: TSplitter
     Left = 0
     Top = 277
-    Width = 541
+    Width = 571
     Height = 3
     Cursor = crVSplit
     Align = alBottom
@@ -24,7 +24,7 @@ object FormDextTestRunner: TFormDextTestRunner
   object SessionsPageControl: TPageControl
     Left = 0
     Top = 66
-    Width = 541
+    Width = 571
     Height = 211
     ActivePage = DefaultSessionTabSheet
     Align = alClient
@@ -34,7 +34,7 @@ object FormDextTestRunner: TFormDextTestRunner
       object TestsTreeView: TTreeView
         Left = 0
         Top = 0
-        Width = 533
+        Width = 563
         Height = 183
         Align = alClient
         Indent = 19
@@ -47,7 +47,7 @@ object FormDextTestRunner: TFormDextTestRunner
   object DetailsPanel: TPanel
     Left = 0
     Top = 280
-    Width = 541
+    Width = 571
     Height = 220
     Align = alBottom
     BevelOuter = bvNone
@@ -55,7 +55,7 @@ object FormDextTestRunner: TFormDextTestRunner
     object DetailsMemo: TMemo
       Left = 0
       Top = 30
-      Width = 541
+      Width = 571
       Height = 190
       Align = alClient
       ReadOnly = True
@@ -65,7 +65,7 @@ object FormDextTestRunner: TFormDextTestRunner
     object SummaryPanel: TPanel
       Left = 0
       Top = 0
-      Width = 541
+      Width = 571
       Height = 30
       Align = alTop
       BevelOuter = bvNone
@@ -168,7 +168,7 @@ object FormDextTestRunner: TFormDextTestRunner
         AlignWithMargins = True
         Left = 360
         Top = 6
-        Width = 85
+        Width = 87
         Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
@@ -176,6 +176,24 @@ object FormDextTestRunner: TFormDextTestRunner
         Caption = 'Time: 9999.9999s'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+        ExplicitHeight = 13
+      end
+      object SummaryTotalTimeLabel: TLabel
+        AlignWithMargins = True
+        Left = 453
+        Top = 6
+        Width = 112
+        Height = 18
+        Margins.Top = 6
+        Margins.Bottom = 6
+        Align = alLeft
+        Caption = 'Total Time: 9999.9999s'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clGray
         Font.Height = -11
         Font.Name = 'Segoe UI'
         Font.Style = []
@@ -187,7 +205,7 @@ object FormDextTestRunner: TFormDextTestRunner
   object ButtonsPanel: TPanel
     Left = 0
     Top = 35
-    Width = 541
+    Width = 571
     Height = 31
     Margins.Left = 0
     Margins.Right = 0
@@ -241,7 +259,7 @@ object FormDextTestRunner: TFormDextTestRunner
     end
     object ActionsButton: TButton
       AlignWithMargins = True
-      Left = 513
+      Left = 543
       Top = 3
       Width = 25
       Height = 25
@@ -255,7 +273,7 @@ object FormDextTestRunner: TFormDextTestRunner
     AlignWithMargins = True
     Left = 3
     Top = 7
-    Width = 535
+    Width = 565
     Height = 21
     Margins.Top = 7
     Margins.Bottom = 7
