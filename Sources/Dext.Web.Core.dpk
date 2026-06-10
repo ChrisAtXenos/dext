@@ -31,7 +31,7 @@ package Dext.Web.Core;
 {$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I Dext.inc}
+//{$I Dext.inc}
 
 requires
   rtl,
@@ -41,9 +41,9 @@ requires
   Dext.Core,
   Dext.EF.Core,
   RESTComponents,
-{$IFDEF DEXT_ENABLE_WEB_STENCILS}
-  inetstn,
-{$ENDIF}
+//{$IFDEF DEXT_ENABLE_WEB_STENCILS}
+//  inetstn,
+//{$ENDIF}
   inet;
 
 contains
