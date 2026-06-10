@@ -289,7 +289,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure RunActiveProjectTests(const ATestFilter: string = ''; AAutoSave: Boolean = True);
+    procedure RunActiveProjectTests(const TestFilter: string = ''; AutoSave: Boolean = True);
     procedure RunImpactedTests(const ATests: TArray<string>);
     procedure HandleFileSaved(const AFileName: string);
     // Called by the IDE AfterCompile notifier
@@ -2035,7 +2035,6 @@ var
   LProj: IOTAProject;
   LProjInfo: TDextProjectInfo;
 begin
-  ResetSummaryLabels;
   UpdateSummaryCounts;
   if ProjectsComboBox.ItemIndex = -1 then Exit;
 
@@ -2409,7 +2408,9 @@ var
   end;
 
 begin
+{$IFDEF DEBUG}
   LogMsg('[Debug Payload] ' + AJSONData);
+{$ENDIF}
 
   LValue := TJSONObject.ParseJSONValue(AJSONData);
   if not Assigned(LValue) then Exit;
@@ -2729,24 +2730,25 @@ begin
   end;
 end;
 
-procedure TFormDextTestRunner.RunActiveProjectTests(const ATestFilter: string; AAutoSave: Boolean);
+procedure TFormDextTestRunner.RunActiveProjectTests(const TestFilter: string = ''; AutoSave: Boolean = True);
 var
-  LProj: IOTAProject;
-  LModuleServices: IOTAModuleServices;
-  LGroup: IOTAProjectGroup;
+  Group: IOTAProjectGroup;
+  ModuleServices: IOTAModuleServices;
+  Project: IOTAProject;
+  SaveServices: IOTAModuleServices;
 begin
   if ProjectsComboBox.ItemIndex = -1 then Exit;
-  LProj := GetProjectByFileName(FActiveProjectFile);
-  if not Assigned(LProj) then Exit;
+  Project := GetProjectByFileName(FActiveProjectFile);
+  if not Assigned(Project) then Exit;
 
   FRunningTests := True;
 
   // Synchronize IDE Active Project
-  if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) and Assigned(LModuleServices) then
+  if Supports(BorlandIDEServices, IOTAModuleServices, ModuleServices) and Assigned(ModuleServices) then
   begin
-    LGroup := LModuleServices.MainProjectGroup;
-    if Assigned(LGroup) and (LGroup.ActiveProject <> LProj) then
-      LGroup.ActiveProject := LProj;
+    Group := ModuleServices.MainProjectGroup;
+    if Assigned(Group) and (Group.ActiveProject <> Project) then
+      Group.ActiveProject := Project;
   end;
 
   ClearTestStatus;
@@ -2754,7 +2756,7 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
   FTestExecutionDurationMs := 0;
-  LogPerformance(Format('RunActiveProjectTests: start filter="%s" autoSave=%s', [ATestFilter, BoolToStr(AAutoSave, True)]));
+  LogPerformance(Format('RunActiveProjectTests: start filter="%s" autoSave=%s', [TestFilter, BoolToStr(AutoSave, True)]));
 
   // Start stopwatch
   TStopwatch(FStopwatch).Reset;
@@ -2771,6 +2773,7 @@ begin
     FProgressPanel.Visible := True;
     FProgressPanel.Update;
   end;
+
   if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
     FDetailsPageControl.ActivePage := FConsoleTab;
 
@@ -2778,18 +2781,17 @@ begin
   LogMsg('Project: ' + ExtractFileName(FActiveProjectFile));
 
   // Step 1: Save all editor buffers so IDE's make sees up-to-date timestamps
-  var LSaveServices: IOTAModuleServices;
-  if AAutoSave and Supports(BorlandIDEServices, IOTAModuleServices, LSaveServices) then
+  if AutoSave and Supports(BorlandIDEServices, IOTAModuleServices, SaveServices) then
   begin
     LogMsg('[1/3] Saving all modified files...');
-    LSaveServices.SaveAll;
+    SaveServices.SaveAll;
   end;
 
   // Step 2: Trigger the IDE's incremental make (async).
   //   The IDE knows exactly which files changed in the editor.
   //   Test launch happens in NotifyCompileComplete → AfterCompile notifier.
-  FPendingTestFilter  := ATestFilter;
-  FPendingProject     := LProj;
+  FPendingTestFilter  := TestFilter;
+  FPendingProject     := Project;
   FWaitingForCompile  := True;
 
   if Assigned(FProgressPanel) then
@@ -2801,7 +2803,7 @@ begin
   DetailsMemo.Update;
   LogPerformance('RunActiveProjectTests: before build');
 
-  LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
+  Project.ProjectBuilder.BuildProject(cmOTAMake, False, True);
   // Returns immediately — NotifyCompileComplete is called by Expert.AfterCompile
 end;
 
@@ -3037,8 +3039,8 @@ var
   CheckedTests: TArray<string>;
   SelectedCount: Integer;
 begin
+  ResetSummaryLabels;
   SummaryTotalLabel.Caption := 'Total: ' + FTestLocations.Count.ToString;
-
   CheckedTests := GetCheckedTests;
   SelectedCount := Length(CheckedTests);
   SummarySelectedLabel.Caption := 'Selected: ' + SelectedCount.ToString;
