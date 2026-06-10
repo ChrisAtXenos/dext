@@ -187,14 +187,12 @@ type
 implementation
 
 uses
+  {$IFDEF MSWINDOWS}
+  Winapi.Windows,
+  {$ENDIF}
   System.Math,
   System.Threading,
-  System.Diagnostics,
-  {$IFDEF MSWINDOWS}
-  Winapi.Windows;
-  {$ELSE}
-  System.Classes;
-  {$ENDIF}
+  System.Diagnostics;
 
 function GetTickCount64: UInt64;
 begin
