@@ -22,6 +22,27 @@ type
     StackTrace: string;
   end;
 
+  TGroupSummaryInfo = record
+    TotalCount: Integer;
+    PassedCount: Integer;
+    FailedCount: Integer;
+    DurationMs: Double;
+  end;
+
+  TTestTreeNodeInfo = class
+  public
+    FullTestName: string;
+    TestIndex: Integer;
+    Status: string;
+    DurationMs: Double;
+    IsGroup: Boolean;
+    GroupTestCount: Integer;
+    GroupPassedCount: Integer;
+    GroupFailedCount: Integer;
+    GroupDurationMs: Double;
+    constructor Create;
+  end;
+
   TDextProjectInfo = class
   public
     FileName: string;
@@ -118,6 +139,8 @@ type
     procedure StopButtonClick(Sender: TObject);
     procedure TestsTreeViewDblClick(Sender: TObject);
     procedure RefreshButtonClick(Sender: TObject);
+    procedure ExpandAllMenuItemClick(Sender: TObject);
+    procedure CollapseAllMenuItemClick(Sender: TObject);
   private
     FServer: TTestRunnerServer;
     FTestLocations: TList<TTestLocation>;
@@ -135,9 +158,11 @@ type
     // Sessions
     FSessions: TObjectList<TTestSession>;
     FActiveSession: TTestSession;
+    FGroupNodes: TDictionary<string, TTreeNode>;
 
     // Test Inspector components
     FTestDetails: TDictionary<string, TTestDetailInfo>;
+    FGroupSummaries: TDictionary<string, TGroupSummaryInfo>;
     FDetailsPageControl: TPageControl;
     FConsoleTab: TTabSheet;
     FInspectorTab: TTabSheet;
@@ -215,6 +240,12 @@ type
     procedure ApplyIDETheme;
     procedure OnTestResultReceived(const AJSONData: string);
     procedure UpdateTimingLabels;
+    procedure LogPerformance(const AMessage: string);
+    procedure InitializeGroupSummaries;
+    procedure UpdateGroupSummary(const ATestName, AStatus: string; ADurationMs: Double);
+    procedure InvalidateGroupNode(const ATestName: string);
+    procedure UpdateNodeResultCache(const ATestName, AStatus: string; ADurationMs: Double);
+    procedure UpdateTotalTimeLabel;
     procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
     function FindNodeByPath(const APath: string): TTreeNode;
     procedure ClearTestStatus;
@@ -244,6 +275,7 @@ type
     procedure IdleTimerTimer(Sender: TObject);
     procedure SaveTimerTimer(Sender: TObject);
     procedure ConfigChangeHandler(Sender: TObject);
+    procedure ExpandTestsTreeView;
 
     // Process handling
     function GetProjectByFileName(const AFileName: string): IOTAProject;
@@ -275,9 +307,16 @@ implementation
 
 {$R *.dfm}
 
+{.$DEFINE DEXT_TEST_EXPLORER_PERF_LOG}
+
 uses
   DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles,
   Winapi.CommCtrl, Dext.Testing.Report, Dext.Testing.Runner;
+
+{$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
+var
+  PerfLogLock: TObject;
+{$ENDIF}
 
 {$IF CompilerVersion < 35.0}
 type
@@ -449,6 +488,12 @@ constructor TDextProjectInfo.Create(const AFileName: string);
 begin
   inherited Create;
   FileName := AFileName;
+end;
+
+constructor TTestTreeNodeInfo.Create;
+begin
+  inherited Create;
+  TestIndex := -1;
 end;
 
 { TDextProjectNotifier }
@@ -677,6 +722,7 @@ begin
   FActiveProjectForNotifier := nil;
   FStopwatch := TStopwatch.Create;
   FScanCache := TObjectDictionary<string, TFileScanCache>.Create([doOwnsValues]);
+  FGroupNodes := TDictionary<string, TTreeNode>.Create;
 
   inherited Create(AOwner);
   Caption := 'Test Explorer' {$IFDEF DEBUG} + '(Compiled: ' + GetModuleBuildTime + ')'{$ENDIF};
@@ -747,6 +793,20 @@ begin
   LPopupMenu.Items.Add(LItem);
 
   LItem := TMenuItem.Create(LPopupMenu);
+  LItem.Caption := '-';
+  LPopupMenu.Items.Add(LItem);
+
+  LItem := TMenuItem.Create(LPopupMenu);
+  LItem.Caption := 'Expand All';
+  LItem.OnClick := ExpandAllMenuItemClick;
+  LPopupMenu.Items.Add(LItem);
+
+  LItem := TMenuItem.Create(LPopupMenu);
+  LItem.Caption := 'Collapse All';
+  LItem.OnClick := CollapseAllMenuItemClick;
+  LPopupMenu.Items.Add(LItem);
+
+  LItem := TMenuItem.Create(LPopupMenu);
   LItem.Caption := 'Go to Source';
   LItem.OnClick := TestsTreeViewDblClick;
   LPopupMenu.Items.Add(LItem);
@@ -765,6 +825,7 @@ begin
 
   // Initialize Inspector UI dynamically
   FTestDetails := TDictionary<string, TTestDetailInfo>.Create;
+  FGroupSummaries := TDictionary<string, TGroupSummaryInfo>.Create;
   FTotalTests := 0;
   FCompletedTests := 0;
 
@@ -1121,6 +1182,8 @@ begin
   FServer.Free;
   FSessions.Free;
   FTestDetails.Free;
+  FGroupSummaries.Free;
+  FGroupNodes.Free;
 
   if Assigned(FIdleTimer) then
     FIdleTimer.Free;
@@ -1182,8 +1245,11 @@ var
   i: Integer;
   ModifiedTimes: TArray<TDateTime>;
   Project: IOTAProject;
+  LStopwatch: TStopwatch;
 begin
   if not FEnabled then Exit;
+  LStopwatch := TStopwatch.StartNew;
+  LogPerformance('RefreshActiveProjectTestsList: begin');
   Project := GetProjectByFileName(FActiveProjectFile);
   if not Assigned(Project) then
   begin
@@ -1195,6 +1261,7 @@ begin
     finally
       TestsTreeView.Items.EndUpdate;
     end;
+    LogPerformance(Format('RefreshActiveProjectTestsList: no project %.2f ms', [LStopwatch.Elapsed.TotalMilliseconds]));
     Exit;
   end;
 
@@ -1248,6 +1315,7 @@ begin
       i: Integer;
     begin
       SetLength(LScannedLists, Length(FilesToScanArray));
+      LogPerformance(Format('RefreshActiveProjectTestsList: scan start (%d files)', [Length(FilesToScanArray)]));
 
       for i := 0 to Length(FilesToScanArray) - 1 do
       begin
@@ -1257,12 +1325,15 @@ begin
         else
           LScannedLists[i] := nil;
       end;
+      LogPerformance('RefreshActiveProjectTestsList: scan end');
 
       TThread.Queue(nil, TThreadProcedure(procedure
         var
           i: Integer;
           FileName: string;
+          LUiStopwatch: TStopwatch;
         begin
+          LUiStopwatch := TStopwatch.StartNew;
           if Generation <> FScanGeneration then
           begin
             for i := 0 to Length(LScannedLists) - 1 do
@@ -1299,6 +1370,11 @@ begin
           finally
             TestsTreeView.Items.EndUpdate;
           end;
+          TThread.ForceQueue(nil, TThreadProcedure(procedure
+            begin
+              ExpandTestsTreeView;
+            end));
+          LogPerformance(Format('RefreshActiveProjectTestsList: ui rebuild %.2f ms, total %.2f ms', [LUiStopwatch.Elapsed.TotalMilliseconds, LStopwatch.Elapsed.TotalMilliseconds]));
         end));
     end));
 end;
@@ -2174,6 +2250,7 @@ var
       FFailedCount := 0;
       FSkippedCount := 0;
       FTestExecutionDurationMs := 0;
+      InitializeGroupSummaries;
 
       // Ensure all test locations exist in FTestDetails as Idle
       var LIdx: Integer;
@@ -2212,7 +2289,7 @@ var
       SummarySuccessLabel.Caption := 'Passed: 0';
       SummaryFailedLabel.Caption := 'Failed: 0';
       SummarySkippedLabel.Caption := 'Skipped: 0';
-      UpdateTimingLabels;
+      UpdateTotalTimeLabel;
 
       if FGroupingMode = tgmStatus then
         RefreshTreeView;
@@ -2290,10 +2367,11 @@ var
       SummaryFailedLabel.Caption := 'Failed: ' + FFailedCount.ToString;
       SummarySkippedLabel.Caption := 'Skipped: ' + FSkippedCount.ToString;
       FTestExecutionDurationMs := FTestExecutionDurationMs + LDurationMs;
-      UpdateTimingLabels;
+      UpdateTotalTimeLabel;
     end;
 
     TTelemetryTracker.RecordTestResult(FActiveProjectFile, LTestName, LStatus, Round(LDurationMs));
+    UpdateNodeResultCache(LTestName, LStatus, LDurationMs);
 
     UpdateTestNode(LTestName, LStatus, LMsg, LStackTrace);
 
@@ -2510,8 +2588,11 @@ end;
 procedure TFormDextTestRunner.TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
 var
   LKey: string;
+  LStopwatch: TStopwatch;
+  LRect: TRect;
 begin
   if not Assigned(Node) then Exit;
+  LStopwatch := TStopwatch.StartNew;
 
   LKey := GetNodeFullTestName(Node);
   UpdateTestInspector(LKey);
@@ -2520,6 +2601,11 @@ begin
     if FDetailsPageControl.Visible then
       FDetailsPageControl.ActivePage := FInspectorTab;
   end;
+  LRect := Node.DisplayRect(True);
+  LRect.Right := TestsTreeView.ClientWidth;
+  InvalidateRect(TestsTreeView.Handle, @LRect, True);
+  if LStopwatch.Elapsed.TotalMilliseconds > 5 then
+    LogPerformance(Format('TestsTreeViewChange slow %.2f ms: %s', [LStopwatch.Elapsed.TotalMilliseconds, LKey]));
 end;
 
 procedure TFormDextTestRunner.UpdateTestInspector(const ATestName: string);
@@ -2529,21 +2615,31 @@ var
   LNode: TTreeNode;
   LIdx: Integer;
   LLoc: TTestLocation;
+  LStopwatch: TStopwatch;
+  LRealLine: Integer;
 begin
+  LStopwatch := TStopwatch.StartNew;
   if not Assigned(FLblTestName) then Exit;
   FLblTestName.Caption := 'Test Name: ' + ATestName;
   FMemoError.Clear;
 
   // Set default Location
   FLblLocation.Caption := 'Location: Unknown';
-  LNode := FindNodeByPath(ATestName);
+  LNode := nil;
+  if Assigned(TestsTreeView) and Assigned(TestsTreeView.Selected) and
+    SameText(GetNodeFullTestName(TestsTreeView.Selected), ATestName) then
+    LNode := TestsTreeView.Selected;
+
+  if not Assigned(LNode) then
+    LNode := FindNodeByPath(ATestName);
+
   if Assigned(LNode) and (LNode.Data <> nil) then
   begin
     LIdx := Integer(LNode.Data) - 1;
     if (LIdx >= 0) and (LIdx < FTestLocations.Count) then
     begin
       LLoc := FTestLocations[LIdx];
-      var LRealLine := FindMethodImplementationLine(LLoc.FileName, LLoc.ClassName, LLoc.MethodName, LLoc.Line);
+      LRealLine := FindMethodImplementationLine(LLoc.FileName, LLoc.ClassName, LLoc.MethodName, LLoc.Line);
       FLblLocation.Caption := Format('Location: %s (Line %d)', [ExtractFileName(LLoc.FileName), LRealLine]);
     end;
   end;
@@ -2589,6 +2685,8 @@ begin
     FLblStatus.Font.Color := clWindowText;
     FLblDuration.Caption := 'Duration: N/A';
   end;
+  if LStopwatch.Elapsed.TotalMilliseconds > 5 then
+    LogPerformance(Format('UpdateTestInspector slow %.2f ms: %s', [LStopwatch.Elapsed.TotalMilliseconds, ATestName]));
 end;
 
 procedure TFormDextTestRunner.ClearTestStatus;
@@ -2598,6 +2696,10 @@ var
 begin
   if Assigned(FTestDetails) then
     FTestDetails.Clear;
+  if Assigned(FGroupSummaries) then
+    FGroupSummaries.Clear;
+  if Assigned(FGroupNodes) then
+    FGroupNodes.Clear;
   if Assigned(FLblTestName) then
   begin
     FLblTestName.Caption := 'Test Name: Select a test...';
@@ -2649,11 +2751,12 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
   FTestExecutionDurationMs := 0;
+  LogPerformance(Format('RunActiveProjectTests: start filter="%s" autoSave=%s', [ATestFilter, BoolToStr(AAutoSave, True)]));
 
   // Start stopwatch
   TStopwatch(FStopwatch).Reset;
   TStopwatch(FStopwatch).Start;
-  UpdateTimingLabels;
+  UpdateTotalTimeLabel;
 
   // Show progress immediately so the user knows something is happening
   if Assigned(FProgressPanel) then
@@ -2693,6 +2796,7 @@ begin
   end;
   LogMsg('[2/3] Starting incremental compile (IDE make)...');
   DetailsMemo.Update;
+  LogPerformance('RunActiveProjectTests: before build');
 
   LProj.ProjectBuilder.BuildProject(cmOTAMake, False, True);
   // Returns immediately — NotifyCompileComplete is called by Expert.AfterCompile
@@ -2809,10 +2913,126 @@ begin
   DetailsMemo.Update;
 end;
 
+procedure TFormDextTestRunner.LogPerformance(const AMessage: string);
+{$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
+var
+  Line: string;
+  LogFile: string;
+{$ENDIF}
+begin
+{$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
+  Line := Format('[%s] %s', [FormatDateTime('hh:nn:ss.zzz', Now), AMessage]);
+  LogFile := TPath.Combine(TPath.GetTempPath, 'DextTestExplorer.perf.log');
+  try
+    System.TMonitor.Enter(PerfLogLock);
+    try
+      TFile.AppendAllText(LogFile, Line + sLineBreak, TEncoding.UTF8);
+    finally
+      System.TMonitor.Exit(PerfLogLock);
+    end;
+  except
+    // ignore logging failures
+  end;
+{$ELSE}
+  if AMessage = '' then;
+{$ENDIF}
+end;
+
+procedure TFormDextTestRunner.InitializeGroupSummaries;
+var
+  LIdx: Integer;
+  LTest: TTestLocation;
+  LKey: string;
+  LInfo: TGroupSummaryInfo;
+begin
+  if not Assigned(FGroupSummaries) then Exit;
+  FGroupSummaries.Clear;
+  for LIdx := 0 to FTestLocations.Count - 1 do
+  begin
+    LTest := FTestLocations[LIdx];
+    LKey := LTest.ClassName;
+    if not FGroupSummaries.TryGetValue(LKey, LInfo) then
+    begin
+      LInfo.TotalCount := 0;
+      LInfo.PassedCount := 0;
+      LInfo.FailedCount := 0;
+      LInfo.DurationMs := 0;
+    end;
+    Inc(LInfo.TotalCount);
+    FGroupSummaries.AddOrSetValue(LKey, LInfo);
+  end;
+end;
+
+procedure TFormDextTestRunner.UpdateGroupSummary(const ATestName, AStatus: string; ADurationMs: Double);
+var
+  LClassName: string;
+  LDotPos: Integer;
+  LInfo: TGroupSummaryInfo;
+  LIdx: Integer;
+  LTest: TTestLocation;
+begin
+  if not Assigned(FGroupSummaries) then Exit;
+  LDotPos := ATestName.IndexOf('.');
+  if LDotPos <= 0 then Exit;
+  LClassName := ATestName.Substring(0, LDotPos);
+  if not FGroupSummaries.TryGetValue(LClassName, LInfo) then
+  begin
+    LInfo.TotalCount := 0;
+    LInfo.PassedCount := 0;
+    LInfo.FailedCount := 0;
+    LInfo.DurationMs := 0;
+
+    for LIdx := 0 to FTestLocations.Count - 1 do
+    begin
+      LTest := FTestLocations[LIdx];
+      if SameText(LTest.ClassName, LClassName) then
+        Inc(LInfo.TotalCount);
+    end;
+  end;
+
+  if SameText(AStatus, 'Passed') then
+    Inc(LInfo.PassedCount)
+  else if SameText(AStatus, 'Failed') or SameText(AStatus, 'Error') then
+    Inc(LInfo.FailedCount);
+  LInfo.DurationMs := LInfo.DurationMs + ADurationMs;
+  FGroupSummaries.AddOrSetValue(LClassName, LInfo);
+end;
+
+procedure TFormDextTestRunner.InvalidateGroupNode(const ATestName: string);
+var
+  DotPos: Integer;
+  Node: TTreeNode;
+  NodeRect: TRect;
+  TestClassName: string;
+begin
+  if not Assigned(TestsTreeView) then Exit;
+  DotPos := ATestName.IndexOf('.');
+  if DotPos <= 0 then Exit;
+  TestClassName := ATestName.Substring(0, DotPos);
+  Node := FindNodeByPath(TestClassName);
+  if Assigned(Node) then
+  begin
+    NodeRect := Node.DisplayRect(True);
+    NodeRect.Right := TestsTreeView.ClientWidth;
+    InvalidateRect(TestsTreeView.Handle, @NodeRect, True);
+  end;
+end;
+
+procedure TFormDextTestRunner.UpdateNodeResultCache(const ATestName, AStatus: string; ADurationMs: Double);
+begin
+  UpdateGroupSummary(ATestName, AStatus, ADurationMs);
+  InvalidateGroupNode(ATestName);
+end;
+
+procedure TFormDextTestRunner.UpdateTotalTimeLabel;
+begin
+  SummaryTotalTimeLabel.Caption := Format('Total: %.2fs', [TStopwatch(FStopwatch).Elapsed.TotalSeconds]);
+end;
+
 procedure TFormDextTestRunner.UpdateTimingLabels;
 begin
   SummaryTimeLabel.Caption := Format('Tests: %.2fs', [FTestExecutionDurationMs / 1000]);
-  SummaryTotalTimeLabel.Caption := Format('Total: %.2fs', [TStopwatch(FStopwatch).Elapsed.TotalSeconds]);
+  UpdateTotalTimeLabel;
 end;
 
 procedure TFormDextTestRunner.NotifyCompileComplete(ASucceeded: Boolean);
@@ -2954,6 +3174,18 @@ begin
   end
   else
     RunActiveProjectTests;
+end;
+
+procedure TFormDextTestRunner.ExpandAllMenuItemClick(Sender: TObject);
+begin
+  ExpandTestsTreeView;
+end;
+
+procedure TFormDextTestRunner.CollapseAllMenuItemClick(Sender: TObject);
+begin
+  TestsTreeView.Items.BeginUpdate;
+  TestsTreeView.FullCollapse;
+  TestsTreeView.Items.EndUpdate;
 end;
 
 procedure TFormDextTestRunner.StopButtonClick(Sender: TObject);
@@ -3261,9 +3493,22 @@ function TFormDextTestRunner.GetNodeFullTestName(ANode: TTreeNode): string;
 var
   LParentText: string;
   LSpaceIdx: Integer;
+  LTestIndex: Integer;
+  LTestLocation: TTestLocation;
 begin
   Result := '';
   if not Assigned(ANode) then Exit;
+
+  if (ANode.Data <> nil) and Assigned(FTestLocations) then
+  begin
+    LTestIndex := Integer(ANode.Data) - 1;
+    if (LTestIndex >= 0) and (LTestIndex < FTestLocations.Count) then
+    begin
+      LTestLocation := FTestLocations[LTestIndex];
+      Result := LTestLocation.ClassName + '.' + LTestLocation.MethodName;
+      Exit;
+    end;
+  end;
 
   if FGroupingMode = tgmStatus then
   begin
@@ -3486,10 +3731,14 @@ var
   LInfo: TTestDetailInfo;
   LStatus: string;
   LTargetRoot: TTreeNode;
+  LFixtureNodeCache: TDictionary<string, TTreeNode>;
 begin
   TestsTreeView.Items.BeginUpdate;
   try
     TestsTreeView.Items.Clear;
+    InitializeGroupSummaries;
+    LFixtureNodeCache := TDictionary<string, TTreeNode>.Create;
+    try
     LFilter := '';
     LActiveFilterEdit := ActiveFilterEdit;
     if Assigned(LActiveFilterEdit) then
@@ -3599,12 +3848,12 @@ begin
 
           if LClassMatches or LMethodMatches then
           begin
-            LFixtureNode := FindNodeByPath(LTest.ClassName);
-            if not Assigned(LFixtureNode) then
+            if not LFixtureNodeCache.TryGetValue(LTest.ClassName, LFixtureNode) then
             begin
               LFixtureNode := TestsTreeView.Items.AddChild(nil, LTest.ClassName);
               LFixtureNode.ImageIndex := 3;
               LFixtureNode.SelectedIndex := 3;
+              LFixtureNodeCache.Add(LTest.ClassName, LFixtureNode);
             end;
 
             LMethodNode := TestsTreeView.Items.AddChild(LFixtureNode, LTest.MethodName);
@@ -3642,7 +3891,9 @@ begin
       end;
     end;
 
-    TestsTreeView.FullExpand;
+    finally
+      LFixtureNodeCache.Free;
+    end;
   finally
     TestsTreeView.Items.EndUpdate;
   end;
@@ -3657,13 +3908,13 @@ var
   LCountText: string;
   LFailedCount: Integer;
   LPassedCount: Integer;
-  J: Integer;
-  LChildFull: string;
-  LChildInfo: TTestDetailInfo;
+  LTotalDuration: Double;
+  LHasDuration: Boolean;
   LFullTestName: string;
   LInfo: TTestDetailInfo;
   LDurText: string;
   LErrText: string;
+  LSummary: TGroupSummaryInfo;
 begin
   DefaultDraw := True;
 
@@ -3691,34 +3942,20 @@ begin
     if Node.Parent = nil then
     begin
       LClassName := Node.Text;
-
-      // Calculate total duration and status counts for the group
       LFailedCount := 0;
       LPassedCount := 0;
-      var LTotalDuration: Double := 0;
-      var LHasDuration: Boolean := False;
-      for J := 0 to Node.Count - 1 do
+      LTotalDuration := 0;
+      LHasDuration := False;
+      if Assigned(FGroupSummaries) and FGroupSummaries.TryGetValue(LClassName, LSummary) then
       begin
-        LChildFull := LClassName + '.' + Node.Item[J].Text;
-        if FTestDetails.TryGetValue(LChildFull, LChildInfo) then
-        begin
-          if SameText(LChildInfo.Status, 'Failed') or SameText(LChildInfo.Status, 'Error') then
-            Inc(LFailedCount)
-          else if SameText(LChildInfo.Status, 'Passed') then
-            Inc(LPassedCount);
-          if LChildInfo.DurationMs > 0 then
-          begin
-            LTotalDuration := LTotalDuration + LChildInfo.DurationMs;
-            LHasDuration := True;
-          end;
-        end;
+        LFailedCount := LSummary.FailedCount;
+        LPassedCount := LSummary.PassedCount;
+        LTotalDuration := LSummary.DurationMs;
+        LHasDuration := LSummary.DurationMs > 0;
       end;
 
-      // Draw (N Testes) or (N Testes em T ms)
-      if cdsSelected in State then
-        Sender.Canvas.Font.Color := clHighlightText
-      else
-        Sender.Canvas.Font.Color := clGrayText;
+      // Draw (N Tests in X ms) and execution status
+      Sender.Canvas.Font.Color := clGrayText;
       Sender.Canvas.Font.Style := [];
 
       if LHasDuration then
@@ -3730,18 +3967,12 @@ begin
 
       if LFailedCount > 0 then
       begin
-        if cdsSelected in State then
-          Sender.Canvas.Font.Color := clHighlightText
-        else
-          Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
+        Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
         Sender.Canvas.TextOut(LTextX, LTextY, 'Failed: ' + LFailedCount.ToString + ' tests failed');
       end
       else if (LPassedCount > 0) and (LPassedCount = Node.Count) then
       begin
-        if cdsSelected in State then
-          Sender.Canvas.Font.Color := clHighlightText
-        else
-          Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
+        Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
         Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
       end;
     end
@@ -3755,28 +3986,19 @@ begin
         else
           LDurText := Format('[%.2f ms]', [LInfo.DurationMs]);
 
-        if cdsSelected in State then
-          Sender.Canvas.Font.Color := clHighlightText
-        else
-          Sender.Canvas.Font.Color := clGrayText;
+        Sender.Canvas.Font.Color := clGrayText;
         Sender.Canvas.Font.Style := [];
         Sender.Canvas.TextOut(LTextX, LTextY, LDurText);
         LTextX := LTextX + Sender.Canvas.TextWidth(LDurText) + 6;
 
         if SameText(LInfo.Status, 'Passed') then
         begin
-          if cdsSelected in State then
-            Sender.Canvas.Font.Color := clHighlightText
-          else
-            Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
+          Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
           Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
         end
         else if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
         begin
-          if cdsSelected in State then
-            Sender.Canvas.Font.Color := clHighlightText
-          else
-            Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
+          Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
           LErrText := 'Failed';
           if LInfo.ErrorMessage <> '' then
             LErrText := 'Failed: ' + LInfo.ErrorMessage.Replace(#13, '').Replace(#10, ' ');
@@ -3813,11 +4035,12 @@ var
   LExeFile: string;
   LModuleServices: IOTAModuleServices;
   LGroup: IOTAProjectGroup;
+  LProjInfo: TDextProjectInfo;
 begin
   LNode := TestsTreeView.Selected;
   if not Assigned(LNode) then Exit;
 
-  var LProjInfo := TDextProjectInfo(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]);
+  LProjInfo := TDextProjectInfo(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]);
   if not Assigned(LProjInfo) then Exit;
   LProj := GetProjectByFileName(LProjInfo.FileName);
   if not Assigned(LProj) then Exit;
@@ -4432,7 +4655,7 @@ begin
     end;
 
     if FPendingSaveFiles.Count > 0 then
-      TestsTreeView.FullExpand;
+      ExpandTestsTreeView;
   finally
     TestsTreeView.Items.EndUpdate;
     FPendingSaveFiles.Clear;
@@ -4646,6 +4869,21 @@ begin
   CreateNewSession('Session ' + (FSessions.Count + 1).ToString);
 end;
 
+procedure TFormDextTestRunner.ExpandTestsTreeView;
+begin
+  if Assigned(TestsTreeView) then
+  begin
+    if TestsTreeView.Items.Count > 0 then
+    begin
+      TestsTreeView.Selected := TestsTreeView.Items[0];
+      TestsTreeView.Items[0].MakeVisible;
+      TestsTreeView.Invalidate;
+    end;
+    TestsTreeView.FullExpand;
+    TestsTreeView.Invalidate;
+  end;
+end;
+
 procedure TFormDextTestRunner.ResetSummaryLabels;
 begin
   SummaryTotalLabel.Caption := 'Total: 0';
@@ -4659,9 +4897,15 @@ begin
 end;
 
 initialization
+{$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
+  PerfLogLock := TObject.Create;
+{$ENDIF}
   RegisterDockableForm;
 
 finalization
+{$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
+  PerfLogLock.Free;
+{$ENDIF}
   UnregisterDockableForm;
 
 end.
