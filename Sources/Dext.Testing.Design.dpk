@@ -26,6 +26,7 @@ package Dext.Testing.Design;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext Framework - Native IDE Test Explorer & Runner'}
+{$LIBSUFFIX AUTO}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 

@@ -26,6 +26,7 @@ package Dext.Testing;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext Framework - Testing Utilities (Mocking, Interception, Assertions)'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 {$I Dext.inc}
