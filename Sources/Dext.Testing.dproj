@@ -3,7 +3,7 @@
         <ProjectGuid>{F41CC71D-7F45-4145-9FAA-799A34D175EA}</ProjectGuid>
         <MainSource>Dext.Testing.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>131</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>VCL</FrameworkType>
