@@ -3998,30 +3998,33 @@ begin
       LFullTestName := GetNodeFullTestName(Node);
       if FTestDetails.TryGetValue(LFullTestName, LInfo) then
       begin
-        if LInfo.DurationMs < 1.0 then
-          LDurText := Format('[%.3f ms]', [LInfo.DurationMs])
-        else
-          LDurText := Format('[%.2f ms]', [LInfo.DurationMs]);
-
-        Sender.Canvas.Font.Color := clGrayText;
-        Sender.Canvas.Font.Style := [];
-        Sender.Canvas.TextOut(LTextX, LTextY, LDurText);
-        LTextX := LTextX + Sender.Canvas.TextWidth(LDurText) + 6;
-
-        if SameText(LInfo.Status, 'Passed') then
+        if LInfo.DurationMs > 0 then
         begin
-          Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
-          Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
-        end
-        else if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
-        begin
-          Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
-          LErrText := 'Failed';
-          if LInfo.ErrorMessage <> '' then
-            LErrText := 'Failed: ' + LInfo.ErrorMessage.Replace(#13, '').Replace(#10, ' ');
-          if Length(LErrText) > 60 then
-            LErrText := Copy(LErrText, 1, 57) + '...';
-          Sender.Canvas.TextOut(LTextX, LTextY, LErrText);
+          if LInfo.DurationMs < 1.0 then
+            LDurText := Format('[%.3f ms]', [LInfo.DurationMs])
+          else
+            LDurText := Format('[%.2f ms]', [LInfo.DurationMs]);
+
+          Sender.Canvas.Font.Color := clGrayText;
+          Sender.Canvas.Font.Style := [];
+          Sender.Canvas.TextOut(LTextX, LTextY, LDurText);
+          LTextX := LTextX + Sender.Canvas.TextWidth(LDurText) + 6;
+
+          if SameText(LInfo.Status, 'Passed') then
+          begin
+            Sender.Canvas.Font.Color := TColor($5EC522); // Green BGR
+            Sender.Canvas.TextOut(LTextX, LTextY, 'Success');
+          end
+          else if SameText(LInfo.Status, 'Failed') or SameText(LInfo.Status, 'Error') then
+          begin
+            Sender.Canvas.Font.Color := TColor($4444EF); // Red BGR
+            LErrText := 'Failed';
+            if LInfo.ErrorMessage <> '' then
+              LErrText := 'Failed: ' + LInfo.ErrorMessage.Replace(#13, '').Replace(#10, ' ');
+            if Length(LErrText) > 60 then
+              LErrText := Copy(LErrText, 1, 57) + '...';
+            Sender.Canvas.TextOut(LTextX, LTextY, LErrText);
+          end;
         end;
       end;
 
