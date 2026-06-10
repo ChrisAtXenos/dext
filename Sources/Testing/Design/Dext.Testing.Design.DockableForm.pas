@@ -2911,10 +2911,11 @@ end;
 
 procedure TFormDextTestRunner.LogMsg(const AMsg: string);
 begin
-  if AMsg = '' then
-    DetailsMemo.Lines.Add('')
-  else
-    DetailsMemo.Lines.Add(Format('[%s] %s', [FormatDateTime('hh:nn:ss.zzz', Now), AMsg]));
+  {$IFDEF DEBUG}
+  DetailsMemo.Lines.Add(Format('[%s] %s', [FormatDateTime('hh:nn:ss.zzz', Now), AMsg]));
+  {$ELSE}
+  DetailsMemo.Lines.Add(AMsg);
+  {$ENDIF}
   DetailsMemo.Update;
 end;
 
