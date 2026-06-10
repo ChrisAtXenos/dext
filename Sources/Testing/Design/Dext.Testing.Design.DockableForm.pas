@@ -246,6 +246,7 @@ type
     procedure InvalidateGroupNode(const ATestName: string);
     procedure UpdateNodeResultCache(const ATestName, AStatus: string; ADurationMs: Double);
     procedure UpdateTotalTimeLabel;
+    procedure UpdateSummaryCounts;
     procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
     function FindNodeByPath(const APath: string): TTreeNode;
     procedure ClearTestStatus;
@@ -2034,6 +2035,8 @@ var
   LProj: IOTAProject;
   LProjInfo: TDextProjectInfo;
 begin
+  ResetSummaryLabels;
+  UpdateSummaryCounts;
   if ProjectsComboBox.ItemIndex = -1 then Exit;
 
   LProjInfo := TDextProjectInfo(ProjectsComboBox.Items.Objects[ProjectsComboBox.ItemIndex]);
@@ -3029,6 +3032,18 @@ begin
   SummaryTotalTimeLabel.Caption := Format('Total: %.2fs', [TStopwatch(FStopwatch).Elapsed.TotalSeconds]);
 end;
 
+procedure TFormDextTestRunner.UpdateSummaryCounts;
+var
+  CheckedTests: TArray<string>;
+  SelectedCount: Integer;
+begin
+  SummaryTotalLabel.Caption := 'Total: ' + FTestLocations.Count.ToString;
+
+  CheckedTests := GetCheckedTests;
+  SelectedCount := Length(CheckedTests);
+  SummarySelectedLabel.Caption := 'Selected: ' + SelectedCount.ToString;
+end;
+
 procedure TFormDextTestRunner.UpdateTimingLabels;
 begin
   SummaryTimeLabel.Caption := Format('Tests: %.2fs', [FTestExecutionDurationMs / 1000]);
@@ -3421,6 +3436,7 @@ begin
               end;
               LParent.Checked := LAnyChecked;
             end;
+            UpdateSummaryCounts;
             TestsTreeView.Invalidate;
           end));
       end;
@@ -3482,6 +3498,7 @@ begin
               end;
               LParent.Checked := LAnyChecked;
             end;
+            UpdateSummaryCounts;
             TestsTreeView.Invalidate;
           end));
       end;
