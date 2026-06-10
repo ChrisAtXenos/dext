@@ -2,7 +2,7 @@ unit Dext.Entity.Drivers.FireDAC.Links;
 
 interface
 
-{$I Dext.inc}
+{$I ..\Dext.inc}
 
 uses
   // Standard Drivers (Commonly available)

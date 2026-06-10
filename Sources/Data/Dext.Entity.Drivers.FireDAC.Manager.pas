@@ -2,7 +2,7 @@ unit Dext.Entity.Drivers.FireDAC.Manager;
 
 interface
 
-{$I Dext.inc}
+{$I ..\Dext.inc}
 
 uses
   System.SysUtils,

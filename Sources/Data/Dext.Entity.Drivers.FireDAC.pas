@@ -27,7 +27,7 @@ unit Dext.Entity.Drivers.FireDAC;
 
 interface
 
-{$I Dext.inc}
+{$I ..\Dext.inc}
 
 uses
   Data.DB,

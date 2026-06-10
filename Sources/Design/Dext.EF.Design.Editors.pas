@@ -2,7 +2,7 @@ unit Dext.EF.Design.Editors;
 
 interface
 
-{$I Dext.Inc}
+{$I ..\Dext.Inc}
 
 uses
   Data.DB,
