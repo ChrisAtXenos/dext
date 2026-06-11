@@ -1013,6 +1013,13 @@ begin
   end;
 end;
 
+initialization
+
+finalization
+  // Clear the global interface pointer raw (without calling @IntfClear / _Release)
+  // because the package hosting the actual closure object might have already been unloaded.
+  PPointer(@PrototypeFactory)^ := nil;
+
 end.
 
 

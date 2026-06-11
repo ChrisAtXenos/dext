@@ -313,10 +313,14 @@ type
   public
     constructor Create(Field: TField; DataSet: TEntityDataSet; Mode: TBlobStreamMode);
     destructor Destroy; override;
-    {$IF Sizeof(LongInt) <> Sizeof(NativeInt)}
+    {$IF (CompilerVersion >= 35.0) and (Sizeof(LongInt) <> Sizeof(NativeInt))}
     function Write(const Buffer; Count: Longint): Longint; override;
     {$ENDIF}
+    {$IF CompilerVersion >= 35.0}
     function Write(const Buffer; Count: TNativeCount): TNativeCount; override;
+    {$ELSE}
+    function Write(const Buffer; Count: Longint): Longint; override;
+    {$IFEND}
   end;
 
 function TValueBufferToValue(ABuffer: TValueBuffer; ADataType: TFieldType): TValue;
@@ -743,7 +747,7 @@ begin
   inherited Destroy;
 end;
 
-{$IF Sizeof(LongInt) <> Sizeof(NativeInt)}
+{$IF (CompilerVersion >= 35.0) and (Sizeof(LongInt) <> Sizeof(NativeInt))}
 function TEntityBlobStream.Write(const Buffer; Count: Longint): Longint;
 begin
   Result := inherited Write(Buffer, Count);
@@ -751,11 +755,19 @@ begin
 end;
 {$ENDIF}
 
+{$IF CompilerVersion >= 35.0}
 function TEntityBlobStream.Write(const Buffer; Count: TNativeCount): TNativeCount;
 begin
   Result := inherited Write(Buffer, Count);
   FModified := True;
 end;
+{$ELSE}
+function TEntityBlobStream.Write(const Buffer; Count: Longint): Longint;
+begin
+  Result := inherited Write(Buffer, Count);
+  FModified := True;
+end;
+{$IFEND}
 
 procedure TEntityDataSet.Load(const AItems: IObjectList; AClass: TClass; AOwns: Boolean = False);
 begin
