@@ -7,7 +7,7 @@
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
-        <TargetedPlatforms>131</TargetedPlatforms>
+        <TargetedPlatforms>32899</TargetedPlatforms>
         <AppType>Package</AppType>
         <ProjectName Condition="'$(ProjectName)'==''">Dext.AST</ProjectName>
     </PropertyGroup>
@@ -1057,7 +1057,7 @@
             </Deployment>
             <Platforms>
                 <Platform value="Android">False</Platform>
-                <Platform value="Android64">False</Platform>
+                <Platform value="Android64">True</Platform>
                 <Platform value="Linux64">True</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
