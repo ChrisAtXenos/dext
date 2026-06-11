@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{42BED2E0-CA2D-4F52-BF35-9F9008B226A5}</ProjectGuid>
         <MainSource>Dext.Core.dpk</MainSource>
@@ -68,9 +68,8 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
         <DCC_DcpOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <PreBuildEvent><![CDATA[copy /Y ".\Dext.inc" "..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc"
-$(PreBuildEvent)]]></PreBuildEvent>
+        <DCC_UnitSearchPath>Common;..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DllSuffix>$(Auto)</DllSuffix>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <VerInfo_Keys>package=com.embarcadero.$(MSBuildProjectName);label=$(MSBuildProjectName);versionCode=1;versionName=1.0.0;persistent=False;restoreAnyVersion=False;installLocation=auto;largeHeap=False;theme=TitleBar;hardwareAccelerated=true;apiKey=;minSdkVersion=23;targetSdkVersion=36</VerInfo_Keys>
@@ -1144,100 +1143,4 @@ $(PreBuildEvent)]]></PreBuildEvent>
     <Import Project="$(BDS)\Bin\CodeGear.Delphi.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')"/>
     <Import Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj" Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')"/>
     <Import Project="$(MSBuildProjectName).deployproj" Condition="Exists('$(MSBuildProjectName).deployproj')"/>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Android'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Android64'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Linux64'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win32'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win64'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win64x'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Android'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Android64'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Linux64'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win32'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win64'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win64x'">
-        <PreBuildEvent>copy /Y &quot;.\Dext.inc&quot; &quot;..\Output\$(ProductVersion)_$(Platform)_$(Config)\Dext.inc&quot;</PreBuildEvent>
-        <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
-        <PreLinkEvent/>
-        <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
-        <PostBuildEvent/>
-        <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
-    </PropertyGroup>
 </Project>

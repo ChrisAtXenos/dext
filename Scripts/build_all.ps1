@@ -51,6 +51,7 @@ $MSBuildArgs = @(
     $GroupProj,
     "/t:Build",
     "/p:Configuration=$env:BUILD_CONFIG",
+    "/p:Config=$env:BUILD_CONFIG",
     "/p:Platform=$env:PLATFORM",
     "/p:ProductVersion=$env:PRODUCT_VERSION",
     "/p:DCC_DcuOutput=`"$env:OUTPUT_PATH`"",

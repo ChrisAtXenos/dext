@@ -29,7 +29,6 @@ package Dext.Testing;
 {$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I Dext.inc}
 
 requires
   rtl,

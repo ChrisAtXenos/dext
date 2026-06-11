@@ -31,7 +31,6 @@ package Dext.Web.Core;
 {$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I Dext.inc}
 
 requires
   rtl,
