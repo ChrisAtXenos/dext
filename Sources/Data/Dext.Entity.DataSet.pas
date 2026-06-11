@@ -313,10 +313,10 @@ type
   public
     constructor Create(Field: TField; DataSet: TEntityDataSet; Mode: TBlobStreamMode);
     destructor Destroy; override;
-    {$IF (CompilerVersion >= 35.0) and (Sizeof(LongInt) <> Sizeof(NativeInt))}
+    {$IF (CompilerVersion >= 36.0) and (Sizeof(LongInt) <> Sizeof(NativeInt))}
     function Write(const Buffer; Count: Longint): Longint; override;
     {$ENDIF}
-    {$IF CompilerVersion >= 35.0}
+    {$IF CompilerVersion >= 36.0}
     function Write(const Buffer; Count: TNativeCount): TNativeCount; override;
     {$ELSE}
     function Write(const Buffer; Count: Longint): Longint; override;
@@ -747,7 +747,7 @@ begin
   inherited Destroy;
 end;
 
-{$IF (CompilerVersion >= 35.0) and (Sizeof(LongInt) <> Sizeof(NativeInt))}
+{$IF (CompilerVersion >= 36.0) and (Sizeof(LongInt) <> Sizeof(NativeInt))}
 function TEntityBlobStream.Write(const Buffer; Count: Longint): Longint;
 begin
   Result := inherited Write(Buffer, Count);
@@ -755,7 +755,7 @@ begin
 end;
 {$ENDIF}
 
-{$IF CompilerVersion >= 35.0}
+{$IF CompilerVersion >= 36.0}
 function TEntityBlobStream.Write(const Buffer; Count: TNativeCount): TNativeCount;
 begin
   Result := inherited Write(Buffer, Count);
