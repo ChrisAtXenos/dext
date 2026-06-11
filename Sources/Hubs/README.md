@@ -65,9 +65,9 @@ Since the .dproj file is large and complex, I recommend creating it through the 
 1. Open `Dext.Web.Hubs.dpk` in Delphi
 2. IDE will offer to create the .dproj - accept it
 3. Configure the following settings:
-   - **Output directory:** `..\Output\$(ProductVersion)_$(Platform)_$(Config)`
-   - **Unit output directory:** `..\Output\$(ProductVersion)_$(Platform)_$(Config)`
-   - **Search path:** `..\Output\$(ProductVersion)_$(Platform)_$(Config)`
+   - **Output directory:** `..\Output\$(ProductVersion)\$(Platform)\$(Config)`
+   - **Unit output directory:** `..\Output\$(ProductVersion)\$(Platform)\$(Config)`
+   - **Search path:** `..\Output\$(ProductVersion)\$(Platform)\$(Config)`
    - **Namespace prefixes:** `System;Xml;Data;Datasnap;Web;Soap`
 
 ## Usage

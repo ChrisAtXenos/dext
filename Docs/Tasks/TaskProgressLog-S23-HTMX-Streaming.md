@@ -1,4 +1,4 @@
-..\Output\$(ProductVersion)_$(Platform)_$(Config)
+..\Output\$(ProductVersion)\$(Platform)\$(Config)
 Dext Framework - Core & Infrastructure
 
 

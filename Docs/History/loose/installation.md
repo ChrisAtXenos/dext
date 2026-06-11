@@ -31,7 +31,7 @@ Add the following paths to your **Library Path** (Tools > Options > Language > D
 If you set up the `$(DEXT)` variable as described above:
 
 ```text
-$(DEXT)\..\Output\$(ProductVersion)_$(Platform)_$(Config)
+$(DEXT)\..\Output\$(ProductVersion)\$(Platform)\$(Config)
 ```
 
 ### 3. Configure Browsing Path

@@ -122,8 +122,8 @@ function Get-OutputPath {
         [string]$Config
     )
 
-    # Output path format: $(dext)\Output\$(ProductVersion)_$(Platform)_$(Config)
-    $OutputDir = Join-Path $DextRoot "Output\${ProductVersion}_${Platform}_${Config}"
+    # Output path format: $(dext)\Output\$(ProductVersion)\$(Platform)\$(Config)
+    $OutputDir = Join-Path $DextRoot "Output\${ProductVersion}\${Platform}\${Config}"
 
     if (-not (Test-Path $OutputDir)) {
         New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null

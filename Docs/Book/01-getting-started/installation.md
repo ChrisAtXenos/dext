@@ -121,6 +121,16 @@ Add the paths to the compiled files in the Library Path of the IDE.
 
 *Note: Repeat for other platforms (e.g., Win64) or configurations (e.g., Release), adjusting the version and platform name accordingly.*
 
+#### Compiling Examples and Test Projects in Debug
+By default, the example and test projects included in the repository point to the **Release** output DCUs of the framework. This ensures that they compile out-of-the-box even if the framework has not been compiled in Debug mode.
+
+If you build an example or test project in **Debug** mode:
+* It will compile successfully by using the framework's **Release** DCUs.
+* If you need to debug the framework's source code step-by-step:
+  1. Compile the Dext Framework packages in **Debug** configuration.
+  2. Enable **Use debug .dcus** in your project's options (`Project > Options > Building > Delphi Compiler > Compiling > Debugging`).
+  3. Ensure your global IDE Debug DCU Path (`Tools > Options > Language > Delphi > Library > Debug DCU Path`) points to the framework's Debug DCU output folder (e.g., `$(DEXT)\..\Output\23.0\Win32\Debug`).
+
 ---
 
 ### 2.5. Configure Execution Path (BPLs)

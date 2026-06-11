@@ -112,6 +112,16 @@ Para que a IDE encontre os arquivos compilados do framework, você deve adiciona
 
 *Nota: Repita o processo para outras plataformas (ex: Win64) ou configurações (ex: Release), ajustando a versão e plataforma conforme necessário.*
 
+#### Compilação de Exemplos e Testes em Debug
+Por padrão, os projetos de exemplos e testes incluídos no repositório apontam para as DCUs compiladas em **Release** do framework. Isso garante que eles compilem imediatamente sem exigir que o framework tenha sido compilado em modo Debug.
+
+Se você compilar um exemplo ou projeto de testes em modo **Debug**:
+* Ele compilará com sucesso utilizando as DCUs em **Release** do framework.
+* Caso necessite debugar o código interno do framework linha a linha:
+  1. Compile os pacotes do Dext Framework na configuração **Debug**.
+  2. Ative a opção **Use debug .dcus** nas opções do seu projeto (`Project > Options > Building > Delphi Compiler > Compiling > Debugging`).
+  3. Garanta que o caminho de Debug DCUs global da IDE (`Tools > Options > Language > Delphi > Library > Debug DCU Path`) aponte para a pasta de saída de DCUs de Debug do framework (ex: `$(DEXT)\..\Output\23.0\Win32\Debug`).
+
 ## 4.1. Configuração do Path de Execução (BPLs)
 
 Como os pacotes compilados em modo runtime (BPLs) são gerados na pasta `Output\Bin`, a IDE do Delphi precisa localizá-los ao carregar os pacotes de design-time (como `Dext.EF.Design370.bpl` e `Dext.Testing.Design370.bpl`). Caso contrário, você receberá o erro *"Não foi possível encontrar o módulo especificado"* ao tentar instalar os pacotes.
