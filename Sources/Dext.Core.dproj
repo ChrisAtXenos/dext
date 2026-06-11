@@ -216,7 +216,6 @@
         <DCCReference Include="Core\Dext.BackgroundJobs.Storage.InMemory.pas"/>
         <DCCReference Include="Core\Dext.BackgroundJobs.Config.pas"/>
         <DCCReference Include="Core\Dext.BackgroundJobs.Server.pas"/>
-        <None Include="Dext.inc"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
