@@ -26,6 +26,7 @@ package Dext.Web.Hubs;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext Framework - Real-Time Communication (Hubs/SignalR-like)'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 

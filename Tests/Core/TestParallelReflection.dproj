@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{7A8B9C0D-1E2F-3A4B-5C6D-8E9F0A1B2C3D}</ProjectGuid>
         <MainSource>TestParallelReflection.dpr</MainSource>
@@ -50,7 +50,7 @@
         <VerInfo_Locale>1046</VerInfo_Locale>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <DCC_ExeOutput>..\Output</DCC_ExeOutput>
-        <DCC_UnitSearchPath>..\..\Sources\Core;..\..\Sources\Core\Base;..\..\Sources\Core\Json;..\..\Sources\Core\Interception;..\..\Sources\Data;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Sources\Common;..\..\Sources\Core;..\..\Sources\Core\Base;..\..\Sources\Core\Json;..\..\Sources\Core\Interception;..\..\Sources\Data;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>..\Output\DCU</DCC_DcuOutput>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
     </PropertyGroup>

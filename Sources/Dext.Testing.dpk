@@ -26,9 +26,9 @@ package Dext.Testing;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext Framework - Testing Utilities (Mocking, Interception, Assertions)'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I Dext.inc}
 
 requires
   rtl,
@@ -40,10 +40,6 @@ requires
   Dext.Web.Core;
 
 contains
-{$IFDEF DEXT_TESTINSIGHT}
-  TestInsight.Client,
-  Dext.Testing.TestInsight in 'Testing\Dext.Testing.TestInsight.pas',
-{$ENDIF}
   Dext.Assertions in 'Testing\Dext.Assertions.pas',
   Dext.Mocks.Auto in 'Testing\Dext.Mocks.Auto.pas',
   Dext.Mocks.Interceptor in 'Testing\Dext.Mocks.Interceptor.pas',

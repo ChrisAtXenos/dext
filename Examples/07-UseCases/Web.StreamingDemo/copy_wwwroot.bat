@@ -11,6 +11,11 @@ if "%TARGET_DIR%"=="" (
 
 echo Copying wwwroot from %PROJECT_DIR% to %TARGET_DIR%...
 
+if not exist "%PROJECT_DIR%wwwroot" (
+    echo No wwwroot folder found in %PROJECT_DIR%, skipping.
+    exit /b 0
+)
+
 if not exist "%TARGET_DIR%wwwroot" mkdir "%TARGET_DIR%wwwroot"
 xcopy "%PROJECT_DIR%wwwroot\*" "%TARGET_DIR%wwwroot\" /S /E /Y /D
 

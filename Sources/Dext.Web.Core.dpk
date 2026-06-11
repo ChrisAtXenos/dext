@@ -23,14 +23,14 @@ package Dext.Web.Core;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IFDEF MSWINDOWS}
-  {$IMAGEBASE $400000}
+{$IMAGEBASE $400000}
 {$ENDIF}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext Framework - Web & HTTP'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
-{$I Dext.inc}
 
 requires
   rtl,
@@ -40,9 +40,6 @@ requires
   Dext.Core,
   Dext.EF.Core,
   RESTComponents,
-{$IFDEF DEXT_ENABLE_WEB_STENCILS}
-  inetstn,
-{$ENDIF}
   inet;
 
 contains
@@ -51,9 +48,6 @@ contains
   Dext.Web.Controllers in 'Web\Dext.Web.Controllers.pas',
   Dext.Web.ControllerScanner in 'Web\Dext.Web.ControllerScanner.pas',
   Dext.Web.ModelBinding in 'Web\Dext.Web.ModelBinding.pas',
-{$WARN UNIT_DEPRECATED OFF}
-  Dext.Web.ModelBinding.Extensions in 'Web\Dext.Web.ModelBinding.Extensions.pas',
-{$WARN UNIT_DEPRECATED ON}
   Dext.Web.HandlerInvoker in 'Web\Dext.Web.HandlerInvoker.pas',
   Dext.Web.Routing.Attributes in 'Web\Dext.Web.Routing.Attributes.pas',
   Dext.Web.ApplicationBuilder.Extensions in 'Web\Dext.Web.ApplicationBuilder.Extensions.pas',
@@ -109,10 +103,10 @@ contains
   Dext.Web.StaticFiles in 'Web\Dext.Web.StaticFiles.pas',
   Dext.Web.Versioning in 'Web\Dext.Web.Versioning.pas',
   Dext.Web.View in 'Web\Dext.Web.View.pas',
-  Dext.Web.View.WebStencils in 'Web\Dext.Web.View.WebStencils.pas',
   Dext.Web.WebBroker in 'Web\Dext.Web.WebBroker.pas',
   Dext.Web.Sessions.Streamable in 'Web\Dext.Web.Sessions.Streamable.pas',
   Dext.WebHost in 'Web\Dext.WebHost.pas',
   Dext.Web.View.Native in 'Web\Dext.Web.View.Native.pas';
 
 end.
+

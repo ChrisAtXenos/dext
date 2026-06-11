@@ -1,4 +1,4 @@
-﻿program Web.SslDemo;
+program Web.SslDemo;
 
 {$APPTYPE CONSOLE}
 
@@ -52,6 +52,7 @@ begin
 
   // Try common relative paths
   Paths := [
+    '..\02-Web\Web.SslDemo',
     '..\..\02-Web\Web.SslDemo',
     '..\Examples\Web.SslDemo',
     '..\..\Examples\Web.SslDemo',

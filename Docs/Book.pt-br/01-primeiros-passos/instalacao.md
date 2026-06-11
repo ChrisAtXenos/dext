@@ -4,7 +4,7 @@ Este guia descreve os passos necessários para compilar o framework e configurar
 
 ## 1. Personalização do Framework (Dext.inc)
 
-Antes de compilar o Dext Framework, você pode personalizar o comportamento e as dependências do framework editando o arquivo `Sources\Dext.inc`. Este arquivo centraliza todas as configurações globais:
+Antes de compilar o Dext Framework, você pode personalizar o comportamento e as dependências do framework editando o arquivo `Sources\Common\Dext.inc`. Este arquivo centraliza todas as configurações globais:
 
 ### A. Drivers de Banco de Dados (Dext.Entity)
 Por padrão, o Dext vem configurado apenas com o driver **SQLite** habilitado, garantindo total compatibilidade com o **Delphi Community Edition**. Se você possui Delphi Enterprise/Architect e deseja habilitar outros bancos de dados, descomente as linhas correspondentes:
@@ -35,6 +35,10 @@ Para projetos desenvolvidos em **Delphi 12.2 ou superior** no Windows, o Dext su
 {$ENDIF}
 ```
 
+> [!NOTE]
+> O suporte a **Web Stencils** é condicional. O pacote `Dext.Web.Core.dpk` inclui o arquivo `Dext.inc` e declara condicionalmente a dependência do pacote `inetstn` da Embarcadero apenas se `DEXT_ENABLE_WEB_STENCILS` estiver ativo. Em versões anteriores à 12.2 ou outras plataformas, essa dependência e o código relacionado são completamente desativados/ignorados pelo compilador de forma transparente, sem warnings.
+
+
 ### D. Conflitos de Nomes de Componentes (`DEXT_USE_ENTITY_PREFIX`)
 Caso você possua outras bibliotecas instaladas (como o Devart EntityDAC) que utilizem os mesmos nomes de componentes (`TEntityDataSet`, `TEntityDataProvider`), você enfrentará um conflito na IDE durante a instalação. Para resolver isso, descomente a linha correspondente para registrar componentes com o prefixo `TDext...`:
 ```pascal
@@ -43,7 +47,19 @@ Caso você possua outras bibliotecas instaladas (como o Devart EntityDAC) que ut
 
 ---
 
-## 2. Compilação dos Fontes
+## 1.1. Instalação Automática via TMS Smart Setup
+
+Se você utiliza o **TMS Smart Setup**, a instalação e compilação do framework é totalmente automatizada.
+
+Apenas execute o seguinte comando no seu terminal na raiz do repositório:
+```bash
+tms install cesarliws.dext
+```
+O Smart Setup irá ler o arquivo `tmsbuild.yaml`, compilar todos os pacotes nas plataformas suportadas e configurar todos os Library Paths, Browsing Paths e variáveis de ambiente na IDE de forma automática.
+
+---
+
+## 2. Compilação dos Fontes (Instalação Manual)
 
 Após ajustar o arquivo `Dext.inc` conforme a sua necessidade:
 
@@ -53,10 +69,14 @@ Após ajustar o arquivo `Dext.inc` conforme a sua necessidade:
 3. Aguarde a conclusão da compilação de todos os pacotes.
 
 Os arquivos compilados serão gerados automaticamente na pasta:
-* `Output\$(Platform)\$(Config)`
-* *Exemplo:* `Output\Win32\Debug`
+* DCUs: `Output\$(ProductVersion)\$(Platform)\$(Config)`
+* BPLs e DCPs: `Output\Bin\$(ProductVersion)\$(Platform)\$(Config)`
 
-> **Nota:** O arquivo `Dext.inc` personalizado é copiado automaticamente para a pasta de saída (`Output`) durante o processo de Build, garantindo que suas aplicações herdem as mesmas definições do framework compilado.
+*Exemplo para Delphi 12 Athens Win32 Debug:*
+* DCUs: `Output\23.0\Win32\Debug`
+* BPLs/DCPs: `Output\Bin\23.0\Win32\Debug`
+
+> **Nota:** O arquivo `Dext.inc` reside na pasta `Sources\Common`, que é adicionada ao Library Path de modo que tanto o framework quanto as suas aplicações possam incluí-lo e herdá-lo diretamente via search path.
 
 ## 3. Configuração de Variável de Ambiente (Recomendado)
 
@@ -71,20 +91,78 @@ Utilizar uma variável de ambiente simplifica seus Library Paths e permite alter
 
     ![Variável de Ambiente DEXT](../../Images/ide-env-var.png)
 
-## 4. Configuração do Library Path (DCUs)
+## 4. Configuração do Library Path (DCUs e DCPs)
 
-Para que a IDE encontre os arquivos compilados do framework, você deve adicionar o caminho para a pasta de saída (`Output`) no Library Path.
+Para que a IDE encontre os arquivos compilados do framework, você deve adicionar os caminhos para as pastas de saída no Library Path.
 
 > [!IMPORTANT]
-> A IDE do Delphi **não expande** variáveis dinâmicas de projeto (como `$(Platform)` ou `$(Config)`) nas configurações globais de Library Path. Por isso, você deve adicionar caminhos específicos para as combinações que deseja utilizar.
+> A IDE do Delphi **não expande** variáveis dinâmicas de projeto (como `$(Platform)`, `$(Config)` ou `$(ProductVersion)`) nas configurações globais de Library Path. Por isso, você deve adicionar caminhos específicos (com a versão do compilador Delphi) para as combinações que deseja utilizar.
+>
+> Valores de `$(ProductVersion)` comuns:
+> - **21.0** para Delphi 10.4 Sydney
+> - **22.0** para Delphi 11 Alexandria
+> - **23.0** para Delphi 12 Athens
 
 1. No Delphi, vá em **Tools** > **Options** > **Language** > **Delphi** > **Library**.
 2. Selecione a **Platform** desejada (ex: Windows 32-bit).
-3. No campo **Library Path**, adicione o caminho para a pasta onde os arquivos `.dcu` foram gerados. Use a variável `$(DEXT)` para simplificar:
-    * `$(DEXT)\..\Output\37.0_win32_debug` (para Debug)
-    * `$(DEXT)\..\Output\37.0_win32_release` (para Release)
+3. No campo **Library Path**, adicione os caminhos usando a variável `$(DEXT)` para simplificar:
+    * `$(DEXT)\Common` (para que a IDE localize as diretivas do `Dext.inc` e a unit `Dext.MM`)
+    * `$(DEXT)\..\Output\23.0\Win32\Debug` (para DCUs)
+    * `$(DEXT)\..\Output\Bin\23.0\Win32\Debug` (para DCPs/BPLs)
 
-*Nota: Repita o processo para outras plataformas (ex: Win64), ajustando o nome da pasta conforme gerado na compilação do Passo 1.*
+*Nota: Repita o processo para outras plataformas (ex: Win64) ou configurações (ex: Release), ajustando a versão e plataforma conforme necessário.*
+
+#### Compilação de Exemplos e Testes em Debug
+Por padrão, os projetos de exemplos e testes incluídos no repositório apontam para as DCUs compiladas em **Release** do framework. Isso garante que eles compilem imediatamente sem exigir que o framework tenha sido compilado em modo Debug.
+
+Se você compilar um exemplo ou projeto de testes em modo **Debug**:
+* Ele compilará com sucesso utilizando as DCUs em **Release** do framework.
+* Caso necessite debugar o código interno do framework linha a linha:
+  1. Compile os pacotes do Dext Framework na configuração **Debug**.
+  2. Ative a opção **Use debug .dcus** nas opções do seu projeto (`Project > Options > Building > Delphi Compiler > Compiling > Debugging`).
+  3. Garanta que o caminho de Debug DCUs global da IDE (`Tools > Options > Language > Delphi > Library > Debug DCU Path`) aponte para a pasta de saída de DCUs de Debug do framework (ex: `$(DEXT)\..\Output\23.0\Win32\Debug`).
+
+## 4.1. Configuração do Path de Execução (BPLs)
+
+Como os pacotes compilados em modo runtime (BPLs) são gerados na pasta `Output\Bin`, a IDE do Delphi precisa localizá-los ao carregar os pacotes de design-time (como `Dext.EF.Design370.bpl` e `Dext.Testing.Design370.bpl`). Caso contrário, você receberá o erro *"Não foi possível encontrar o módulo especificado"* ao tentar instalar os pacotes.
+
+Para resolver isso, você deve adicionar os caminhos de saída das BPLs na variável `PATH` da própria IDE:
+
+1. Vá em **Tools** > **Options** > **IDE** > **Environment Variables**.
+2. Em **User System Overrides**, selecione a variável **PATH** e clique em **Edit** (ou clique em **New...** se ela não existir).
+3. Adicione no final do valor existente, separando por ponto e vírgula (`;`), os seguintes caminhos (ajustando `C:\dev\Dext\DextRepository` para o seu diretório de instalação e `37.0` para a versão do compilador utilizada):
+    * Para a IDE de 32 bits (Delphi 11 ou anterior):
+      `;C:\dev\Dext\DextRepository\Output\Bin\37.0\Win32\Release`
+    * Para a IDE de 64 bits (Delphi 12 ou posterior):
+      `;C:\dev\Dext\DextRepository\Output\Bin\37.0\Win64\Release`
+    
+    *Dica:* É recomendado adicionar ambos os caminhos para garantir compatibilidade com compilações e execuções em ambas as arquiteturas.
+
+    ![PATH Override](../../Images/ide-env-var.png)
+
+## 4.2. Configuração do Gerenciador de Memória (Dext.MM)
+
+O gerenciador de memória do Dext (`Dext.MM.pas`) reside na pasta `Sources\Common`. Para utilizá-lo em suas aplicações executáveis:
+
+1. Certifique-se de que a pasta `$(DEXT)\Common` está adicionada ao seu Library Path (conforme passo 4).
+2. No arquivo principal da sua aplicação (arquivo `.dpr` do executável), adicione `Dext.MM` como a **primeiríssima** unit na cláusula `uses`.
+   * *Exemplo:*
+     ```pascal
+     program MeuProjeto;
+
+     uses
+       Dext.MM, // Deve ser sempre a primeira!
+       Vcl.Forms,
+       ...
+     ```
+
+## 4.3. Integrações Opcionais (WebStencils e TestInsight)
+
+Por motivos de portabilidade e compatibilidade de instalação automatizada, as units de integrações opcionais não são incluídas de forma estática nos pacotes principais do framework:
+
+* **Web Stencils**: A unit `Dext.Web.View.WebStencils.pas` reside em `Sources\Web` e é usada apenas quando a condicional `DEXT_ENABLE_WEB_STENCILS` está ativa em seu `Dext.inc`.
+* **TestInsight**: A unit `Dext.Testing.TestInsight.pas` reside em `Sources\Testing`. Para utilizá-la em seus projetos de testes, adicione-a diretamente ao uses do projeto `.dpr` de testes (condicionada a `{$IFDEF TESTINSIGHT}`) e certifique-se de que a biblioteca do cliente TestInsight está no library path da IDE.
+
 
 ## 5. Configuração do Browsing Path (Arquivos Fonte)
 
@@ -208,12 +286,14 @@ Este erro ocorre quando o compilador Delphi encontra um conflito entre arquivos 
 ### Compilação falha com erros "File not found"
 
 **Causa:**  
-O Library Path não contém a pasta dos DCUs compilados, ou o framework não foi compilado para a plataforma/configuração alvo.
+O Library Path não contém a pasta dos DCUs ou DCPs compilados, ou o framework não foi compilado para a plataforma/configuração alvo.
 
 **Solução:**
 
 1. Certifique-se de que você compilou o framework Dext para a plataforma correta (Win32/Win64) e configuração (Debug/Release).
-2. Verifique se o Library Path aponta para a pasta `Output` correta (ex: `Output\37.0_win32_debug`).
+2. Verifique se o Library Path aponta para a pasta `Output` e `Output\Bin` corretas:
+    * ex: `$(DEXT)\..\Output\23.0\Win32\Debug`
+    * ex: `$(DEXT)\..\Output\Bin\23.0\Win32\Debug`
 3. Se estiver alternando entre Debug e Release, atualize o Library Path de acordo ou adicione ambos os caminhos.
 
 ### Debug stepping não funciona / Não consigo navegar para o fonte
@@ -228,10 +308,12 @@ As pastas de Fontes (`Sources`) não estão no Browsing Path.
 
 ### Referência Rápida: Resumo da Configuração de Paths
 
-| Tipo de Path      | O Que Adicionar                           | Objetivo                             |
-|-------------------|-------------------------------------------|--------------------------------------|
-| **Library Path**  | `Output\Win32\Debug` (ou sua config alvo) | Localizar arquivos `.dcu` compilados  |
-| **Browsing Path** | Todas as pastas `Sources\*`               | Navegação no código e debugging      |
+| Tipo de Path      | O Que Adicionar                                | Objetivo                                 |
+|-------------------|------------------------------------------------|------------------------------------------|
+| **Library Path**  | `Output\23.0\Win32\Debug`                      | Localizar arquivos `.dcu` compilados     |
+| **Library Path**  | `Output\Bin\23.0\Win32\Debug`                  | Localizar arquivos `.dcp` compilados     |
+| **System PATH**   | `Output\Bin\23.0\Win32\Debug`                  | Encontrar as BPLs em tempo de execução   |
+| **Browsing Path** | Todas as pastas `Sources\*`                    | Navegação no código e debugging          |
 
 ---
 

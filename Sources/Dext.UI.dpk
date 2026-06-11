@@ -26,6 +26,7 @@ package Dext.UI;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext UI Framework - MVU Architecture for Desktop/Mobile'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD ON}
 

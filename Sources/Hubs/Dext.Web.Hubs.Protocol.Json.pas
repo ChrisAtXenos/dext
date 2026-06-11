@@ -28,7 +28,7 @@
 {***************************************************************************}
 unit Dext.Web.Hubs.Protocol.Json;
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 

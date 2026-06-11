@@ -92,13 +92,8 @@ $env:ProductVersion = $env:PRODUCT_VERSION
 
 # 6. Standardize Paths
 $env:BDSCOMMONDIR = (Get-Item "env:PUBLIC").Value + "\Documents\Embarcadero\Studio\$($env:PRODUCT_VERSION)"
-$env:COMMON_BPL_OUTPUT = Join-Path $env:BDSCOMMONDIR "Bpl"
-$env:COMMON_DCP_OUTPUT = Join-Path $env:BDSCOMMONDIR "Dcp"
-
-if ($env:PLATFORM -ne "Win32") {
-    $env:COMMON_BPL_OUTPUT = Join-Path $env:COMMON_BPL_OUTPUT $env:PLATFORM
-    $env:COMMON_DCP_OUTPUT = Join-Path $env:COMMON_DCP_OUTPUT $env:PLATFORM
-}
+$env:COMMON_BPL_OUTPUT = Join-Path $env:DEXT "Output\Bin\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
+$env:COMMON_DCP_OUTPUT = Join-Path $env:DEXT "Output\Bin\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
 
 if ($null -eq $env:DEXT_PROJECT_TYPE) { $env:DEXT_PROJECT_TYPE = "Framework" }
 
@@ -106,18 +101,19 @@ $ProjOutput = "Output"
 if ($env:DEXT_PROJECT_TYPE -eq "Examples") { $ProjOutput = "Examples\Output" }
 elseif ($env:DEXT_PROJECT_TYPE -eq "Tests") { $ProjOutput = "Tests\Output" }
 
-$env:OUTPUT_PATH = Join-Path $env:DEXT "$ProjOutput\$($env:PRODUCT_VERSION)_$($env:PLATFORM)_$($env:BUILD_CONFIG)"
+$env:OUTPUT_PATH = Join-Path $env:DEXT "$ProjOutput\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
 
 # 7. Context-Aware Search Paths
-$FrameDCU = Join-Path $env:DEXT "Output\$($env:PRODUCT_VERSION)_$($env:PLATFORM)_$($env:BUILD_CONFIG)"
-$ExamplesDCU = Join-Path $env:DEXT "Examples\Output\$($env:PRODUCT_VERSION)_$($env:PLATFORM)_$($env:BUILD_CONFIG)"
-$TestsDCU = Join-Path $env:DEXT "Tests\Output\$($env:PRODUCT_VERSION)_$($env:PLATFORM)_$($env:BUILD_CONFIG)"
+$FrameDCU = Join-Path $env:DEXT "Output\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
+$FrameBin = Join-Path $env:DEXT "Output\Bin\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
+$ExamplesDCU = Join-Path $env:DEXT "Examples\Output\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
+$TestsDCU = Join-Path $env:DEXT "Tests\Output\$($env:PRODUCT_VERSION)\$($env:PLATFORM)\$($env:BUILD_CONFIG)"
 
 # Root Sources included for Dext.inc
 # We include External\DelphiAST sources because several internal tools and tests reference the units directly.
 $ExtAST = Join-Path $env:DEXT "External\DelphiAST\Source"
 $ExtParser = Join-Path $ExtAST "SimpleParser"
-$env:SEARCH_PATH = "$($env:OUTPUT_PATH);$FrameDCU;$ExamplesDCU;$TestsDCU;$($env:DEXT)\Sources;$ExtAST;$ExtParser"
+$env:SEARCH_PATH = "$($env:OUTPUT_PATH);$FrameDCU;$FrameBin;$ExamplesDCU;$TestsDCU;$($env:DEXT)\Sources;$($env:DEXT)\Sources\Common;$($env:DEXT)\Sources\Web;$($env:DEXT)\Apps\CLI\Commands;$ExtAST;$ExtParser"
 
 # 8. Create common directories
 @($env:COMMON_BPL_OUTPUT, $env:COMMON_DCP_OUTPUT, $env:OUTPUT_PATH) | ForEach-Object {

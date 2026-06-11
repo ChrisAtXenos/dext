@@ -122,8 +122,8 @@ function Get-OutputPath {
         [string]$Config
     )
 
-    # Output path format: $(dext)\Output\$(ProductVersion)_$(Platform)_$(Config)
-    $OutputDir = Join-Path $DextRoot "Output\${ProductVersion}_${Platform}_${Config}"
+    # Output path format: $(dext)\Output\$(ProductVersion)\$(Platform)\$(Config)
+    $OutputDir = Join-Path $DextRoot "Output\${ProductVersion}\${Platform}\${Config}"
 
     if (-not (Test-Path $OutputDir)) {
         New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
@@ -177,16 +177,18 @@ function Build-Package {
     Write-Warn "Building $Name..."
     Write-Detail "  Project: $DprojPath"
 
+    $CommonPath = Join-Path $SourcesDir "Common"
     $MSBuildArgs = @(
         $DprojPath,
         "/t:Build",
         "/p:Configuration=$Config",
+        "/p:Config=$Config",
         "/p:Platform=$Platform",
         "/p:DCC_DcuOutput=`"$OutputPath`"",
         "/p:DCC_DcpOutput=`"$OutputPath`"",
         "/p:DCC_BplOutput=`"$OutputPath`"",
         "/p:DCC_OutputNeverBuildDcps=false",
-        "/p:DCC_UnitSearchPath=`"$OutputPath`"",
+        "/p:DCC_UnitSearchPath=`"$OutputPath;$CommonPath`"",
         "/nologo"
     )
 

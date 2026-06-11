@@ -43,9 +43,9 @@ uses
   Dext.DI.Attributes,
   Dext.DI.Comparers,
   Dext.DI.Core,
-{$WARN UNIT_DEPRECATED OFF}
-  Dext.DI.Extensions,
-{$WARN UNIT_DEPRECATED ON}
+//{$WARN UNIT_DEPRECATED OFF}
+//  Dext.DI.Extensions,
+//{$WARN UNIT_DEPRECATED ON}
   Dext.DI.Interfaces,
   Dext.Hosting.ApplicationLifetime,
   Dext.Hosting.AppState,
@@ -203,9 +203,9 @@ type
   TDextServiceProvider = Dext.DI.Core.TDextServiceProvider;
   TDextServiceCollection = Dext.DI.Core.TDextServiceCollection;
 
-  // Dext.DI.Extensions
-  TServiceCollectionExtensions = Dext.DI.Extensions.TServiceCollectionExtensions;
-  TServiceProviderExtensions = Dext.DI.Extensions.TServiceProviderExtensions;
+  // Dext.DI.Extensions - Deprecated
+//  TServiceCollectionExtensions = Dext.DI.Extensions.TServiceCollectionExtensions;
+//  TServiceProviderExtensions = Dext.DI.Extensions.TServiceProviderExtensions;
 
   // Dext.DI.Interfaces
   IServiceCollection = Dext.DI.Interfaces.IServiceCollection;

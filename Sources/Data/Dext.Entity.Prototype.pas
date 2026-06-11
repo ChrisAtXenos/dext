@@ -106,6 +106,7 @@ begin
   end;
   FCache := nil;
   FStack := nil;
+  Dext.Validation.PrototypeFactory := nil;
 end;
 
 class procedure Prototype.ClearCache;

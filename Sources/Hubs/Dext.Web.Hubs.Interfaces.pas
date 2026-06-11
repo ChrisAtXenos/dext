@@ -34,7 +34,7 @@
 {***************************************************************************}
 unit Dext.Web.Hubs.Interfaces;
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 

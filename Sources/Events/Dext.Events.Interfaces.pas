@@ -165,9 +165,9 @@ type
   /// </summary>
   TEventBusExtensions = record
     class function Publish<T>(const ABus: IEventBus;
-      const AEvent: T): TPublishResult; static; inline;
+      const AEvent: T): TPublishResult; static; {$IF CompilerVersion >= 36.0}inline;{$IFEND}
     class procedure PublishBackground<T>(const ABus: IEventBus;
-      const AEvent: T); static; inline;
+      const AEvent: T); static; {$IF CompilerVersion >= 36.0}inline;{$IFEND}
   end;
 
   EEventBusException = class(Exception);

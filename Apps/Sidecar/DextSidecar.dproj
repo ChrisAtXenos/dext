@@ -50,10 +50,10 @@
         <SanitizedProjectName>DextSidecar</SanitizedProjectName>
         <VerInfo_Locale>1046</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
-        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\..\External\DelphiAST\Source\SimpleParser;..\..\External\DelphiAST\Source;..\..\Sources\Dashboard;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)\$(Platform)\$(Config);..\..\Sources\Common;..\..\Sources\Dashboard;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_ExeOutput>..\..\Output</DCC_ExeOutput>
-        <DCC_DcuOutput>..\..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
-        <PreBuildEvent><![CDATA[powershell -NoProfile -ExecutionPolicy Bypass -File "$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1" -OutputPath "..\..\Output\$(ProductVersion)_$(Platform)_$(Config)"
+        <DCC_DcuOutput>..\..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
+        <PreBuildEvent><![CDATA[powershell -NoProfile -ExecutionPolicy Bypass -File "$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1" -OutputPath "..\..\Output\$(ProductVersion)\$(Platform)\$(Config)"
 $(PreBuildEvent)]]></PreBuildEvent>
         <PostBuildEvent><![CDATA[copy /Y "$(OUTPUTPATH)" "$(OUTPUTDIR)..\Apps\dext-sidecar.exe"
 $(PostBuildEvent)]]></PostBuildEvent>
@@ -140,6 +140,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
                     <Source Name="MainSource">DextSidecar.dpr</Source>
                 </Source>
                 <Excluded_Packages>
+                    <Excluded_Packages Name="C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext.Testing.Design.bpl">File C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext.Testing.Design.bpl not found</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k370.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp370.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
@@ -1146,7 +1147,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
     <Import Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj" Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')"/>
     <Import Project="$(MSBuildProjectName).deployproj" Condition="Exists('$(MSBuildProjectName).deployproj')"/>
     <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win32'">
-        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)_$(Platform)_$(Config)&quot;</PreBuildEvent>
+        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)\$(Platform)\$(Config)&quot;</PreBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
@@ -1154,7 +1155,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' And '$(Platform)'=='Win64'">
-        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)_$(Platform)_$(Config)&quot;</PreBuildEvent>
+        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)\$(Platform)\$(Config)&quot;</PreBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
@@ -1162,7 +1163,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win32'">
-        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)_$(Platform)_$(Config)&quot;</PreBuildEvent>
+        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)\$(Platform)\$(Config)&quot;</PreBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>
@@ -1170,7 +1171,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <PostBuildEventIgnoreExitCode>False</PostBuildEventIgnoreExitCode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' And '$(Platform)'=='Win64'">
-        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)_$(Platform)_$(Config)&quot;</PreBuildEvent>
+        <PreBuildEvent>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PROJECTDIR)\..\..\Sources\Dashboard\build-resources.ps1&quot; -OutputPath &quot;..\..\Output\$(ProductVersion)\$(Platform)\$(Config)&quot;</PreBuildEvent>
         <PreBuildEventIgnoreExitCode>False</PreBuildEventIgnoreExitCode>
         <PreLinkEvent/>
         <PreLinkEventIgnoreExitCode>False</PreLinkEventIgnoreExitCode>

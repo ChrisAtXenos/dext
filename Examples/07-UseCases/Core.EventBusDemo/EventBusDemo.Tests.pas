@@ -50,7 +50,7 @@ begin
     .AddTransient<IOrderService, TOrderService>;
 
   Provider := Services.BuildServiceProvider;
-  OrderSvc := TServiceProviderExtensions.GetRequiredService<IOrderService>(Provider);
+  OrderSvc := TDextServices.GetRequiredService<IOrderService>(Provider);
 
   // Act
   OrderSvc.PlaceOrder(101, 55, 3, 149.90);
@@ -82,7 +82,7 @@ begin
     .AddTransient<IOrderService, TOrderService>;
 
   Provider := Services.BuildServiceProvider;
-  OrderSvc := TServiceProviderExtensions.GetRequiredService<IOrderService>(Provider);
+  OrderSvc := TDextServices.GetRequiredService<IOrderService>(Provider);
 
   OrderSvc.PlaceOrder(201, 10, 1, 29.90);
   OrderSvc.PlaceOrder(202, 11, 2, 59.80);
@@ -113,7 +113,7 @@ begin
   TEventBusTracker.Register(Services, Tracker);
 
   Provider := Services.BuildServiceProvider;
-  Bus := TServiceProviderExtensions.GetRequiredService<IEventBus>(Provider);
+  Bus := TDextServices.GetRequiredService<IEventBus>(Provider);
 
   Evt.OrderId := 1; Evt.CustomerId := 1; Evt.ItemCount := 1; Evt.TotalAmount := 10;
   TEventBusExtensions.Publish<TOrderPlacedEvent>(Bus, Evt);
@@ -141,7 +141,7 @@ begin
   TEventBusTracker.Register(Services, Tracker);
 
   Provider := Services.BuildServiceProvider;
-  Bus := TServiceProviderExtensions.GetRequiredService<IEventBus>(Provider);
+  Bus := TDextServices.GetRequiredService<IEventBus>(Provider);
 
   // Publish a DIFFERENT event type (TPaymentProcessedEvent)
   Evt.OrderId := 99; Evt.Amount := 50; Evt.PaymentMethod := 'Pix';
