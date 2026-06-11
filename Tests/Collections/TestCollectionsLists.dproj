@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{9513260E-9A37-4BA0-B2C3-BC3E28CC7255}</ProjectGuid>
         <MainSource>TestCollectionsLists.dpr</MainSource>

@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{8C48F5A0-0562-4A5E-BEFD-A6DAD62A325F}</ProjectGuid>
         <MainSource>VCLMemoLog.dpr</MainSource>

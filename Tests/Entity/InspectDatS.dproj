@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{F42FC0E5-4CD4-4413-9275-3299AE0B9AB3}</ProjectGuid>
         <MainSource>InspectDatS.dpr</MainSource>

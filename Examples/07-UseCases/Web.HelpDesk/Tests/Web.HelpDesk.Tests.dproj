@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{CDB312AF-3B90-4547-BE21-4516B5CFB55B}</ProjectGuid>
         <MainSource>Web.HelpDesk.Tests.dpr</MainSource>
@@ -47,8 +47,8 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_ExeOutput>..\..\..\Output\</DCC_ExeOutput>
-        <DCC_DcuOutput>..\..\..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
-        <DCC_UnitSearchPath>..\..\..\Output\$(ProductVersion)_$(Platform)_$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_DcuOutput>..\..\..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_UnitSearchPath>..\..\..\..\Sources\Common;..\..\..\Output\$(ProductVersion)\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_E>false</DCC_E>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>

@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{E2A1B2C3-4D5E-6F7A-8B9C-0D1E2F3A4B5C}</ProjectGuid>
         <MainSource>Dext.Templating.UnitTests.dpr</MainSource>
@@ -64,8 +64,8 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <Icns_MainIcns>$(BDS)\bin\delphi_PROJECTICNS.icns</Icns_MainIcns>
-        <DCC_UnitSearchPath>..\..\..\Output\$(ProductVersion)_$(Platform)_$(Config);C:\dev\Dext\DextRepository\Sources;C:\dev\Dext\DextRepository\Sources\Core;C:\dev\Dext\DextRepository\Sources\Core\Base;C:\dev\Dext\DextRepository\Sources\Core\Interception;C:\dev\Dext\DextRepository\Sources\Core\Json;C:\dev\Dext\DextRepository\Sources\Data;C:\dev\Dext\DextRepository\Sources\Design;C:\dev\Dext\DextRepository\Sources\Debug;C:\dev\Dext\DextRepository\Sources\Testing;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_DcuOutput>..\..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
+        <DCC_UnitSearchPath>..\..\..\Sources\Common;..\..\..\Output\$(ProductVersion)\$(Platform)\$(Config);C:\dev\Dext\DextRepository\Sources;C:\dev\Dext\DextRepository\Sources\Core;C:\dev\Dext\DextRepository\Sources\Core\Base;C:\dev\Dext\DextRepository\Sources\Core\Interception;C:\dev\Dext\DextRepository\Sources\Core\Json;C:\dev\Dext\DextRepository\Sources\Data;C:\dev\Dext\DextRepository\Sources\Design;C:\dev\Dext\DextRepository\Sources\Debug;C:\dev\Dext\DextRepository\Sources\Testing;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_DcuOutput>..\..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>..\..\Output</DCC_ExeOutput>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>

@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{174280D1-CA62-4372-9B85-2CC23FD85C40}</ProjectGuid>
         <MainSource>VerifyScaffold.dpr</MainSource>
