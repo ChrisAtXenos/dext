@@ -71,8 +71,8 @@
     <PropertyGroup Condition="'$(Base)'!=''">
         <DllSuffix>$(Auto)</DllSuffix>
         <DCC_DcuOutput>..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_DcpOutput>..\Output\Bin\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_BplOutput>..\Output\Bin\$(ProductVersion)\$(Platform)\$(Config)</DCC_BplOutput>
+        <DCC_DcpOutput>..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcpOutput>
+        <DCC_BplOutput>..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
@@ -87,7 +87,7 @@
         <DCC_RunTimeTypeInfo>true</DCC_RunTimeTypeInfo>
         <DCC_Description>Dext Framework - High Performance Networking</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-        <DCC_UnitSearchPath>Common;..\Output\$(ProductVersion)\$(Platform)\$(Config);..\Output\Bin\$(ProductVersion)\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>Common;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
@@ -177,7 +177,6 @@
                     <Source Name="MainSource">Dext.Net.dpk</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext.Testing.Design.bpl">File C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext.Testing.Design.bpl not found</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k370.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp370.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
