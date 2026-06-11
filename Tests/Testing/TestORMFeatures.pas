@@ -1,6 +1,6 @@
 unit TestORMFeatures;
 
-{$I ..\..\Sources\Dext.inc}
+{$I Dext.inc}
 
 // JSON Query Tests Configuration:
 // - Define DEXT_TEST_JSON_SQLITE to use SQLite (requires sqlite3.dll with JSON1 support)
