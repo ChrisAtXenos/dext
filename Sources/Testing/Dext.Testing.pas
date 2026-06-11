@@ -45,7 +45,7 @@ uses
   Dext.Mocks,
   Dext.Testing.Attributes,
   Dext.Testing.Console,
-  Dext.Testing.Dashboard,
+  //Dext.Testing.Dashboard,
   Dext.Testing.DI,
   Dext.Testing.Fluent,
   Dext.Testing.History,
@@ -161,7 +161,7 @@ type
   TTestRunner = Dext.Testing.Runner.TTestRunner;
 
   // Dext.Testing.Dashboard
-  TDashboardListener = Dext.Testing.Dashboard.TDashboardListener;
+  // TDashboardListener = Dext.Testing.Dashboard.TDashboardListener;
 
   // Dext.Testing.TestInsight
   {$IFDEF DEXT_TESTINSIGHT}

@@ -144,7 +144,6 @@
         <DCCReference Include="Testing\Dext.Mocks.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Attributes.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Console.pas"/>
-        <DCCReference Include="Testing\Dext.Testing.Dashboard.pas"/>
         <DCCReference Include="Testing\Dext.Testing.DI.pas"/>
         <DCCReference Include="Testing\Dext.Testing.Fluent.pas"/>
         <DCCReference Include="Testing\Dext.Testing.History.pas"/>
@@ -199,6 +198,12 @@
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="..\Output\37.0\Win32\Release\Dext.Testing370.bpl" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>Dext.Testing.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

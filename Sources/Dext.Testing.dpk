@@ -47,7 +47,6 @@ contains
   Dext.Mocks in 'Testing\Dext.Mocks.pas',
   Dext.Testing.Attributes in 'Testing\Dext.Testing.Attributes.pas',
   Dext.Testing.Console in 'Testing\Dext.Testing.Console.pas',
-  Dext.Testing.Dashboard in 'Testing\Dext.Testing.Dashboard.pas',
   Dext.Testing.DI in 'Testing\Dext.Testing.DI.pas',
   Dext.Testing.Fluent in 'Testing\Dext.Testing.Fluent.pas',
   Dext.Testing.History in 'Testing\Dext.Testing.History.pas',

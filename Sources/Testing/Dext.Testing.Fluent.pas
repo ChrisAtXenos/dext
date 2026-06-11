@@ -53,7 +53,7 @@ type
     FVerbosity: TOutputVerbosity;
     FDebugDiscovery: Boolean;
     FUseDashboard: Boolean;
-    FDashboardPort: Integer;
+//    FDashboardPort: Integer;
     FWaitDashboard: Boolean;
     FJUnitFile: string;
     FJsonFile: string;
@@ -94,7 +94,7 @@ type
     /// <summary>
     ///   Enables the Live Dashboard Runner.
     /// </summary>
-    function UseDashboard(Port: Integer = 9000; WaitAfterRun: Boolean = True): TTestConfigurator;
+    // function UseDashboard(Port: Integer = 9000; WaitAfterRun: Boolean = True): TTestConfigurator;
 
     /// <summary>
     ///   Enables integration with TestInsight IDE plugin.
@@ -248,7 +248,7 @@ uses
   Winapi.Windows,
   {$ENDIF}
   Dext.Testing.Report,
-  Dext.Testing.Dashboard,
+  //Dext.Testing.Dashboard,
   {$IFDEF DEXT_TESTINSIGHT}
   Dext.Testing.TestInsight,
   {$ENDIF}
@@ -285,13 +285,13 @@ begin
   Result := Self;
 end;
 
-function TTestConfigurator.UseDashboard(Port: Integer; WaitAfterRun: Boolean): TTestConfigurator;
-begin
-  FUseDashboard := True;
-  FDashboardPort := Port;
-  FWaitDashboard := WaitAfterRun;
-  Result := Self;
-end;
+//function TTestConfigurator.UseDashboard(Port: Integer; WaitAfterRun: Boolean): TTestConfigurator;
+//begin
+//  FUseDashboard := True;
+//  FDashboardPort := Port;
+//  FWaitDashboard := WaitAfterRun;
+//  Result := Self;
+//end;
 
 function TTestConfigurator.UseTestInsight: TTestConfigurator;
 begin
@@ -459,7 +459,7 @@ begin
   begin
     // TDashboardListener auto-registers itself with TTestRunner in Start.
     // The instance is kept alive by TTestRunner's interface list.
-    TDashboardListener.Create(FDashboardPort).Start;
+    // TDashboardListener.Create(FDashboardPort).Start;
   end;
 
   // Register fixtures
