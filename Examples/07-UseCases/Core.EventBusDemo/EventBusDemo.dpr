@@ -57,7 +57,7 @@ end;
 
 function GetBus(const AProvider: IServiceProvider): IEventBus;
 begin
-  Result := TServiceProviderExtensions.GetRequiredService<IEventBus>(AProvider);
+  Result := TDextServices.GetRequiredService<IEventBus>(AProvider);
 end;
 
 // ---------------------------------------------------------------------------
@@ -231,13 +231,13 @@ begin
     end);
 
   // TOrderService only knows about IEventPublisher<TOrderPlacedEvent>
-  OrderSvc := TServiceProviderExtensions.GetRequiredService<IOrderService>(Provider);
+  OrderSvc := TDextServices.GetRequiredService<IOrderService>(Provider);
   OrderSvc.PlaceOrder(6, 200, 4, 350.00);
 
   WriteLn;
 
   // TPaymentService uses IEventBus and publishes two event types
-  PaySvc := TServiceProviderExtensions.GetRequiredService<IPaymentService>(Provider);
+  PaySvc := TDextServices.GetRequiredService<IPaymentService>(Provider);
   PaySvc.ProcessPayment(6, 350.00, 'Pix');
 end;
 

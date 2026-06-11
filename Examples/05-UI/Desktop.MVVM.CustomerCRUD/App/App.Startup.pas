@@ -144,7 +144,7 @@ end;
 
 class function TAppStartup.GetCustomerService: ICustomerService;
 begin
-  Result := TServiceProviderExtensions.GetService<ICustomerService>(FProvider);
+  Result := TDextServices.GetService<ICustomerService>(FProvider);
 end;
 
 class function TAppStartup.GetLogger: ILogger;
@@ -154,7 +154,7 @@ end;
 
 class function TAppStartup.GetCustomerController: ICustomerController;
 begin
-  Result := TServiceProviderExtensions.GetService<ICustomerController>(FProvider);
+  Result := TDextServices.GetService<ICustomerController>(FProvider);
 end;
 
 class function TAppStartup.GetNavigator: INavigator;
