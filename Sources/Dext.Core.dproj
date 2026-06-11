@@ -172,7 +172,6 @@
         <DCCReference Include="Core\Dext.Hosting.BackgroundService.pas"/>
         <DCCReference Include="Core\Dext.Hosting.Events.pas"/>
         <DCCReference Include="Core\Dext.Hosting.ApplicationLifetime.pas"/>
-        <DCCReference Include="Core\Dext.MM.pas"/>
         <DCCReference Include="Core\Base\Dext.Core.Span.pas"/>
         <DCCReference Include="Core\Json\Dext.Json.Utf8.pas"/>
         <DCCReference Include="Core\Json\Dext.Json.Utf8.Serializer.pas"/>
