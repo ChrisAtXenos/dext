@@ -174,11 +174,13 @@ class function TActivator.CreateInstanceRttiOnly(AType: PTypeInfo): TValue;
 var
   BestMethod: TRttiMethod;
   Entry: TConstructorEntry;
-  HasDIConstructors: Boolean;
   Method: TRttiMethod;
   RegisteredImpl: TClass;
   TargetClass: TClass;
   TypeObj: TRttiType;
+  {$IFDEF DEBUG}
+  HasDIConstructors: Boolean;
+  {$ENDIF}
 begin
   Result := TValue.Empty;
   if AType = nil then
@@ -204,7 +206,9 @@ begin
         Exit;
 
       BestMethod := nil;
+      {$IFDEF DEBUG}
       HasDIConstructors := False;
+      {$ENDIF}
       for Method in TypeObj.GetMethods do
       begin
         if not Method.IsConstructor then Continue;
@@ -213,9 +217,11 @@ begin
           BestMethod := Method;
           Break;
         end;
+        {$IFDEF DEBUG}
         if (Length(Method.GetParameters) > 0) and
            (Method.GetParameters[0].ParamType.TypeKind in [tkInterface, tkClass]) then
           HasDIConstructors := True;
+        {$ENDIF}
       end;
 
       if BestMethod <> nil then

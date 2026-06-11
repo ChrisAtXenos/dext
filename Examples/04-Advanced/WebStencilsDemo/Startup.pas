@@ -71,7 +71,11 @@ begin
       begin
         Opts.UseSqlite('webstencils-customers.db');
       end)
+    {$IFDEF DEXT_ENABLE_WEB_STENCILS}
     .AddWebStencils;
+    {$ELSE}
+    .AddDextTemplating;
+    {$ENDIF}
 end;
 
 procedure TStartup.Configure(const App: IWebApplication);
@@ -85,17 +89,17 @@ begin
     .UseHttpLogging
     .UseViewEngine
     .UseStaticFiles('wwwroot')
-    .MapGet<IResult>('/',
+    .MapGetResult<IResult>('/',
       function: IResult
       begin
         Result := Results.View('index');
       end)
-    .MapGet<TAppDbContext, IResult>('/customers',
+    .MapGetResult<TAppDbContext, IResult>('/customers',
       function(Db: TAppDbContext): IResult
       begin
         Result := Results.View<TCustomer>('customers', Db.Customers.QueryAll);
       end)
-    .MapGet<TAppDbContext, TSearchDTO, IResult>('/customers/search',
+    .MapGetResult<TAppDbContext, TSearchDTO, IResult>('/customers/search',
       function(Db: TAppDbContext; Query: TSearchDTO): IResult
       var
         c: TCustomer;

@@ -52,6 +52,7 @@ foreach ($proj in $projects) {
         "/t:Build",
         "/p:Configuration=$($env:BUILD_CONFIG)",
         "/p:Platform=$($env:PLATFORM)",
+        "/p:ProductVersion=$($env:PRODUCT_VERSION)",
         "/p:DCC_ExeOutput=`"$ExamplesOutput`"",
         "/p:DCC_DcuOutput=`"$DcuOutput`"",
         "/p:DCC_UnitSearchPath=`"$($env:SEARCH_PATH)`"",

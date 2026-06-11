@@ -52,6 +52,7 @@ $MSBuildArgs = @(
     "/t:Build",
     "/p:Configuration=$env:BUILD_CONFIG",
     "/p:Platform=$env:PLATFORM",
+    "/p:ProductVersion=$env:PRODUCT_VERSION",
     "/p:DCC_DcuOutput=`"$env:OUTPUT_PATH`"",
     "/p:DCC_BplOutput=`"$env:COMMON_BPL_OUTPUT`"",
     "/p:DCC_DcpOutput=`"$env:COMMON_DCP_OUTPUT`"",

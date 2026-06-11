@@ -24,7 +24,7 @@
 {                                                                           }
 {  Dext.Testing.Host - Application Host for Test Execution (GUI/Console)    }
 {***************************************************************************}
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 unit Dext.Testing.Host;
 

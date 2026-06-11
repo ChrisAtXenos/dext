@@ -22,7 +22,7 @@ unit Dext.Web.View.WebStencils;
 
 interface
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 uses
   System.Classes,

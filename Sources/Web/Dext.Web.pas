@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -25,7 +25,7 @@
 {***************************************************************************}
 unit Dext.Web;
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 
@@ -101,9 +101,9 @@ uses
   Dext.Web.Controllers,
   Dext.Web.ControllerScanner,
   Dext.Web.HandlerInvoker,
-{$WARN UNIT_DEPRECATED OFF}
-  Dext.Web.ModelBinding.Extensions,
-{$WARN UNIT_DEPRECATED ON}
+//{$WARN UNIT_DEPRECATED OFF}
+//  Dext.Web.ModelBinding.Extensions,
+//{$WARN UNIT_DEPRECATED ON}
   Dext.Web.ModelBinding,
   Dext.Web.Routing.Attributes,
   Dext.Hosting.ApplicationLifetime
@@ -457,9 +457,9 @@ type
   TBindingSourceProvider = Dext.Web.ModelBinding.TBindingSourceProvider;
 
   // Dext.Web.ModelBinding.Extensions
-  IApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.IApplicationBuilderWithModelBinding;
-  TApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.TApplicationBuilderWithModelBinding;
-  TApplicationBuilderModelBindingExtensions = Dext.Web.ModelBinding.Extensions.TApplicationBuilderModelBindingExtensions;
+//  IApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.IApplicationBuilderWithModelBinding;
+//  TApplicationBuilderWithModelBinding = Dext.Web.ModelBinding.Extensions.TApplicationBuilderWithModelBinding;
+//  TApplicationBuilderModelBindingExtensions = Dext.Web.ModelBinding.Extensions.TApplicationBuilderModelBindingExtensions;
 
   // Dext.Web.MultiTenancy
   ITenantResolutionStrategy = Dext.Web.MultiTenancy.ITenantResolutionStrategy;
@@ -660,6 +660,7 @@ type
     function AddDextTemplating(const AOptions: TViewOptions): TDextServices; overload;
     function AddDextTemplating(const ABuilder: TViewOptionsBuilder): TDextServices; overload;
 
+    {$IFDEF DEXT_ENABLE_WEB_STENCILS}
     /// <summary>
     ///  Enables Web Stencils view engine using default conventions (CoC):
     ///  - Template Root: 'wwwroot/views' (Full Path)
@@ -682,6 +683,7 @@ type
     ///   Registers the Web Stencils view engine using a fluent builder configuration.
     /// </summary>
     function AddWebStencils(const ABuilder: TViewOptionsBuilder): TDextServices; overload;
+    {$ENDIF}
 
     /// <summary>
     ///   Registers `TInMemoryStreamableSessionManager` as `IStreamableSessionManager` in DI.
@@ -1643,19 +1645,17 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF DEXT_ENABLE_WEB_STENCILS}
 function TWebServicesHelper.AddWebStencils: TDextServices;
 begin
   Result := AddWebStencils(TProc<TViewOptions>(nil));
 end;
 
 function TWebServicesHelper.AddWebStencils(AConfig: TProc<TViewOptions>): TDextServices;
-{$IFDEF DEXT_ENABLE_WEB_STENCILS}
 var
   LConfig: TProc<TViewOptions>;
-{$ENDIF}
 begin
   Result := Self;
-  {$IFDEF DEXT_ENABLE_WEB_STENCILS}
   LConfig := AConfig;
   TWebStencilsViewEngine.RegisterWebStencilsFunctions;
   Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(
@@ -1668,17 +1668,13 @@ begin
         LConfig(Options);
       Result := TWebStencilsViewEngine.Create(Options);
     end);
-  {$ENDIF}
 end;
 
 function TWebServicesHelper.AddWebStencils(const AOptions: TViewOptions): TDextServices;
-{$IFDEF DEXT_ENABLE_WEB_STENCILS}
 var
   Options: TViewOptions;
-{$ENDIF}
 begin
   Result := Self;
-  {$IFDEF DEXT_ENABLE_WEB_STENCILS}
   Options := AOptions;
   TWebStencilsViewEngine.RegisterWebStencilsFunctions;
   Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(
@@ -1686,17 +1682,13 @@ begin
     begin
       Result := TWebStencilsViewEngine.Create(Options);
     end);
-  {$ENDIF}
 end;
 
 function TWebServicesHelper.AddWebStencils(const ABuilder: TViewOptionsBuilder): TDextServices;
-{$IFDEF DEXT_ENABLE_WEB_STENCILS}
 var
   OptionsBuilder: TViewOptionsBuilder;
-{$ENDIF}
 begin
   Result := Self;
-  {$IFDEF DEXT_ENABLE_WEB_STENCILS}
   OptionsBuilder := ABuilder;
   TWebStencilsViewEngine.RegisterWebStencilsFunctions;
   Self.AddSingleton<IViewEngine, TWebStencilsViewEngine>(
@@ -1704,8 +1696,8 @@ begin
     begin
       Result := TWebStencilsViewEngine.Create(TViewOptions(OptionsBuilder));
     end);
-  {$ENDIF}
 end;
+{$ENDIF}
 
 function TWebServicesHelper.AddDextTemplating: TDextServices;
 begin

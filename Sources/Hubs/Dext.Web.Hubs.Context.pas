@@ -29,7 +29,7 @@
 {***************************************************************************}
 unit Dext.Web.Hubs.Context;
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 

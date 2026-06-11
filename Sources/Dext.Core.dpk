@@ -9,21 +9,21 @@ package Dext.Core;
 {$EXTENDEDSYNTAX ON}
 {$IMPORTEDDATA ON}
 {$IOCHECKS ON}
-{$LOCALSYMBOLS ON}
+{$LOCALSYMBOLS OFF}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION OFF}
-{$OVERFLOWCHECKS ON}
-{$RANGECHECKS ON}
-{$REFERENCEINFO ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
 {$SAFEDIVIDE OFF}
-{$STACKFRAMES ON}
+{$STACKFRAMES OFF}
 {$TYPEDADDRESS OFF}
 {$VARSTRINGCHECKS ON}
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
+{$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Dext Framework - Core & Infrastructure'}
 {$LIBSUFFIX AUTO}
@@ -58,15 +58,11 @@ contains
   Dext.Collections.Vector in 'Core\Dext.Collections.Vector.pas',
   Dext.Collections in 'Core\Dext.Collections.pas',
   Dext.Configuration.Binder in 'Core\Dext.Configuration.Binder.pas',
-  Dext.Configuration.Core in 'Core\Dext.Configuration.Core.pas',
   Dext.Configuration.EnvironmentVariables in 'Core\Dext.Configuration.EnvironmentVariables.pas',
   Dext.Configuration.Interfaces in 'Core\Dext.Configuration.Interfaces.pas',
   Dext.Configuration.Json in 'Core\Dext.Configuration.Json.pas',
   Dext.DI.Comparers in 'Core\Dext.DI.Comparers.pas',
   Dext.DI.Core in 'Core\Dext.DI.Core.pas',
-{$WARN UNIT_DEPRECATED OFF}
-  Dext.DI.Extensions in 'Core\Dext.DI.Extensions.pas',
-{$WARN UNIT_DEPRECATED ON}
   Dext.DI.Interfaces in 'Core\Dext.DI.Interfaces.pas',
   Dext.Json in 'Core\Dext.Json.pas',
   Dext.Json.Types in 'Core\Dext.Json.Types.pas',
@@ -89,7 +85,6 @@ contains
   Dext.Hosting.BackgroundService in 'Core\Dext.Hosting.BackgroundService.pas',
   Dext.Hosting.Events in 'Core\Dext.Hosting.Events.pas',
   Dext.Hosting.ApplicationLifetime in 'Core\Dext.Hosting.ApplicationLifetime.pas',
-  Dext.MM in 'Core\Dext.MM.pas',
   Dext.Core.Span in 'Core\Base\Dext.Core.Span.pas',
   Dext.Json.Utf8 in 'Core\Json\Dext.Json.Utf8.pas',
   Dext.Json.Utf8.Serializer in 'Core\Json\Dext.Json.Utf8.Serializer.pas',
@@ -133,7 +128,8 @@ contains
   Dext.BackgroundJobs.Intf in 'Core\Dext.BackgroundJobs.Intf.pas',
   Dext.BackgroundJobs.Storage.InMemory in 'Core\Dext.BackgroundJobs.Storage.InMemory.pas',
   Dext.BackgroundJobs.Config in 'Core\Dext.BackgroundJobs.Config.pas',
-  Dext.BackgroundJobs.Server in 'Core\Dext.BackgroundJobs.Server.pas';
+  Dext.BackgroundJobs.Server in 'Core\Dext.BackgroundJobs.Server.pas',
+  Dext.Configuration.Core in 'Core\Dext.Configuration.Core.pas';
 
 end.
 

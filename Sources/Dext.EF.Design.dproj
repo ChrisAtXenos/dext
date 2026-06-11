@@ -76,8 +76,11 @@
         <VerInfo_Locale>1046</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UnitSearchPath>..\Output\$(ProductVersion)_$(Platform)_$(Config);$(BDS)\source\ToolsAPI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_DcuOutput>..\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
+        <DCC_UnitSearchPath>Common;..\Output\$(ProductVersion)\$(Platform)\$(Config);..\Output\Bin\$(ProductVersion)\$(Platform)\$(Config);$(BDS)\source\ToolsAPI;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DllSuffix>$(Auto)</DllSuffix>
+        <DCC_DcuOutput>..\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcpOutput>..\Output\Bin\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcpOutput>
+        <DCC_BplOutput>..\Output\Bin\$(ProductVersion)\$(Platform)\$(Config)</DCC_BplOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <VerInfo_Keys>package=com.embarcadero.$(MSBuildProjectName);label=$(MSBuildProjectName);versionCode=1;versionName=1.0.0;persistent=False;restoreAnyVersion=False;installLocation=auto;largeHeap=False;theme=TitleBar;hardwareAccelerated=true;apiKey=;minSdkVersion=23;targetSdkVersion=36</VerInfo_Keys>
@@ -131,7 +134,6 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_Description>Dext Framework - Entity IDE Integration</DCC_Description>
-        <DllSuffix>$(Auto)</DllSuffix>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

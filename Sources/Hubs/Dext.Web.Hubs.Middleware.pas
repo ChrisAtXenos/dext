@@ -28,7 +28,7 @@
 {***************************************************************************}
 unit Dext.Web.Hubs.Middleware;
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 

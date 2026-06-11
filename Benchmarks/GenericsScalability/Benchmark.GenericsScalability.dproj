@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{B7E3F2A1-9C4D-4E5F-8A6B-1D2E3F4A5B6C}</ProjectGuid>
         <MainSource>Benchmark.GenericsScalability.dpr</MainSource>
@@ -48,8 +48,8 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <SanitizedProjectName>Benchmark_GenericsScalability</SanitizedProjectName>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)_$(Platform)_$(Config);..\..\Sources\Core;..\..\Sources\Core\Base;..\..\Sources\Data;Generated;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_DcuOutput>.\Output\$(ProductVersion)_$(Platform)_$(Config)</DCC_DcuOutput>
+        <DCC_UnitSearchPath>..\..\Output\$(ProductVersion)\$(Platform)\$(Config);..\..\Sources\Core;..\..\Sources\Core\Base;..\..\Sources\Data;Generated;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_DcuOutput>.\Output\$(ProductVersion)\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\Output</DCC_ExeOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">

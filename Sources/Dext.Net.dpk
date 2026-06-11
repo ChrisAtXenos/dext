@@ -28,7 +28,7 @@ package Dext.Net;
 {$DESCRIPTION 'Dext Framework - High Performance Networking'}
 {$LIBSUFFIX AUTO}
 {$RUNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,

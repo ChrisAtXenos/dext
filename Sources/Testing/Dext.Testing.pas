@@ -23,7 +23,7 @@
 {  Created: 2026-01-07                                                      }
 {                                                                           }
 {  Dext.Testing - Wildcard unit for all testing features.                    }
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 unit Dext.Testing;
 

@@ -2,7 +2,7 @@ unit Dext.Core.Enums;
 
 interface
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 uses
   System.SysUtils,

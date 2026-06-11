@@ -29,7 +29,7 @@
 {***************************************************************************}
 unit Dext.Web.Hubs.Transport.SSE;
 
-{$I ..\..\Dext.inc}
+{$I Dext.inc}
 
 interface
 

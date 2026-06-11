@@ -24,7 +24,7 @@
 {                                                                           }
 {***************************************************************************}
 unit Dext.Web.WebApplication;
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 

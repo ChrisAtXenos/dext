@@ -495,7 +495,7 @@ var
   CInfo: TClassInfo;
   CName, CVal: string;
   CNode, GP, GPT: TSyntaxNode;
-  GChild, GSB, ClassNode, Candidate, IChild, Sub, EVal, EnumSB: TSyntaxNode;
+  GChild, ClassNode, Candidate, IChild, Sub, EVal: TSyntaxNode;
   GenericParams: string;
   GPName, CandKind, NameFound: string;
   InterfaceNode, Child, TypeNode: TSyntaxNode;

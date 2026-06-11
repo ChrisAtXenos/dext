@@ -1,6 +1,6 @@
 unit Dext.EF.Design.Expert;
 
-{$I ..\Dext.inc}
+{$I Dext.inc}
 
 interface
 
