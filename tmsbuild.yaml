@@ -62,3 +62,9 @@ package options:
     delphisydney+: Sources
 
   add libsuffix: true
+
+paths:
+  extra library paths: 
+    - Sources\Common
+  extra browsing paths: 
+    - Sources\Common    
