@@ -1,9 +1,9 @@
 # Mocking
 
-Create test doubles with `Mock<T>` for interfaces.
+Create test doubles with `Mock<T>` for interfaces and classes.
 
 > [!IMPORTANT]
-> `Mock<T>` is a **generic Record** that lives in `Dext.Mocks` — it is **NOT** part of the `Dext.Testing` facade. It does **NOT** need `.Free`.
+> `Mock<T>` is a **generic Record** that lives in `Dext.Mocks` — it is **NOT** part of the `Dext.Testing` facade. It does **NOT** need `.Free` since its lifecycle is managed automatically on the stack.
 
 ## Interface Mocking
 
@@ -16,7 +16,7 @@ uses
 type
   {$M+} // REQUIRED for mockable interfaces
   IService = interface
-    ['{...}']
+    ['{7E8A0B1C-2C3D-4E5F-6A7B-8C9D0E1F2A3B}']
     function Calculate(A: Integer): Integer;
   end;
   {$M-}
@@ -37,6 +37,8 @@ begin
 end;
 ```
 
+---
+
 ## Setup Methods
 
 ```pascal
@@ -44,14 +46,15 @@ end;
 MyMock.Setup.Returns(42).When.Calculate(Arg.Any<Integer>);
 
 // Return different values in sequence
-MyMock.Setup.Returns(User1).When.GetNext;
-// On second call, returns User2, etc.
+MyMock.Setup.ReturnsInSequence([User1, User2]).When.GetNext;
 
 // Throw exception
-MyMock.Setup.Throws(ENotFound).When.GetById(Arg.Any<Integer>);
+MyMock.Setup.Throws(ENotFoundException).When.GetById(Arg.Any<Integer>);
 ```
 
-## Argument Matching
+---
+
+## Argument Matching (Arg)
 
 ```pascal
 // Any value of a type
@@ -59,7 +62,16 @@ MyMock.Setup.Returns(User).When.FindById(Arg.Any<Integer>);
 
 // Exact value
 MyMock.Received(Times.Once).FindById(42);
+
+// Conditional argument
+MyMock.Setup.Returns(True).When.IsValid(Arg.Is<string>(
+  function(S: string): Boolean
+  begin
+    Result := S.Length > 5;
+  end));
 ```
+
+---
 
 ## Verification
 
@@ -81,49 +93,50 @@ MyMock.Received(Times.AtMost(5)).GetAll;
 MyMock.VerifyNoOtherCalls;
 ```
 
-## Test Fixture Example
+---
+
+## Class Mocking (Spies)
+
+Dext also supports mocking virtual methods of concrete classes and configuring partial behavior (redirecting unconfigured calls to the actual class logic):
+
+```pascal
+var MockRepo := Mock<TUserRepository>.Create;
+MockRepo.CallsBaseForUnconfiguredMembers; // Active spy/partial behavior
+
+MockRepo.Setup.Returns(MockedUser).When.FindById(99);
+// FindById(99) returns mock. Other IDs will invoke the actual database/repository.
+```
+
+---
+
+## Auto-Mocking Container (`TAutoMocker`)
+
+`TAutoMocker` eliminates repetitive boilerplate code for creating and injecting multiple mocks by automatically instantiating the class under test (SUT) and resolving its dependencies:
 
 ```pascal
 uses
-  Dext.Testing,  // Facade: Should, [TestFixture], [Test]
-  Dext.Mocks;    // Mock<T>
+  Dext.Mocks.Auto;
 
-type
-  [TestFixture]
-  TUserServiceTests = class
-  private
-    FMockRepo: Mock<IUserRepository>;
-    FService: TUserService;
-  public
-    [Setup]
-    procedure Setup;
+procedure TestUserService;
+begin
+  var Mocker := TAutoMocker.Create;
+  try
+    // Automatically creates IUserRepository and IEmailService and injects them
+    var Service := Mocker.CreateInstance<TUserService>;
+    
+    // Configure expectations on the mock created silently by the container
+    Mocker.GetMock<IUserRepository>.Setup
+      .Returns(True)
+      .When
+      .Save(Arg.Any<TUser>);
 
-    [Test]
-    procedure Should_Find_User;
+    Service.Register('John', 'john@dext.dev');
+
+    // Validate if the email was sent
+    Mocker.GetMock<IEmailService>.Received(Times.Once).SendWelcomeEmail('john@dext.dev');
+  finally
+    Mocker.Free;
   end;
-
-procedure TUserServiceTests.Setup;
-begin
-  FMockRepo := Mock<IUserRepository>.Create;
-  FService := TUserService.Create(FMockRepo.Instance);
-end;
-
-procedure TUserServiceTests.Should_Find_User;
-begin
-  // Arrange
-  var User := TUser.Create;
-  User.Name := 'Alice';
-  FMockRepo.Setup.Returns(User).When.FindById(1);
-
-  // Act
-  var Found := FService.GetById(1);
-
-  // Assert
-  Should(Found).NotBeNil;
-  Should(Found.Name).Be('Alice');
-
-  // Verify
-  FMockRepo.Received(Times.Once).FindById(1);
 end;
 ```
 

@@ -32,7 +32,7 @@ begin
       // .UseTestInsight   // Optional: Force TestInsight even if not in IDE
       // .UseDashboard     // Optional: Start Web Dashboard
       .RegisterFixtures([
-        TCalculatorTests,
+        TDiscountServiceTests,
         TUserServiceTests
       ])
     );
@@ -51,7 +51,7 @@ uses
 
 type
   [TestFixture]
-  TCalculatorTests = class
+  TDiscountServiceTests = class
   public
     [Setup]
     procedure Setup;
@@ -60,12 +60,13 @@ type
     procedure TearDown;
 
     [Test]
-    procedure Should_Add_Numbers;
+    procedure Should_Give_No_Discount_For_Standard_User;
 
     [Test]
-    [TestCase(1, 2, 3)]
-    [TestCase(10, 5, 15)]
-    procedure Should_Add_With_Params(A, B, Expected: Integer);
+    [TestCase(100.0, False, '', 0.0)]
+    [TestCase(100.0, True, '', 10.0)]
+    [TestCase(200.0, False, 'BLACKFRIDAY', 30.0)]
+    procedure Should_Calculate_Discount_Rules(const Subtotal: Double; const IsVip: Boolean; const Coupon: string; const ExpectedDiscount: Double);
   end;
 ```
 
@@ -177,20 +178,45 @@ Every Web API must have a PowerShell integration test script (e.g., `Test.MyProj
 - **Enum values**: By default, Dext serializes enums as strings (`"tsOpen"` not `1`)
 - **JWT testing**: If the API uses JWT, include a `New-JwtToken` function in the script
 
-## IDE Integration (TestInsight)
+## IDE Integration (Dext Test Explorer)
 
-Dext includes native support for the **TestInsight** plugin. This provides a professional UI inside Delphi for running and debugging tests.
+Dext includes native high-level support for the **Dext Test Explorer**, a full-featured RAD Studio Delphi IDE Expert (plugin). It offers a rich, interactive visual interface to discover, run, and inspect tests directly from your development environment.
 
-### How to Enable
+### Test Explorer Features:
+*   **Automatic Discovery**: Dynamically maps all RTTI fixtures and test cases directly from the `.dproj` project file.
+*   **Grouping Modes**: Group tests logically by structure (`Group by Code Structure`) or execution results (`Group by Test Status`).
+*   **Flexible Layouts**: Supports tabbed views (`Tabbed Layout`) or split layouts (`Split Bottom/Right Layout`).
+*   **Test Inspector**: Displays detailed error details, stack traces, precise duration, and source code location. Double-clicking a test navigates directly to the line of code in the IDE editor.
+*   **Visual Reports**: Visual menu `...` to instantly export results to **JUnit XML**, **XUnit XML**, **JSON**, **SonarQube XML**, or **HTML Report**.
+
+---
+
+## Alternative Integration (TestInsight)
+
+Dext also retains backward compatibility with the classic **TestInsight** plugin by Stefan Gliener.
+
+### How to Enable TestInsight:
 1. Install [TestInsight](https://github.com/stefangliener/TestInsight).
-2. Enable `TESTINSIGHT` in your `Dext.inc` file (Disabled by default).
-3. The framework will automatically detect when you run tests from the TestInsight panel.
+2. Enable the `TESTINSIGHT` directive in your `Dext.inc` file (Disabled by default).
+3. The framework will automatically detect runs triggered via TestInsight.
 
-### Features
-- **Visual Tree**: View tests in a structured tree.
-- **Run Selection**: Run only the tests or fixtures you click on.
-- **Double-Click to Code**: Instantly navigate to the test source code.
-- **Skip Reasons**: View why tests were ignored directly in the IDE.
+---
+
+## Code Coverage
+
+Dext features support for code coverage analysis integrated with the community open-source tool **Delphi Code Coverage** (https://github.com/DelphiCodeCoverage/DelphiCodeCoverage). The `dext.exe` CLI utility automates the entire setup, download of the latest release from the official repository if missing, test run orchestration, and report consolidation.
+
+### How to Run:
+Code coverage is executed via the Dext CLI:
+```bash
+dext test --coverage
+```
+This generates unified reports in formats compatible with major DevSecOps quality tools (such as SonarQube) and visual static reports (HTML).
+
+> [!TIP]
+> **IDE Integration**: The Dext Test Explorer will soon support running and visualizing code coverage directly within the IDE, highlighting covered and uncovered lines inside the RAD Studio source code editor.
+
+---
 
 ## Command Line Runner
 

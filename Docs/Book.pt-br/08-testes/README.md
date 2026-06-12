@@ -32,7 +32,7 @@ begin
       // .UseTestInsight   // Opcional: Força TestInsight mesmo fora da IDE
       // .UseDashboard     // Opcional: Inicia o Dashboard Web
       .RegisterFixtures([
-        TCalculadoraTests,
+        TDiscountServiceTests,
         TUsuarioServiceTests
       ])
     );
@@ -51,7 +51,7 @@ uses
 
 type
   [TestFixture]
-  TCalculadoraTests = class
+  TDiscountServiceTests = class
   public
     [Setup]
     procedure Setup;
@@ -60,12 +60,13 @@ type
     procedure TearDown;
 
     [Test]
-    procedure Deve_Somar_Numeros;
+    procedure Deve_Nao_Dar_Desconto_Para_Padrao;
 
     [Test]
-    [TestCase(1, 2, 3)]
-    [TestCase(10, 5, 15)]
-    procedure Deve_Somar_Com_Parametros(A, B, Esperado: Integer);
+    [TestCase(100.0, False, '', 0.0)]
+    [TestCase(100.0, True, '', 10.0)]
+    [TestCase(200.0, False, 'BLACKFRIDAY', 30.0)]
+    procedure Deve_Calcular_Regras_Desconto(const Subtotal: Double; const IsVip: Boolean; const Coupon: string; const ExpectedDiscount: Double);
   end;
 ```
 
@@ -177,20 +178,43 @@ Toda Web API deve ter um script de teste de integração PowerShell (ex: `Test.M
 - **Enums**: Por padrão, o Dext serializes enums como strings (`"tsAberto"` e não `1`)
 - **JWT**: Se a API usar JWT, inclua uma função `New-JwtToken` no script
 
-## Integração com IDE (TestInsight)
+## Integração com a IDE (Dext Test Explorer)
 
-O Dext inclui suporte nativo para o plugin **TestInsight**. Isso fornece uma interface profissional dentro do Delphi para executar e depurar testes.
+O Dext inclui suporte nativo de alto nível com o **Dext Test Explorer**, um Expert (plugin) completo para a IDE RAD Studio Delphi. Ele oferece uma interface visual interativa e integrada para descobrir, executar e analisar testes diretamente do seu ambiente de desenvolvimento.
 
-### Como Habilitar
+### Funcionalidades do Test Explorer:
+*   **Descoberta Automática**: Mapeia todas as fixtures e testes RTTI dinamicamente do arquivo de projeto `.dproj`.
+*   **Modos de Agrupamento**: Alterne entre agrupamento por estrutura física de código (`Group by Code Structure`) ou status de execução (`Group by Test Status`).
+*   **Layout Flexível**: Suporta visualização em Abas (`Tabbed Layout`) ou Layouts Divididos (`Split Bottom/Right Layout`).
+*   **Test Inspector**: Exibe detalhes completos sobre o erro, stack trace, duração e localização física do teste. Dê duplo clique no teste para ir direto para a linha do código correspondente.
+*   **Exportação Visual**: Menu integrado `...` que permite exportar relatórios diretamente para os formatos **JUnit XML**, **XUnit XML**, **JSON**, **SonarQube XML** ou **HTML Report**.
+
+---
+
+## Integração Alternativa com TestInsight
+
+Caso prefira, o Dext também mantém retrocompatibilidade com o plugin clássico **TestInsight** de Stefan Gliener.
+
+### Como Habilitar o TestInsight:
 1. Instale o [TestInsight](https://github.com/stefangliener/TestInsight).
-2. Habilite `TESTINSIGHT` no seu arquivo `Dext.inc` (Desabilitado por padrão).
-3. O framework detectará automaticamente quando você rodar os testes pelo painel do TestInsight.
+2. Habilite a diretiva `TESTINSIGHT` no seu arquivo `Dext.inc` (Desabilitado por padrão).
+3. O framework detectará automaticamente quando a execução for disparada via TestInsight.
 
-### Funcionalidades
-- **Árvore Visual**: Veja os testes em uma árvore estruturada.
-- **Execução Seletiva**: Rode apenas os testes ou fixtures que você clicar.
-- **Duplo-clique para o Código**: Navegue instantaneamente para o código fonte do teste.
-- **Motivos de Skip**: Veja por que os testes foram ignorados diretamente na IDE.
+## Cobertura de Código (Code Coverage)
+
+O Dext possui suporte a análise de cobertura de código integrado à ferramenta open-source da comunidade **Delphi Code Coverage** (https://github.com/DelphiCodeCoverage/DelphiCodeCoverage). O utilitário `dext.exe` automatiza todo o setup, podendo baixar a última release diretamente do repositório se necessário, além de coordenar a execução e gerar os relatórios.
+
+### Como Executar:
+A análise de cobertura é executada de forma simples através da CLI do Dext:
+```bash
+dext test --coverage
+```
+Isso gerará relatórios consolidados em formatos compatíveis com analisadores de qualidade de código do mercado (como o SonarQube) e relatórios visuais estáticos (HTML).
+
+> [!TIP]
+> **Integração IDE**: O Dext Test Explorer receberá em breve suporte a execução e visualização da cobertura de código diretamente na IDE, colorindo as linhas executadas e não executadas no próprio editor de código do RAD Studio.
+
+---
 
 ## Execução via Linha de Comando
 

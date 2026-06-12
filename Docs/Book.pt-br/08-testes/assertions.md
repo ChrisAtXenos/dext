@@ -1,72 +1,126 @@
 # Assertions
 
-Sintaxe fluente e expressiva para validação de testes com `Should`.
+Sintaxe fluente e expressiva para validação de testes com `Should()`.
 
 ## Sintaxe Should
 
-Dext Testing fornece uma API fluente que torna os testes fáceis de ler:
+O Dext Testing fornece uma API fluente que torna os testes extremamente legíveis:
 
 ```pascal
-Value.Should.Be(10);
-Name.Should.Contain('Dext');
-List.Should.HaveCount(5);
+Should(Value).Be(10);
+Should(Name).Contain('Dext');
+Should(List).HaveCount(5);
 ```
+
+---
 
 ## Tipos de Asserções
 
-### Valores Numéricos
+### Valores Numéricos (Integer, Int64, Double)
 
 ```pascal
-Id.Should.Be(123);
-Count.Should.BeGreaterThan(0);
-Price.Should.BeInRange(10, 50);
+Should(Id).Be(123);
+Should(Count).BeGreaterThan(0);
+Should(Price).BeInRange(10.0, 50.0);
+Should(Value).BePositive;
+Should(Value).BeZero;
 ```
 
 ### Strings
 
 ```pascal
-Email.Should.NotBeEmpty;
-Name.Should.StartWith('C');
-Description.Should.MatchRegex('^[a-z]+$');
+Should(Email).NotBeEmpty;
+Should(Name).StartWith('C');
+Should(Description).MatchRegex('^[a-z]+$');
+Should(Text).HaveLength(5);
+Should(Text).BeLowerCase;
 ```
 
-### Objetos e Nil
+### Objetos, Interfaces e Nil
 
 ```pascal
-User.Should.NotBeNil;
-Order.Should.BeOfType<TOrder>;
+Should(User).NotBeNil;
+Should(Order).BeOfType<TOrder>;
+Should(PaymentIntf).NotBeNil;
 ```
 
-### Listas e Coleções
+### GUIDs e UUIDs (Tipos Nativos Dext)
+
+```pascal
+Should(RecordGuid).NotBeEmpty;
+Should(DextUuid).Be(ExpectedUuid);
+```
+
+### Listas e Coleções (TArray e IEnumerable)
 
 ```pascal
 var u := Prototype.Entity<TUser>;
-Users.Should.NotBeEmpty;
-Users.Should.Contain(AdminUser);
-Users.Should.All.Satisfy(u.IsActive);
-```
-
-### Exceções
-
-Verifique se um código lança a exceção correta:
-
-```pascal
-Assert.Throws<EArgumentException>(procedure
+Should(Users).NotBeEmpty;
+Should(Users).Contain(AdminUser);
+Should(Users).AllSatisfy(function(User: TUser): Boolean
   begin
-    Service.Process(nil);
+    Result := User.IsActive;
   end);
 ```
 
-## Soft Asserts (Multiple)
+---
 
-Verifique múltiplas condições sem interromper no primeiro erro:
+## Asserções de Propriedades Profundas (Property Accessors)
+
+Você pode encadear asserções para inspecionar propriedades internas de objetos usando `.HaveProperty()`:
+
+```pascal
+Should(Order)
+  .NotBeNil
+  .HaveProperty('Customer').WhichObject
+  .HaveProperty('Name').WhichString
+  .StartWith('Enterprise');
+```
+
+---
+
+## Tratamento de Exceções
+
+Verifique se um bloco de código lança a exceção correta de forma fluente:
+
+```pascal
+Should(procedure
+  begin
+    Service.Process(nil);
+  end).Throw<EArgumentNullException>();
+```
+
+Ou valide se o código executa sem exceções:
+
+```pascal
+Should(procedure
+  begin
+    Service.Process(Valido);
+  end).NotThrow;
+```
+
+---
+
+## Mensagens Customizadas (Because)
+
+Você pode adicionar justificativas amigáveis que serão exibidas caso a asserção falhe:
+
+```pascal
+Should(Value).Because('O total deve incluir impostos').Be(150);
+```
+
+---
+
+## Múltiplas Asserções (Soft Asserts)
+
+Verifique várias condições de uma vez sem interromper no primeiro erro, acumulando todas as falhas no relatório:
 
 ```pascal
 Assert.Multiple(procedure
   begin
-    User.Name.Should.Be('João');
-    User.Email.Should.Contain('@');
-    User.Age.Should.Be(30);
+    Should(User.Name).Be('João');
+    Should(User.Email).Contain('@');
+    Should(User.Age).Be(30);
   end);
 ```
 

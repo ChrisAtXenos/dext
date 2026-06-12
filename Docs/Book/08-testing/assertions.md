@@ -1,110 +1,127 @@
 # Assertions
 
-Fluent assertion syntax with `Should()`.
+Fluent and expressive assertion syntax with `Should()`.
 
-## Basic Assertions
+## Should Syntax
+
+Dext Testing provides a fluent API that makes tests extremely readable:
 
 ```pascal
-uses
-  Dext.Testing.Assertions;
-
-// Equality
-Value.Should.Be(42);
-Value.Should.NotBe(0);
-
-// Nil checks
-Obj.Should.NotBeNil;
-Obj.Should.BeNil;
-
-// Boolean
-Flag.Should.BeTrue;
-Flag.Should.BeFalse;
-
-// Comparisons
-Value.Should.BeGreaterThan(10);
-Value.Should.BeLessThan(100);
-Value.Should.BeInRange(1, 100);
+Should(Value).Be(10);
+Should(Name).Contain('Dext');
+Should(List).HaveCount(5);
 ```
 
-## String Assertions
+---
+
+## Types of Assertions
+
+### Numeric Values (Integer, Int64, Double)
 
 ```pascal
-Text.Should.Be('Hello');
-Text.Should.Contain('ell');
-Text.Should.StartWith('He');
-Text.Should.EndWith('lo');
-Text.Should.Match('^[A-Z]');  // Regex
-Text.Should.BeEmpty;
-Text.Should.NotBeEmpty;
-Text.Should.HaveLength(5);
+Should(Id).Be(123);
+Should(Count).BeGreaterThan(0);
+Should(Price).BeInRange(10.0, 50.0);
+Should(Value).BePositive;
+Should(Value).BeZero;
 ```
 
-## Collection Assertions
+### Strings
 
 ```pascal
-List.Should.HaveCount(5);
-List.Should.BeEmpty;
-List.Should.NotBeEmpty;
-List.Should.Contain(Item);
-List.Should.NotContain(Item);
-List.Should.ContainOnly(Item1, Item2);
-List.Should.BeOrdered;
+Should(Email).NotBeEmpty;
+Should(Name).StartWith('C');
+Should(Description).MatchRegex('^[a-z]+$');
+Should(Text).HaveLength(5);
+Should(Text).BeLowerCase;
+```
 
+### Objects, Interfaces, and Nil
+
+```pascal
+Should(User).NotBeNil;
+Should(Order).BeOfType<TOrder>;
+Should(PaymentIntf).NotBeNil;
+```
+
+### GUIDs and UUIDs (Native Dext Types)
+
+```pascal
+Should(RecordGuid).NotBeEmpty;
+Should(DextUuid).Be(ExpectedUuid);
+```
+
+### Lists and Collections (TArray and IEnumerable)
+
+```pascal
 var u := Prototype.Entity<TUser>;
-Users.Should.AllMatch(u.Age > 0);
-```
-
-## Object Assertions
-
-```pascal
-// Type checking
-Obj.Should.BeOfType<TUser>;
-Obj.Should.BeAssignableTo<IPerson>;
-
-// Deep equality
-Obj1.Should.BeEquivalentTo(Obj2);
-
-// Property checking
-User.Should.HaveProperty('Name').WithValue('John');
-```
-
-## Exception Assertions
-
-```pascal
-Should.Raise<EArgumentException>(procedure
+Should(Users).NotBeEmpty;
+Should(Users).Contain(AdminUser);
+Should(Users).AllSatisfy(function(User: TUser): Boolean
   begin
-    Service.DoSomethingBad;
-  end);
-
-Should.RaiseAny(procedure
-  begin
-    Service.DoSomethingBad;
-  end);
-
-Should.NotRaise(procedure
-  begin
-    Service.DoSomethingSafe;
+    Result := User.IsActive;
   end);
 ```
 
-## Custom Messages
+---
+
+## Deep Property Assertions (Property Accessors)
+
+You can chain assertions to inspect nested properties of objects using `.HaveProperty()`:
 
 ```pascal
-Value.Should.Be(42, 'Expected value to be 42');
+Should(Order)
+  .NotBeNil
+  .HaveProperty('Customer').WhichObject
+  .HaveProperty('Name').WhichString
+  .StartWith('Enterprise');
 ```
 
-## Soft Assertions
+---
 
-Collect multiple failures before reporting:
+## Exception Handling
+
+Verify that a block of code throws the correct exception fluently:
+
+```pascal
+Should(procedure
+  begin
+    Service.Process(nil);
+  end).Throw<EArgumentNullException>();
+```
+
+Or validate that the code executes without exceptions:
+
+```pascal
+Should(procedure
+  begin
+    Service.Process(ValidInstance);
+  end).NotThrow;
+```
+
+---
+
+## Custom Explanations (Because)
+
+You can add friendly explanations that will be displayed if the assertion fails:
+
+```pascal
+Should(Value).Because('The total must include taxes').Be(150);
+```
+
+---
+
+## Multiple Assertions (Soft Asserts)
+
+Verify multiple conditions at once without interrupting at the first error, aggregating all failures in the report:
 
 ```pascal
 Assert.Multiple(procedure
   begin
-    User.Name.Should.Be('John');
-    User.Age.Should.BeGreaterThan(18);
-    User.Email.Should.Contain('@');
+    Should(User.Name).Be('John');
+    Should(User.Email).Contain('@');
+    Should(User.Age).Be(30);
   end);
-// All assertions run, all failures reported together
 ```
 
 ---
