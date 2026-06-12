@@ -94,44 +94,65 @@ type
   TTestGroupingMode = (tgmCodeStructure, tgmStatus);
 
   TFormDextTestRunner = class(TDockableForm)
-    SessionsPageControl: TPageControl;
-    DefaultSessionTabSheet: TTabSheet;
-    TestsTreeView: TTreeView;
-    DetailsPanel: TPanel;
-    DetailsMemo: TMemo;
-    NameSplitter: TSplitter;
-    ButtonsPanel: TPanel;
-    RefreshButton: TButton;
-    RunAllButton: TButton;
-    RunSelectedButton: TButton;
-    StopButton: TButton;
-    SummaryPanel: TPanel;
-    SummaryTotalLabel: TLabel;
-    SummarySelectedLabel: TLabel;
-    SummarySuccessLabel: TLabel;
-    SummaryFailedLabel: TLabel;
-    SummarySkippedLabel: TLabel;
-    SummaryTimeLabel: TLabel;
-    ProjectsComboBox: TComboBox;
     ActionsButton: TButton;
     ActionsPopupMenu: TPopupMenu;
+    ButtonsPanel: TPanel;
     ClearMenuItem: TMenuItem;
-    LayoutSeparator: TMenuItem;
-    TabbedLayoutMenuItem: TMenuItem;
-    SplitBottomLayoutMenuItem: TMenuItem;
-    SplitRightLayoutMenuItem: TMenuItem;
-    ExportSeparator: TMenuItem;
-    ExportToJUnitXmlMenutem: TMenuItem;
-    ExportToXUnitXMLMenutem: TMenuItem;
-    ExportToJsonMenutem: TMenuItem;
-    ExportToSonarQubeXmlMenutem: TMenuItem;
-    ExportToHtmlReportMenuItem: TMenuItem;
     ClearSeparator: TMenuItem;
+    ConfigScroll: TScrollBox;
+    ConfigTab: TTabSheet;
+    ConsoleTab: TTabSheet;
+    CreateaNewSessionMenuItem: TMenuItem;
+    CustomParamsEdit: TEdit;
+    CustomParamsLabel: TLabel;
+    DefaultSessionTabSheet: TTabSheet;
+    DetailsMemo: TMemo;
+    DetailsPageControl: TPageControl;
+    DetailsPanel: TPanel;
+    DurationLabel: TLabel;
+    EnabledCheckBox: TCheckBox;
+    EnableDisableTestExplorerMenuItem: TMenuItem;
+    ErrorHeaderLabel: TLabel;
+    ErrorMemo: TMemo;
+    ExportSeparator: TMenuItem;
+    ExportToHtmlReportMenuItem: TMenuItem;
+    ExportToJsonMenutem: TMenuItem;
+    ExportToJUnitXmlMenutem: TMenuItem;
+    ExportToSonarQubeXmlMenutem: TMenuItem;
+    ExportToXUnitXMLMenutem: TMenuItem;
     GroupByClassMenuItem: TMenuItem;
     GroupByTestStatusMenuItem: TMenuItem;
-    CreateaNewSessionMenuItem: TMenuItem;
-    EnableDisableTestExplorerMenuItem: TMenuItem;
+    InfoPanel: TPanel;
+    InspectorScroll: TScrollBox;
+    InspectorTab: TTabSheet;
+    LayoutSeparator: TMenuItem;
+    LocationLabel: TLabel;
+    NameSplitter: TSplitter;
+    ProgressBar: TProgressBar;
+    ProgressLabel: TLabel;
+    ProgressPanel: TPanel;
+    ProjectsComboBox: TComboBox;
+    RefreshButton: TButton;
+    RunAllButton: TButton;
+    RunOnIdleCheckBox: TCheckBox;
+    RunOnSaveCheckBox: TCheckBox;
+    RunSelectedButton: TButton;
+    SessionsPageControl: TPageControl;
+    SplitBottomLayoutMenuItem: TMenuItem;
+    SplitRightLayoutMenuItem: TMenuItem;
+    StatusLabel: TLabel;
+    StopButton: TButton;
+    SummaryFailedLabel: TLabel;
+    SummaryPanel: TPanel;
+    SummarySelectedLabel: TLabel;
+    SummarySkippedLabel: TLabel;
+    SummarySuccessLabel: TLabel;
+    SummaryTimeLabel: TLabel;
+    SummaryTotalLabel: TLabel;
     SummaryTotalTimeLabel: TLabel;
+    TabbedLayoutMenuItem: TMenuItem;
+    TestNameLabel: TLabel;
+    TestsTreeView: TTreeView;
     procedure ActionsButtonClick(Sender: TObject);
     procedure ProjectsComboBoxChange(Sender: TObject);
     procedure RunAllButtonClick(Sender: TObject);
@@ -163,20 +184,7 @@ type
     // Test Inspector components
     FTestDetails: TDictionary<string, TTestDetailInfo>;
     FGroupSummaries: TDictionary<string, TGroupSummaryInfo>;
-    FDetailsPageControl: TPageControl;
-    FConsoleTab: TTabSheet;
-    FInspectorTab: TTabSheet;
-    FInspectorScroll: TScrollBox;
-    FLblTestName: TLabel;
-    FLblStatus: TLabel;
-    FLblLocation: TLabel;
-    FLblDuration: TLabel;
-    FLblErrorHeader: TLabel;
-    FMemoError: TMemo;
     // Progress tracking
-    FProgressBar: TProgressBar;
-    FProgressLabel: TLabel;
-    FProgressPanel: TPanel;
     FTotalTests: Integer;
     FCompletedTests: Integer;
     FInspectorSplitter: TSplitter;
@@ -196,11 +204,6 @@ type
     FDisabledContainer: TPanel;
 
     // Configurations/Startup Tab
-    FConfigTab: TTabSheet;
-    FCustomParamsEdit: TEdit;
-    FChkRunOnSave: TCheckBox;
-    FChkRunOnIdle: TCheckBox;
-    FChkEnabled: TCheckBox;
     FIdleTimer: TTimer;
     FSaveTimer: TTimer;
     FPendingSaveFiles: TStringList;
@@ -215,83 +218,83 @@ type
     // File scan AST cache (thread-safe performance optimization)
     FScanCache: TObjectDictionary<string, TFileScanCache>;
 
-    procedure CollapseSuccessAndFocusFailures;
-    procedure NotifyProcessExited;
-    procedure GroupingMenuClick(Sender: TObject);
-
     function ActiveFilterEdit: TEdit;
-    procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
-    procedure UpdateTestInspector(const ATestName: string);
-    procedure FilterEditChange(Sender: TObject);
-    procedure LayoutMenuClick(Sender: TObject);
-    procedure ApplyLayout(ALayout: TTestExplorerLayout);
-    procedure RefreshTreeView;
-    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    function GetNodeFullTestName(ANode: TTreeNode): string;
-    procedure SetActiveSession(ASession: TTestSession);
-    procedure SessionsPageControlChange(Sender: TObject);
-    function FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
-    procedure SessionTabContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
-    procedure CloseActiveSessionClick(Sender: TObject);
     function CompileProjectDirect(const AProjFile: string): Boolean;
-    procedure CreateNewSession(const AName: string);
-    procedure CloseSession(ASession: TTestSession);
-    procedure TryLoadCoverage;
-    procedure ApplyIDETheme;
-    procedure OnTestResultReceived(const AJSONData: string);
-    procedure UpdateTimingLabels;
-    procedure LogPerformance(const AMessage: string);
-    procedure InitializeGroupSummaries;
-    procedure UpdateGroupSummary(const ATestName, AStatus: string; ADurationMs: Double);
-    procedure InvalidateGroupNode(const ATestName: string);
-    procedure UpdateNodeResultCache(const ATestName, AStatus: string; ADurationMs: Double);
-    procedure UpdateTotalTimeLabel;
-    procedure UpdateSummaryCounts;
-    procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
+    function FindMethodImplementationLine(const AFileName, AClassName, AMethodName: string; ADefaultLine: Integer): Integer;
     function FindNodeByPath(const APath: string): TTreeNode;
-    procedure ClearTestStatus;
     function GetCheckedTests: TArray<string>;
+    function GetNodeFullTestName(ANode: TTreeNode): string;
     function GetRunButtonRect(ANode: TTreeNode): TRect;
-    procedure TestsTreeViewMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
-    procedure TestsTreeViewMouseLeave(Sender: TObject);
-    procedure TestsTreeViewMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure TestsTreeViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure TestsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
+
+    procedure AddSessionButtonClick(Sender: TObject);
+    procedure ApplyIDETheme;
+    procedure ApplyLayout(ALayout: TTestExplorerLayout);
+    procedure ClearLogsClick(Sender: TObject);
+    procedure ClearTestStatus;
+    procedure CloseActiveSessionClick(Sender: TObject);
+    procedure CloseSession(ASession: TTestSession);
+    procedure CollapseSuccessAndFocusFailures;
+    procedure ConfigChangeHandler(Sender: TObject);
+    procedure CreateNewSession(const AName: string);
     procedure DebugSelectedClick(Sender: TObject);
+    procedure EnableBtnClick(Sender: TObject);
+    procedure ExpandTestsTreeView;
+    procedure ExportMenuClick(Sender: TObject);
+    procedure ExportResults(const ExportFormat, FileName: string);
+    procedure FilterEditChange(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure GroupingMenuClick(Sender: TObject);
+    procedure IdleTimerTimer(Sender: TObject);
+    procedure InitializeGroupSummaries;
+    procedure InvalidateGroupNode(const ATestName: string);
+    procedure LaunchTestExe(const ATestFilter: string);
+    procedure LayoutMenuClick(Sender: TObject);
+    procedure LogMsg(const AMsg: string);
+    procedure LogPerformance(const AMessage: string);
+    procedure NotifyProcessExited;
+    procedure OnTestResultReceived(const AJSONData: string);
+    procedure RebuildStatusImages;
+    procedure RefreshTreeView;
     procedure RunAllProjectsClick(Sender: TObject);
     procedure RunAllProjectsTests;
-    procedure LaunchTestExe(const ATestFilter: string);
-    procedure LogMsg(const AMsg: string);
-    procedure RebuildStatusImages;
-    procedure UpdateTabVisibility;
-    procedure AddSessionButtonClick(Sender: TObject);
-
-    procedure SetEnabledState(AValue: Boolean);
-    procedure ToggleEnabledClick(Sender: TObject);
-    procedure EnableBtnClick(Sender: TObject);
-    procedure ClearLogsClick(Sender: TObject);
-    procedure ExportMenuClick(Sender: TObject);
     procedure RunFailedTestsClick(Sender: TObject);
-    procedure ExportResults(const ExportFormat, FileName: string);
-    procedure IdleTimerTimer(Sender: TObject);
     procedure SaveTimerTimer(Sender: TObject);
-    procedure ConfigChangeHandler(Sender: TObject);
-    procedure ExpandTestsTreeView;
+    procedure SessionsPageControlChange(Sender: TObject);
+    procedure SessionTabContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
+    procedure SetActiveSession(ASession: TTestSession);
+    procedure SetEnabledState(AValue: Boolean);
+    procedure TestsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
+    procedure TestsTreeViewChange(Sender: TObject; Node: TTreeNode);
+    procedure TestsTreeViewMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure TestsTreeViewMouseLeave(Sender: TObject);
+    procedure TestsTreeViewMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure TestsTreeViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure ToggleEnabledClick(Sender: TObject);
+    procedure TryLoadCoverage;
+    procedure UpdateGroupSummary(const ATestName, AStatus: string; ADurationMs: Double);
+    procedure UpdateNodeResultCache(const ATestName, AStatus: string; ADurationMs: Double);
+    procedure UpdateSummaryCounts;
+    procedure UpdateTabVisibility;
+    procedure UpdateTestInspector(const ATestName: string);
+    procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
+    procedure UpdateTimingLabels;
+    procedure UpdateTotalTimeLabel;
 
     // Process handling
     function GetProjectByFileName(const AFileName: string): IOTAProject;
     procedure RefreshActiveProjectTestsList;
     procedure ResetSummaryLabels;
   protected
-    procedure DoShow; override;
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
+    procedure DoShow; override;
     procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure HandleFileSaved(const AFileName: string);
     procedure RunActiveProjectTests(const TestFilter: string = ''; AutoSave: Boolean = True);
     procedure RunImpactedTests(const ATests: TArray<string>);
-    procedure HandleFileSaved(const AFileName: string);
     // Called by the IDE AfterCompile notifier
     procedure NotifyCompileComplete(ASucceeded: Boolean);
     procedure RefreshProjects;
@@ -830,167 +833,21 @@ begin
   FTotalTests := 0;
   FCompletedTests := 0;
 
-  // Progress bar panel
-  FProgressPanel := TPanel.Create(Self);
-  FProgressPanel.Parent := Self;
-  FProgressPanel.Align := alTop;
-  FProgressPanel.Height := 18;
-  FProgressPanel.BevelOuter := bvNone;
-  FProgressPanel.Visible := False;
-  FProgressPanel.AlignWithMargins := True;
-  FProgressPanel.Margins.Left := 4;
-  FProgressPanel.Margins.Right := 4;
-  FProgressPanel.Margins.Top := 2;
-  FProgressPanel.Margins.Bottom := 2;
-  FProgressPanel.BringToFront;
-
-  FProgressLabel := TLabel.Create(Self);
-  FProgressLabel.Parent := FProgressPanel;
-  FProgressLabel.Align := alLeft;
-  FProgressLabel.Layout := tlCenter;
-  FProgressLabel.Caption := '';
-  FProgressLabel.Width := 55;
-  FProgressLabel.Font.Size := 7;
-  FProgressLabel.Margins.Left := 2;
-
-  FProgressBar := TProgressBar.Create(Self);
-  FProgressBar.Parent := FProgressPanel;
-  FProgressBar.Align := alClient;
-  FProgressBar.Min := 0;
-  FProgressBar.Max := 100;
-  FProgressBar.Position := 0;
-  FProgressBar.Style := pbstNormal;
+  // Setup event handlers and non-design property values
+  ProgressPanel.Visible := False;
+  ProgressPanel.BringToFront;
 
   ResetSummaryLabels;
 
   EnableDisableTestExplorerMenuItem.OnClick := ToggleEnabledClick;
   ClearMenuItem.OnClick := ClearLogsClick;
 
-  FDetailsPageControl := TPageControl.Create(Self);
-  FDetailsPageControl.Parent := DetailsPanel;
-  FDetailsPageControl.Align := alClient;
+  CustomParamsEdit.TextHint := 'e.g. --filter mytest* --verbose';
+  CustomParamsEdit.OnChange := ConfigChangeHandler;
 
-  FInspectorTab := TTabSheet.Create(Self);
-  FInspectorTab.PageControl := FDetailsPageControl;
-  FInspectorTab.Caption := 'Test Inspector';
-
-  FInspectorScroll := TScrollBox.Create(Self);
-  FInspectorScroll.Parent := FInspectorTab;
-  FInspectorScroll.Align := alClient;
-  FInspectorScroll.BorderStyle := bsNone;
-  FInspectorScroll.ParentColor := True;
-  FInspectorScroll.StyleElements := [];
-
-  var LInfoPanel := TPanel.Create(Self);
-  LInfoPanel.Parent := FInspectorScroll;
-  LInfoPanel.Align := alTop;
-  LInfoPanel.Height := 98;
-  LInfoPanel.BevelOuter := bvNone;
-  LInfoPanel.ParentColor := True;
-  LInfoPanel.StyleElements := [];
-
-  FLblTestName := TLabel.Create(Self);
-  FLblTestName.Parent := LInfoPanel;
-  FLblTestName.Top := 6;
-  FLblTestName.Left := 6;
-  FLblTestName.Font.Style := [fsBold];
-  FLblTestName.Caption := 'Test Name: Select a test...';
-  FLblTestName.StyleElements := [];
-
-  FLblStatus := TLabel.Create(Self);
-  FLblStatus.Parent := LInfoPanel;
-  FLblStatus.Top := 24;
-  FLblStatus.Left := 6;
-  FLblStatus.Caption := 'Status: Idle';
-  FLblStatus.StyleElements := [];
-
-  FLblLocation := TLabel.Create(Self);
-  FLblLocation.Parent := LInfoPanel;
-  FLblLocation.Top := 42;
-  FLblLocation.Left := 6;
-  FLblLocation.Caption := 'Location: N/A';
-  FLblLocation.StyleElements := [];
-
-  FLblDuration := TLabel.Create(Self);
-  FLblDuration.Parent := LInfoPanel;
-  FLblDuration.Top := 60;
-  FLblDuration.Left := 6;
-  FLblDuration.Caption := 'Duration: N/A';
-  FLblDuration.StyleElements := [];
-
-  FLblErrorHeader := TLabel.Create(Self);
-  FLblErrorHeader.Parent := LInfoPanel;
-  FLblErrorHeader.Top := 78;
-  FLblErrorHeader.Left := 6;
-  FLblErrorHeader.Font.Style := [fsBold];
-  FLblErrorHeader.Caption := 'Errors / Stack Trace:';
-  FLblErrorHeader.StyleElements := [];
-
-  FMemoError := TMemo.Create(Self);
-  FMemoError.Parent := FInspectorScroll;
-  FMemoError.Align := alClient;
-  FMemoError.AlignWithMargins := True;
-  FMemoError.Margins.Left := 6;
-  FMemoError.Margins.Right := 6;
-  FMemoError.Margins.Top := 2;
-  FMemoError.Margins.Bottom := 6;
-  FMemoError.ReadOnly := True;
-  FMemoError.ScrollBars := ssBoth;
-
-  // Configurations Tab
-  FConfigTab := TTabSheet.Create(Self);
-  FConfigTab.PageControl := FDetailsPageControl;
-  FConfigTab.Caption := 'Configurations';
-
-  var LConfigScroll := TScrollBox.Create(Self);
-  LConfigScroll.Parent := FConfigTab;
-  LConfigScroll.Align := alClient;
-  LConfigScroll.BorderStyle := bsNone;
-
-  var FLblCustomParams := TLabel.Create(Self);
-  FLblCustomParams.Parent := LConfigScroll;
-  FLblCustomParams.Left := 10;
-  FLblCustomParams.Top := 10;
-  FLblCustomParams.Caption := 'Custom Command Line Parameters:';
-
-  FCustomParamsEdit := TEdit.Create(Self);
-  FCustomParamsEdit.Parent := LConfigScroll;
-  FCustomParamsEdit.Left := 10;
-  FCustomParamsEdit.Top := 28;
-  FCustomParamsEdit.Width := 350;
-  FCustomParamsEdit.TextHint := 'e.g. --filter mytest* --verbose';
-  FCustomParamsEdit.OnChange := ConfigChangeHandler;
-
-  FChkRunOnSave := TCheckBox.Create(Self);
-  FChkRunOnSave.Parent := LConfigScroll;
-  FChkRunOnSave.Left := 10;
-  FChkRunOnSave.Top := 65;
-  FChkRunOnSave.Width := 200;
-  FChkRunOnSave.Caption := 'Run tests automatically on Save';
-  FChkRunOnSave.OnClick := ConfigChangeHandler;
-
-  FChkRunOnIdle := TCheckBox.Create(Self);
-  FChkRunOnIdle.Parent := LConfigScroll;
-  FChkRunOnIdle.Left := 10;
-  FChkRunOnIdle.Top := 90;
-  FChkRunOnIdle.Width := 200;
-  FChkRunOnIdle.Caption := 'Run tests automatically on Idle';
-  FChkRunOnIdle.OnClick := ConfigChangeHandler;
-
-  FChkEnabled := TCheckBox.Create(Self);
-  FChkEnabled.Parent := LConfigScroll;
-  FChkEnabled.Left := 10;
-  FChkEnabled.Top := 115;
-  FChkEnabled.Width := 200;
-  FChkEnabled.Caption := 'Enable Dext Test Explorer';
-  FChkEnabled.OnClick := ToggleEnabledClick;
-
-  FConsoleTab := TTabSheet.Create(Self);
-  FConsoleTab.PageControl := FDetailsPageControl;
-  FConsoleTab.Caption := 'Console Log';
-
-  DetailsMemo.Parent := FConsoleTab;
-  DetailsMemo.Align := alClient;
+  RunOnSaveCheckBox.OnClick := ConfigChangeHandler;
+  RunOnIdleCheckBox.OnClick := ConfigChangeHandler;
+  EnabledCheckBox.OnClick := ToggleEnabledClick;
 
   ExportToJUnitXmlMenutem.OnClick := ExportMenuClick;
   ExportToXUnitXMLMenutem.OnClick := ExportMenuClick;
@@ -1110,9 +967,9 @@ begin
       FEnabled := LIni.ReadBool('General', 'Enabled', True);
       LLayoutMode := LIni.ReadInteger('Layout', 'Mode', Ord(telCompact));
       LGroupingMode := LIni.ReadInteger('Grouping', 'Mode', Ord(tgmCodeStructure));
-      FCustomParamsEdit.Text := LIni.ReadString('General', 'CustomParams', '');
-      FChkRunOnSave.Checked := LIni.ReadBool('General', 'RunOnSave', False);
-      FChkRunOnIdle.Checked := LIni.ReadBool('General', 'RunOnIdle', False);
+      CustomParamsEdit.Text := LIni.ReadString('General', 'CustomParams', '');
+      RunOnSaveCheckBox.Checked := LIni.ReadBool('General', 'RunOnSave', False);
+      RunOnIdleCheckBox.Checked := LIni.ReadBool('General', 'RunOnIdle', False);
     finally
       LIni.Free;
     end;
@@ -1123,7 +980,7 @@ begin
   SetEnabledState(FEnabled);
   ApplyLayout(TTestExplorerLayout(LLayoutMode));
   FGroupingMode := TTestGroupingMode(LGroupingMode);
-  FIdleTimer.Enabled := FChkRunOnIdle.Checked;
+  FIdleTimer.Enabled := RunOnIdleCheckBox.Checked;
 
   // Sync menu Checked states based on loaded configurations
   TabbedLayoutMenuItem.Checked := TTestExplorerLayout(LLayoutMode) = telCompact;
@@ -1425,26 +1282,26 @@ begin
       end;
 
       // 4. Test Inspector (Scrollbox & Labels)
-      if Assigned(FInspectorScroll) then
+      if Assigned(InspectorScroll) then
       begin
-        FInspectorScroll.ParentColor := False;
-        FInspectorScroll.Color := BgColor;
+        InspectorScroll.ParentColor := False;
+        InspectorScroll.Color := BgColor;
       end;
 
-      if Assigned(FLblTestName) then FLblTestName.Font.Color := FgColor;
-      if Assigned(FLblStatus) then
+      if Assigned(TestNameLabel) then TestNameLabel.Font.Color := FgColor;
+      if Assigned(StatusLabel) then
       begin
-        if (not string(FLblStatus.Caption).Contains('Passed')) and (not string(FLblStatus.Caption).Contains('Failed')) then
-          FLblStatus.Font.Color := FgColor;
+        if (not string(StatusLabel.Caption).Contains('Passed')) and (not string(StatusLabel.Caption).Contains('Failed')) then
+          StatusLabel.Font.Color := FgColor;
       end;
-      if Assigned(FLblLocation) then FLblLocation.Font.Color := FgColor;
-      if Assigned(FLblDuration) then FLblDuration.Font.Color := FgColor;
-      if Assigned(FLblErrorHeader) then FLblErrorHeader.Font.Color := FgColor;
+      if Assigned(LocationLabel) then LocationLabel.Font.Color := FgColor;
+      if Assigned(DurationLabel) then DurationLabel.Font.Color := FgColor;
+      if Assigned(ErrorHeaderLabel) then ErrorHeaderLabel.Font.Color := FgColor;
 
-      if Assigned(FMemoError) then
+      if Assigned(ErrorMemo) then
       begin
-        FMemoError.Color := BgColor;
-        FMemoError.Font.Color := FgColor;
+        ErrorMemo.Color := BgColor;
+        ErrorMemo.Font.Color := FgColor;
       end;
 
       if Assigned(SummaryTotalLabel) then SummaryTotalLabel.Font.Color := FgColor;
@@ -1483,14 +1340,14 @@ begin
   FEnabled := AValue;
   FDisabledPanel.Visible := not AValue;
 
-  if Assigned(FChkEnabled) then
+  if Assigned(EnabledCheckBox) then
   begin
-    var LHandler := FChkEnabled.OnClick;
-    FChkEnabled.OnClick := nil;
+    var LHandler := EnabledCheckBox.OnClick;
+    EnabledCheckBox.OnClick := nil;
     try
-      FChkEnabled.Checked := AValue;
+      EnabledCheckBox.Checked := AValue;
     finally
-      FChkEnabled.OnClick := LHandler;
+      EnabledCheckBox.OnClick := LHandler;
     end;
   end;
 
@@ -1848,7 +1705,7 @@ end;
 procedure TFormDextTestRunner.IdleTimerTimer(Sender: TObject);
 begin
   FIdleTimer.Enabled := False;
-  if FEnabled and FChkRunOnIdle.Checked and (FActiveProjectFile <> '') then
+  if FEnabled and RunOnIdleCheckBox.Checked and (FActiveProjectFile <> '') then
   begin
     LogMsg('Idle auto-run triggered.');
     RunActiveProjectTests;
@@ -1859,16 +1716,16 @@ procedure TFormDextTestRunner.ConfigChangeHandler(Sender: TObject);
 begin
   var LIni := TMemIniFile.Create(TPath.Combine(TPath.GetHomePath, 'DextTestExplorer.ini'));
   try
-    LIni.WriteString('General', 'CustomParams', FCustomParamsEdit.Text);
-    LIni.WriteBool('General', 'RunOnSave', FChkRunOnSave.Checked);
-    LIni.WriteBool('General', 'RunOnIdle', FChkRunOnIdle.Checked);
+    LIni.WriteString('General', 'CustomParams', CustomParamsEdit.Text);
+    LIni.WriteBool('General', 'RunOnSave', RunOnSaveCheckBox.Checked);
+    LIni.WriteBool('General', 'RunOnIdle', RunOnIdleCheckBox.Checked);
     LIni.UpdateFile;
   finally
     LIni.Free;
   end;
 
   if Assigned(FIdleTimer) then
-    FIdleTimer.Enabled := FChkRunOnIdle.Checked;
+    FIdleTimer.Enabled := RunOnIdleCheckBox.Checked;
 end;
 
 function GetProjectTargetInfo(const ADprojPath: string; out AIsPackage: Boolean; out AExeOutput: string): Boolean;
@@ -2074,17 +1931,17 @@ end;
 
 function TFormDextTestRunner.FindNodeByPath(const APath: string): TTreeNode;
 var
-  I: Integer;
-  LNode: TTreeNode;
-  LSplit: TArray<string>;
+  i: Integer;
+  Node: TTreeNode;
+  Split: TArray<string>;
 
   function GetNodeClassName(const ANodeText: string): string;
   var
-    LPos: Integer;
+    Pos: Integer;
   begin
-    LPos := ANodeText.IndexOf(' (');
-    if LPos > 0 then
-      Result := ANodeText.Substring(0, LPos)
+    Pos := ANodeText.IndexOf(' (');
+    if Pos > 0 then
+      Result := ANodeText.Substring(0, Pos)
     else
       Result := ANodeText;
   end;
@@ -2094,23 +1951,23 @@ begin
   if FGroupingMode = tgmStatus then
   begin
     // In status mode, child nodes are named exactly 'ClassName.MethodName'. Root nodes are 'Failed', 'Passed', 'Skipped', 'Idle'.
-    for I := 0 to TestsTreeView.Items.Count - 1 do
+    for i := 0 to TestsTreeView.Items.Count - 1 do
     begin
-      LNode := TestsTreeView.Items[I];
-      if (LNode.Parent <> nil) and SameText(LNode.Text, APath) then
+      Node := TestsTreeView.Items[i];
+      if (Node.Parent <> nil) and SameText(Node.Text, APath) then
       begin
-        Result := LNode;
+        Result := Node;
         Exit;
       end;
     end;
 
     // If not found, check if searching for a status category node itself
-    for I := 0 to TestsTreeView.Items.Count - 1 do
+    for i := 0 to TestsTreeView.Items.Count - 1 do
     begin
-      LNode := TestsTreeView.Items[I];
-      if (LNode.Parent = nil) and SameText(LNode.Text, APath) then
+      Node := TestsTreeView.Items[i];
+      if (Node.Parent = nil) and SameText(Node.Text, APath) then
       begin
-        Result := LNode;
+        Result := Node;
         Exit;
       end;
     end;
@@ -2121,20 +1978,20 @@ begin
   // If APath contains a dot, try to find the child node via ClassName.MethodName
   if APath.Contains('.') then
   begin
-    LSplit := APath.Split(['.'], 2);
-    if Length(LSplit) = 2 then
+    Split := APath.Split(['.'], 2);
+    if Length(Split) = 2 then
     begin
-      for I := 0 to TestsTreeView.Items.Count - 1 do
+      for i := 0 to TestsTreeView.Items.Count - 1 do
       begin
-        LNode := TestsTreeView.Items[I];
-        if (LNode.Parent = nil) and SameText(GetNodeClassName(LNode.Text), LSplit[0]) then
+        Node := TestsTreeView.Items[i];
+        if (Node.Parent = nil) and SameText(GetNodeClassName(Node.Text), Split[0]) then
         begin
           var J: Integer;
-          for J := 0 to LNode.Count - 1 do
+          for J := 0 to Node.Count - 1 do
           begin
-            if SameText(LNode.Item[J].Text, LSplit[1]) then
+            if SameText(Node.Item[J].Text, Split[1]) then
             begin
-              Result := LNode.Item[J];
+              Result := Node.Item[J];
               Exit;
             end;
           end;
@@ -2144,12 +2001,12 @@ begin
   end;
 
   // Fallback: search all nodes by ClassName prefix
-  for I := 0 to TestsTreeView.Items.Count - 1 do
+  for i := 0 to TestsTreeView.Items.Count - 1 do
   begin
-    LNode := TestsTreeView.Items[I];
-    if (LNode.Parent = nil) and SameText(GetNodeClassName(LNode.Text), APath) then
+    Node := TestsTreeView.Items[i];
+    if (Node.Parent = nil) and SameText(GetNodeClassName(Node.Text), APath) then
     begin
-      Result := LNode;
+      Result := Node;
       Exit;
     end;
   end;
@@ -2157,26 +2014,31 @@ end;
 
 procedure TFormDextTestRunner.OnTestResultReceived(const AJSONData: string);
 var
-  LValue: TJSONValue;
-  LArray: TJSONArray;
-  I: Integer;
+  Value: TJSONValue;
+  JSONArray: TJSONArray;
+  i: Integer;
 
-  procedure ProcessSingleResult(LJSON: TJSONObject);
+  procedure ProcessSingleResult(ItemJson: TJSONObject);
   var
-    LTestName, LStatus, LMsg, LStackTrace: string;
-    LErrorObj: TJSONObject;
-    LEvent: string;
-    LPassed, LFailed, LIgnored: Integer;
-    LDurationMs: Double;
+    DetailInfo: TTestDetailInfo;
+    DurationMs: Double;
+    ErrorObj: TJSONObject;
+    Event: string;
+    FullTestName: string;
+    i: Integer;
+    Node: TTreeNode;
+    Passed, Failed, Ignored: Integer;
+    TestLocation: TTestLocation;
+    TestName, Status, Msg, StackTrace: string;
   begin
-    if LJSON.TryGetValue<string>('event', LEvent) and SameText(LEvent, 'RunComplete') then
+    if ItemJson.TryGetValue<string>('event', Event) and SameText(Event, 'RunComplete') then
     begin
-      LPassed := LJSON.GetValue<Integer>('passed');
-      LFailed := LJSON.GetValue<Integer>('failed');
-      LIgnored := LJSON.GetValue<Integer>('ignored');
+      Passed := ItemJson.GetValue<Integer>('passed');
+      Failed := ItemJson.GetValue<Integer>('failed');
+      Ignored := ItemJson.GetValue<Integer>('ignored');
       LogMsg('');
       LogMsg('========================================');
-      LogMsg(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [LPassed, LFailed, LIgnored]));
+      LogMsg(Format('Testing Completed. Passed: %d, Failed: %d, Ignored: %d', [Passed, Failed, Ignored]));
       LogMsg('========================================');
 
       // Stop the stopwatch
@@ -2184,33 +2046,29 @@ var
       UpdateTimingLabels;
 
       // Mark any remaining 'Idle' tests as 'Skipped'
-      var LIdx: Integer;
-      var LTest: TTestLocation;
-      var LFullTestName: string;
-      var LInfo: TTestDetailInfo;
-      for LIdx := 0 to FTestLocations.Count - 1 do
+      for i := 0 to FTestLocations.Count - 1 do
       begin
-        LTest := FTestLocations[LIdx];
-        LFullTestName := LTest.ClassName + '.' + LTest.MethodName;
-        if FTestDetails.TryGetValue(LFullTestName, LInfo) then
+        TestLocation := FTestLocations[i];
+        FullTestName := TestLocation.ClassName + '.' + TestLocation.MethodName;
+        if FTestDetails.TryGetValue(FullTestName, DetailInfo) then
         begin
-          if SameText(LInfo.Status, 'Idle') or (LInfo.Status = '') then
+          if SameText(DetailInfo.Status, 'Idle') or (DetailInfo.Status = '') then
           begin
-            LInfo.Status := 'Skipped';
-            FTestDetails.AddOrSetValue(LFullTestName, LInfo);
+            DetailInfo.Status := 'Skipped';
+            FTestDetails.AddOrSetValue(FullTestName, DetailInfo);
             Inc(FSkippedCount);
           end;
         end
         else
         begin
-          LInfo.TestName := LFullTestName;
-          LInfo.Status := 'Skipped';
-          LInfo.DurationMs := 0;
-          LInfo.ErrorMessage := 'Not executed';
-          LInfo.StackTrace := '';
-          LInfo.FileName := LTest.FileName;
-          LInfo.Line := LTest.Line;
-          FTestDetails.AddOrSetValue(LFullTestName, LInfo);
+          DetailInfo.TestName := FullTestName;
+          DetailInfo.Status := 'Skipped';
+          DetailInfo.DurationMs := 0;
+          DetailInfo.ErrorMessage := 'Not executed';
+          DetailInfo.StackTrace := '';
+          DetailInfo.FileName := TestLocation.FileName;
+          DetailInfo.Line := TestLocation.Line;
+          FTestDetails.AddOrSetValue(FullTestName, DetailInfo);
           Inc(FSkippedCount);
         end;
       end;
@@ -2221,15 +2079,15 @@ var
       SummarySkippedLabel.Caption := 'Skipped: ' + FSkippedCount.ToString;
 
       // Complete and then hide the progress panel
-      if Assigned(FProgressPanel) then
+      if Assigned(ProgressPanel) then
       begin
-        FProgressBar.Position := FProgressBar.Max;
-        FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
+        ProgressBar.Position := ProgressBar.Max;
+        ProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
         // Hide after a short delay so user can see 100%
         TThread.ForceQueue(nil, TThreadProcedure(procedure
           begin
-            if Assigned(FProgressPanel) then
-              FProgressPanel.Visible := False;
+            if Assigned(ProgressPanel) then
+              ProgressPanel.Visible := False;
           end));
       end;
       if FRunningProcessHandle <> 0 then
@@ -2244,9 +2102,9 @@ var
       Exit;
     end;
 
-    if LJSON.TryGetValue<string>('event', LEvent) and SameText(LEvent, 'RunStart') then
+    if ItemJson.TryGetValue<string>('event', Event) and SameText(Event, 'RunStart') then
     begin
-      FTotalTests := LJSON.GetValue<Integer>('totalTests');
+      FTotalTests := ItemJson.GetValue<Integer>('totalTests');
       FCompletedTests := 0;
       FPassedCount := 0;
       FFailedCount := 0;
@@ -2255,30 +2113,26 @@ var
       InitializeGroupSummaries;
 
       // Ensure all test locations exist in FTestDetails as Idle
-      var LIdx: Integer;
-      var LTest: TTestLocation;
-      var LFullTestName: string;
-      var LInfo: TTestDetailInfo;
-      for LIdx := 0 to FTestLocations.Count - 1 do
+      for i := 0 to FTestLocations.Count - 1 do
       begin
-        LTest := FTestLocations[LIdx];
-        LFullTestName := LTest.ClassName + '.' + LTest.MethodName;
-        LInfo.TestName := LFullTestName;
-        LInfo.Status := 'Idle';
-        LInfo.DurationMs := 0;
-        LInfo.ErrorMessage := '';
-        LInfo.StackTrace := '';
-        LInfo.FileName := LTest.FileName;
-        LInfo.Line := LTest.Line;
-        FTestDetails.AddOrSetValue(LFullTestName, LInfo);
+        TestLocation := FTestLocations[i];
+        FullTestName := TestLocation.ClassName + '.' + TestLocation.MethodName;
+        DetailInfo.TestName := FullTestName;
+        DetailInfo.Status := 'Idle';
+        DetailInfo.DurationMs := 0;
+        DetailInfo.ErrorMessage := '';
+        DetailInfo.StackTrace := '';
+        DetailInfo.FileName := TestLocation.FileName;
+        DetailInfo.Line := TestLocation.Line;
+        FTestDetails.AddOrSetValue(FullTestName, DetailInfo);
       end;
 
-      if Assigned(FProgressPanel) then
+      if Assigned(ProgressPanel) then
       begin
-        FProgressBar.Max := Max(1, FTotalTests);
-        FProgressBar.Position := 0;
-        FProgressLabel.Caption := Format('0/%d', [FTotalTests]);
-        FProgressPanel.Visible := True;
+        ProgressBar.Max := Max(1, FTotalTests);
+        ProgressBar.Position := 0;
+        ProgressLabel.Caption := Format('0/%d', [FTotalTests]);
+        ProgressPanel.Visible := True;
       end;
 
       // Update summary counts
@@ -2299,111 +2153,110 @@ var
     end;
 
     // Detect if this is a standard result or a TestInsight result
-    LTestName := '';
-    LStatus := '';
-    LMsg := '';
-    LStackTrace := '';
-    LDurationMs := 0;
+    TestName := '';
+    Status := '';
+    Msg := '';
+    StackTrace := '';
+    DurationMs := 0;
 
-    if LJSON.TryGetValue<string>('testName', LTestName) then
+    if ItemJson.TryGetValue<string>('testName', TestName) then
     begin
       // Standard Dext result format
-      LJSON.TryGetValue<string>('status', LStatus);
-      LJSON.TryGetValue<Double>('durationMs', LDurationMs);
-      if LJSON.TryGetValue<TJSONObject>('error', LErrorObj) and Assigned(LErrorObj) then
+      ItemJson.TryGetValue<string>('status', Status);
+      ItemJson.TryGetValue<Double>('durationMs', DurationMs);
+      if ItemJson.TryGetValue<TJSONObject>('error', ErrorObj) and Assigned(ErrorObj) then
       begin
-        LMsg := LErrorObj.GetValue<string>('message');
-        LStackTrace := LErrorObj.GetValue<TJSONObject>('stackTrace').ToJSON;
+        Msg := ErrorObj.GetValue<string>('message');
+        StackTrace := ErrorObj.GetValue<TJSONObject>('stackTrace').ToJSON;
       end;
     end
-    else if LJSON.TryGetValue<string>('testname', LTestName) then
+    else if ItemJson.TryGetValue<string>('testname', TestName) then
     begin
       // TestInsight compatibility result format
-      LJSON.TryGetValue<string>('resulttype', LStatus);
+      ItemJson.TryGetValue<string>('resulttype', Status);
 
       // Map TestInsight status to Dext status standard values ('Passed', 'Failed', 'Skipped', 'Error')
-      if SameText(LStatus, 'Passed') then LStatus := 'Passed'
-      else if SameText(LStatus, 'Failed') then LStatus := 'Failed'
-      else if SameText(LStatus, 'Error') then LStatus := 'Error'
-      else if SameText(LStatus, 'Skipped') then LStatus := 'Skipped';
+      if SameText(Status, 'Passed') then Status := 'Passed'
+      else if SameText(Status, 'Failed') then Status := 'Failed'
+      else if SameText(Status, 'Error') then Status := 'Error'
+      else if SameText(Status, 'Skipped') then Status := 'Skipped';
 
       var LFixture: string := '';
-      if LJSON.TryGetValue<string>('fixturename', LFixture) and (LFixture <> '') then
+      if ItemJson.TryGetValue<string>('fixturename', LFixture) and (LFixture <> '') then
       begin
-        LTestName := LFixture + '.' + LTestName;
+        TestName := LFixture + '.' + TestName;
       end;
 
       var LTempDur: Double := 0;
-      if LJSON.TryGetValue<Double>('duration', LTempDur) then
-        LDurationMs := LTempDur;
+      if ItemJson.TryGetValue<Double>('duration', LTempDur) then
+        DurationMs := LTempDur;
 
-      LJSON.TryGetValue<string>('exceptionmessage', LMsg);
-      LJSON.TryGetValue<string>('status', LStackTrace);
+      ItemJson.TryGetValue<string>('exceptionmessage', Msg);
+      ItemJson.TryGetValue<string>('status', StackTrace);
     end;
 
-    if LTestName = '' then Exit;
+    if TestName = '' then Exit;
 
-    LogMsg('Result received: ' + LTestName + ' - ' + LStatus);
+    LogMsg('Result received: ' + TestName + ' - ' + Status);
 
-    if not SameText(LStatus, 'Running') then
+    if not SameText(Status, 'Running') then
     begin
       // Update progress bar
       Inc(FCompletedTests);
-      if Assigned(FProgressPanel) and FProgressPanel.Visible then
+      if Assigned(ProgressPanel) and ProgressPanel.Visible then
       begin
-        if FProgressBar.Style = pbstMarquee then
-          FProgressBar.Style := pbstNormal;
-        FProgressBar.Max := Max(FProgressBar.Max, FTotalTests);
-        FProgressBar.Position := Min(FCompletedTests, FProgressBar.Max);
-        FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, FTotalTests]);
+        if ProgressBar.Style = pbstMarquee then
+          ProgressBar.Style := pbstNormal;
+        ProgressBar.Max := Max(ProgressBar.Max, FTotalTests);
+        ProgressBar.Position := Min(FCompletedTests, ProgressBar.Max);
+        ProgressLabel.Caption := Format('%d/%d', [FCompletedTests, FTotalTests]);
       end;
 
-      if SameText(LStatus, 'Passed') then
+      if SameText(Status, 'Passed') then
         Inc(FPassedCount)
-      else if SameText(LStatus, 'Failed') or SameText(LStatus, 'Error') then
+      else if SameText(Status, 'Failed') or SameText(Status, 'Error') then
         Inc(FFailedCount)
-      else if SameText(LStatus, 'Skipped') then
+      else if SameText(Status, 'Skipped') then
         Inc(FSkippedCount);
 
       SummarySuccessLabel.Caption := 'Passed: ' + FPassedCount.ToString;
       SummaryFailedLabel.Caption := 'Failed: ' + FFailedCount.ToString;
       SummarySkippedLabel.Caption := 'Skipped: ' + FSkippedCount.ToString;
-      FTestExecutionDurationMs := FTestExecutionDurationMs + LDurationMs;
+      FTestExecutionDurationMs := FTestExecutionDurationMs + DurationMs;
       UpdateTotalTimeLabel;
     end;
 
-    TTelemetryTracker.RecordTestResult(FActiveProjectFile, LTestName, LStatus, Round(LDurationMs));
-    UpdateNodeResultCache(LTestName, LStatus, LDurationMs);
+    TTelemetryTracker.RecordTestResult(FActiveProjectFile, TestName, Status, Round(DurationMs));
+    UpdateNodeResultCache(TestName, Status, DurationMs);
 
-    UpdateTestNode(LTestName, LStatus, LMsg, LStackTrace);
+    UpdateTestNode(TestName, Status, Msg, StackTrace);
 
     // Cache test details
-    var LInfo: TTestDetailInfo;
-    LInfo.TestName := LTestName;
-    LInfo.Status := LStatus;
-    LInfo.DurationMs := LDurationMs;
-    LInfo.ErrorMessage := LMsg;
-    LInfo.StackTrace := LStackTrace;
+    DetailInfo.TestName := TestName;
+    DetailInfo.Status := Status;
+    DetailInfo.DurationMs := DurationMs;
+    DetailInfo.ErrorMessage := Msg;
+    DetailInfo.StackTrace := StackTrace;
 
-    var LNode := FindNodeByPath(LTestName);
-    if Assigned(LNode) and (LNode.Data <> nil) then
+    Node := FindNodeByPath(TestName);
+    if Assigned(Node) and (Node.Data <> nil) then
     begin
-      var LIdx := Integer(LNode.Data) - 1;
-      if (LIdx >= 0) and (LIdx < FTestLocations.Count) then
+      i := Integer(Node.Data) - 1;
+      if (i >= 0) and (i < FTestLocations.Count) then
       begin
-        LInfo.FileName := FTestLocations[LIdx].FileName;
-        LInfo.Line := FTestLocations[LIdx].Line;
+        DetailInfo.FileName := FTestLocations[i].FileName;
+        DetailInfo.Line := FTestLocations[i].Line;
       end;
     end;
 
-    FTestDetails.AddOrSetValue(LTestName, LInfo);
+    FTestDetails.AddOrSetValue(TestName, DetailInfo);
 
     // If this test is selected, update inspector tab
     if (TestsTreeView.Selected <> nil) and
-       (SameText(TestsTreeView.Selected.Text, LTestName) or
-        SameText(GetNodeFullTestName(TestsTreeView.Selected), LTestName)) then
+       (SameText(TestsTreeView.Selected.Text, TestName) or
+        SameText(GetNodeFullTestName(TestsTreeView.Selected), TestName)) then
     begin
-      UpdateTestInspector(LTestName);
+      UpdateTestInspector(TestName);
     end;
   end;
 
@@ -2412,25 +2265,25 @@ begin
   LogMsg('[Debug Payload] ' + AJSONData);
 {$ENDIF}
 
-  LValue := TJSONObject.ParseJSONValue(AJSONData);
-  if not Assigned(LValue) then Exit;
+  Value := TJSONObject.ParseJSONValue(AJSONData);
+  if not Assigned(Value) then Exit;
 
   try
-    if LValue is TJSONArray then
+    if Value is TJSONArray then
     begin
-      LArray := TJSONArray(LValue);
-      for I := 0 to LArray.Count - 1 do
+      JSONArray := TJSONArray(Value);
+      for i := 0 to JsonArray.Count - 1 do
       begin
-        if LArray.Items[I] is TJSONObject then
-          ProcessSingleResult(TJSONObject(LArray.Items[I]));
+        if JSONArray.Items[i] is TJSONObject then
+          ProcessSingleResult(TJSONObject(JSONArray.Items[i]));
       end;
     end
-    else if LValue is TJSONObject then
+    else if Value is TJSONObject then
     begin
-      ProcessSingleResult(TJSONObject(LValue));
+      ProcessSingleResult(TJSONObject(Value));
     end;
   finally
-    LValue.Free;
+    Value.Free;
   end;
 end;
 
@@ -2517,14 +2370,14 @@ begin
     LogMsg('Testing Completed (Process Exited)');
     LogMsg('========================================');
 
-    if Assigned(FProgressPanel) then
+    if Assigned(ProgressPanel) then
     begin
-      FProgressBar.Position := FProgressBar.Max;
-      FProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
+      ProgressBar.Position := ProgressBar.Max;
+      ProgressLabel.Caption := Format('%d/%d', [FCompletedTests, Max(FCompletedTests, FTotalTests)]);
       TThread.Queue(nil, TThreadProcedure(procedure
         begin
-          if Assigned(FProgressPanel) then
-            FProgressPanel.Visible := False;
+          if Assigned(ProgressPanel) then
+            ProgressPanel.Visible := False;
         end));
     end;
 
@@ -2541,32 +2394,32 @@ end;
 
 procedure TFormDextTestRunner.UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
 var
-  LNode: TTreeNode;
-  LText: string;
-  LRect: TRect;
+  Node: TTreeNode;
+  Text: string;
+  NodeRect: TRect;
 begin
   // ATestName is usually in the format: ClassName.MethodName or TClassName.MethodName
-  LNode := FindNodeByPath(ATestName);
-  if not Assigned(LNode) then
+  Node := FindNodeByPath(ATestName);
+  if not Assigned(Node) then
   begin
     // Fallback: search for method leaf node matching method portion
-    LText := ATestName;
-    if LText.Contains('.') then
-      LText := LText.Split(['.'])[1];
-    LNode := FindNodeByPath(LText);
+    Text := ATestName;
+    if Text.Contains('.') then
+      Text := Text.Split(['.'])[1];
+    Node := FindNodeByPath(Text);
   end;
 
-  if Assigned(LNode) then
+  if Assigned(Node) then
   begin
     if SameText(AStatus, 'Passed') then
     begin
-      LNode.ImageIndex := 1;
-      LNode.SelectedIndex := 1;
+      Node.ImageIndex := 1;
+      Node.SelectedIndex := 1;
     end
     else if SameText(AStatus, 'Failed') or SameText(AStatus, 'Error') then
     begin
-      LNode.ImageIndex := 2;
-      LNode.SelectedIndex := 2;
+      Node.ImageIndex := 2;
+      Node.SelectedIndex := 2;
       if AMessage <> '' then
       begin
         LogMsg('Test Failed: ' + ATestName);
@@ -2581,11 +2434,11 @@ begin
     end
     else if SameText(AStatus, 'Skipped') then
     begin
-      LNode.ImageIndex := 0; // Gray
-      LNode.SelectedIndex := 0;
+      Node.ImageIndex := 0; // Gray
+      Node.SelectedIndex := 0;
     end;
-    LRect := LNode.DisplayRect(False);
-    InvalidateRect(TestsTreeView.Handle, @LRect, True);
+    NodeRect := Node.DisplayRect(False);
+    InvalidateRect(TestsTreeView.Handle, @NodeRect, True);
   end;
 end;
 
@@ -2602,8 +2455,8 @@ begin
   UpdateTestInspector(LKey);
   if (Node.Parent <> nil) and FTestDetails.ContainsKey(LKey) then
   begin
-    if FDetailsPageControl.Visible then
-      FDetailsPageControl.ActivePage := FInspectorTab;
+    if DetailsPageControl.Visible then
+      DetailsPageControl.ActivePage := InspectorTab;
   end;
   LRect := Node.DisplayRect(True);
   LRect.Right := TestsTreeView.ClientWidth;
@@ -2614,83 +2467,88 @@ end;
 
 procedure TFormDextTestRunner.UpdateTestInspector(const ATestName: string);
 var
-  LInfo: TTestDetailInfo;
-  LStatusText: string;
-  LNode: TTreeNode;
-  LIdx: Integer;
-  LLoc: TTestLocation;
-  LStopwatch: TStopwatch;
-  LRealLine: Integer;
+  DetailInfo: TTestDetailInfo;
+  StatusText: string;
+  Node: TTreeNode;
+  i: Integer;
+  TestLocation: TTestLocation;
+  Stopwatch: TStopwatch;
+  RealLine: Integer;
 begin
-  LStopwatch := TStopwatch.StartNew;
-  if not Assigned(FLblTestName) then Exit;
-  FLblTestName.Caption := 'Test Name: ' + ATestName;
-  FMemoError.Clear;
+  Stopwatch := TStopwatch.StartNew;
+  if not Assigned(TestNameLabel) then Exit;
+  TestNameLabel.Caption := 'Test Name: ' + ATestName;
+  ErrorMemo.Clear;
 
   // Set default Location
-  FLblLocation.Caption := 'Location: Unknown';
-  LNode := nil;
+  LocationLabel.Caption := 'Location: Unknown';
+  Node := nil;
   if Assigned(TestsTreeView) and Assigned(TestsTreeView.Selected) and
     SameText(GetNodeFullTestName(TestsTreeView.Selected), ATestName) then
-    LNode := TestsTreeView.Selected;
+    Node := TestsTreeView.Selected;
 
-  if not Assigned(LNode) then
-    LNode := FindNodeByPath(ATestName);
+  if not Assigned(Node) then
+    Node := FindNodeByPath(ATestName);
 
-  if Assigned(LNode) and (LNode.Data <> nil) then
+  if Assigned(Node) and (Node.Data <> nil) then
   begin
-    LIdx := Integer(LNode.Data) - 1;
-    if (LIdx >= 0) and (LIdx < FTestLocations.Count) then
+    i := Integer(Node.Data) - 1;
+    if (i >= 0) and (i < FTestLocations.Count) then
     begin
-      LLoc := FTestLocations[LIdx];
-      LRealLine := FindMethodImplementationLine(LLoc.FileName, LLoc.ClassName, LLoc.MethodName, LLoc.Line);
-      FLblLocation.Caption := Format('Location: %s (Line %d)', [ExtractFileName(LLoc.FileName), LRealLine]);
+      TestLocation := FTestLocations[i];
+      RealLine := FindMethodImplementationLine(TestLocation.FileName, TestLocation.ClassName, TestLocation.MethodName, TestLocation.Line);
+      LocationLabel.Caption := Format('Location: %s (Line %d)', [ExtractFileName(TestLocation.FileName), RealLine]);
     end;
   end;
 
-  if FTestDetails.TryGetValue(ATestName, LInfo) then
+  if FTestDetails.TryGetValue(ATestName, DetailInfo) then
   begin
-    LStatusText := LInfo.Status;
-    FLblStatus.Caption := 'Status: ' + LStatusText;
-    FLblStatus.ParentColor := False;
-    if SameText(LStatusText, 'Passed') then
-      FLblStatus.Font.Color := TColor($5EC522) // Green BGR
-    else if SameText(LStatusText, 'Failed') or SameText(LStatusText, 'Error') then
-      FLblStatus.Font.Color := TColor($4444EF) // Red BGR
+    StatusText := DetailInfo.Status;
+    StatusLabel.Caption := 'Status: ' + StatusText;
+    StatusLabel.ParentColor := False;
+    if SameText(StatusText, 'Passed') then
+      StatusLabel.Font.Color := TColor($5EC522) // Green BGR
+    else if SameText(StatusText, 'Failed') or SameText(StatusText, 'Error') then
+      StatusLabel.Font.Color := TColor($4444EF) // Red BGR
     else
     begin
-      FLblStatus.Font.Color := clWindowText;
-      FLblStatus.ParentColor := True;
+      StatusLabel.Font.Color := clWindowText;
+      StatusLabel.ParentColor := True;
     end;
 
     // Format duration intelligently: show sub-ms precision when needed
-    if LInfo.DurationMs < 1.0 then
-      FLblDuration.Caption := Format('Duration: %.3f ms', [LInfo.DurationMs])
-    else if LInfo.DurationMs < 100.0 then
-      FLblDuration.Caption := Format('Duration: %.2f ms', [LInfo.DurationMs])
+    if DetailInfo.DurationMs < 1.0 then
+      DurationLabel.Caption := Format('Duration: %.3f ms', [DetailInfo.DurationMs])
+    else if DetailInfo.DurationMs < 100.0 then
+      DurationLabel.Caption := Format('Duration: %.2f ms', [DetailInfo.DurationMs])
     else
-      FLblDuration.Caption := Format('Duration: %.0f ms', [LInfo.DurationMs]);
+      DurationLabel.Caption := Format('Duration: %.0f ms', [DetailInfo.DurationMs]);
 
-    if LInfo.ErrorMessage <> '' then
+    if DetailInfo.ErrorMessage <> '' then
     begin
-      FMemoError.Lines.Add('Error Message:');
-      FMemoError.Lines.Add(LInfo.ErrorMessage);
-      FMemoError.Lines.Add('');
+      ErrorMemo.Lines.Add('Error Message:');
+      ErrorMemo.Lines.Add(DetailInfo.ErrorMessage);
+      ErrorMemo.Lines.Add('');
     end;
-    if LInfo.StackTrace <> '' then
+
+    if DetailInfo.StackTrace <> '' then
     begin
-      FMemoError.Lines.Add('Stack Trace:');
-      FMemoError.Lines.Add(LInfo.StackTrace);
+      ErrorMemo.Lines.Add('Stack Trace:');
+      ErrorMemo.Lines.Add(DetailInfo.StackTrace);
     end;
   end
   else
   begin
-    FLblStatus.Caption := 'Status: Idle';
-    FLblStatus.Font.Color := clWindowText;
-    FLblDuration.Caption := 'Duration: N/A';
+    StatusLabel.Caption := 'Status: Idle';
+    StatusLabel.Font.Color := clWindowText;
+    DurationLabel.Caption := 'Duration: N/A';
   end;
-  if LStopwatch.Elapsed.TotalMilliseconds > 5 then
-    LogPerformance(Format('UpdateTestInspector slow %.2f ms: %s', [LStopwatch.Elapsed.TotalMilliseconds, ATestName]));
+
+  ErrorHeaderLabel.Visible := (DetailInfo.ErrorMessage <> '') or (DetailInfo.StackTrace <> '');
+  ErrorMemo.Visible := ErrorHeaderLabel.Visible;
+
+  if Stopwatch.Elapsed.TotalMilliseconds > 5 then
+    LogPerformance(Format('UpdateTestInspector slow %.2f ms: %s', [Stopwatch.Elapsed.TotalMilliseconds, ATestName]));
 end;
 
 procedure TFormDextTestRunner.ClearTestStatus;
@@ -2704,14 +2562,14 @@ begin
     FGroupSummaries.Clear;
   if Assigned(FGroupNodes) then
     FGroupNodes.Clear;
-  if Assigned(FLblTestName) then
+  if Assigned(TestNameLabel) then
   begin
-    FLblTestName.Caption := 'Test Name: Select a test...';
-    FLblStatus.Caption := 'Status: Idle';
-    FLblStatus.Font.Color := clWindowText;
-    FLblLocation.Caption := 'Location: N/A';
-    FLblDuration.Caption := 'Duration: N/A';
-    FMemoError.Clear;
+    TestNameLabel.Caption := 'Test Name: Select a test...';
+    StatusLabel.Caption := 'Status: Idle';
+    StatusLabel.Font.Color := clWindowText;
+    LocationLabel.Caption := 'Location: N/A';
+    DurationLabel.Caption := 'Duration: N/A';
+    ErrorMemo.Clear;
   end;
 
   TestsTreeView.Items.BeginUpdate;
@@ -2764,18 +2622,18 @@ begin
   UpdateTotalTimeLabel;
 
   // Show progress immediately so the user knows something is happening
-  if Assigned(FProgressPanel) then
+  if Assigned(ProgressPanel) then
   begin
-    FProgressBar.Style := pbstMarquee;
-    FProgressBar.Position := 0;
-    FProgressBar.Max := 100;
-    FProgressLabel.Caption := 'Saving files...';
-    FProgressPanel.Visible := True;
-    FProgressPanel.Update;
+    ProgressBar.Style := pbstMarquee;
+    ProgressBar.Position := 0;
+    ProgressBar.Max := 100;
+    ProgressLabel.Caption := 'Saving files...';
+    ProgressPanel.Visible := True;
+    ProgressPanel.Update;
   end;
 
-  if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
-    FDetailsPageControl.ActivePage := FConsoleTab;
+  if Assigned(DetailsPageControl) and Assigned(ConsoleTab) then
+    DetailsPageControl.ActivePage := ConsoleTab;
 
   LogMsg('--- Dext Test Runner ---');
   LogMsg('Project: ' + ExtractFileName(FActiveProjectFile));
@@ -2794,10 +2652,10 @@ begin
   FPendingProject     := Project;
   FWaitingForCompile  := True;
 
-  if Assigned(FProgressPanel) then
+  if Assigned(ProgressPanel) then
   begin
-    FProgressLabel.Caption := '[2/3] Compiling...';
-    FProgressPanel.Update;
+    ProgressLabel.Caption := '[2/3] Compiling...';
+    ProgressPanel.Update;
   end;
   LogMsg('[2/3] Starting incremental compile (IDE make)...');
   DetailsMemo.Update;
@@ -2827,7 +2685,7 @@ begin
     LogMsg('Error: Executable not found at ' + LExeFile);
     TStopwatch(FStopwatch).Stop;
     UpdateTimingLabels;
-    if Assigned(FProgressPanel) then FProgressPanel.Visible := False;
+    if Assigned(ProgressPanel) then ProgressPanel.Visible := False;
     Exit;
   end;
 
@@ -2855,17 +2713,17 @@ begin
   LogMsg('Selected tests filter: ' + FServer.SelectedTestsJSON);
 
   // Update progress to 'Executing'
-  if Assigned(FProgressPanel) then
+  if Assigned(ProgressPanel) then
   begin
-    FProgressLabel.Caption := '⏳ Executing tests...';
-    FProgressBar.Style := pbstMarquee;
-    FProgressPanel.Visible := True;
-    FProgressPanel.Update;
+    ProgressLabel.Caption := '⏳ Executing tests...';
+    ProgressBar.Style := pbstMarquee;
+    ProgressPanel.Visible := True;
+    ProgressPanel.Update;
   end;
   DetailsMemo.Update;
 
   LParams := Format('--port %d -no-wait', [FServer.Port]);
-  var LCustomParams := FCustomParamsEdit.Text;
+  var LCustomParams := CustomParamsEdit.Text;
   if LCustomParams <> '' then
     LParams := LParams + ' ' + LCustomParams;
 
@@ -3064,10 +2922,10 @@ begin
     LogMsg('❌ Compile failed — tests not executed.');
     TStopwatch(FStopwatch).Stop;
     UpdateTimingLabels;
-    if Assigned(FProgressPanel) then
+    if Assigned(ProgressPanel) then
     begin
-      FProgressLabel.Caption := 'Compile failed';
-      FProgressPanel.Visible := False;
+      ProgressLabel.Caption := 'Compile failed';
+      ProgressPanel.Visible := False;
     end;
     Exit;
   end;
@@ -3104,17 +2962,17 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
-  if Assigned(FProgressPanel) then
+  if Assigned(ProgressPanel) then
   begin
-    FProgressBar.Style := pbstMarquee;
-    FProgressBar.Position := 0;
-    FProgressBar.Max := 100;
-    FProgressLabel.Caption := '...';
-    FProgressPanel.Visible := True;
+    ProgressBar.Style := pbstMarquee;
+    ProgressBar.Position := 0;
+    ProgressBar.Max := 100;
+    ProgressLabel.Caption := '...';
+    ProgressPanel.Visible := True;
   end;
   // Focus Console Log
-  if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
-    FDetailsPageControl.ActivePage := FConsoleTab;
+  if Assigned(DetailsPageControl) and Assigned(ConsoleTab) then
+    DetailsPageControl.ActivePage := ConsoleTab;
   LogMsg('=== Running All Test Projects ===');
 
   // Save all modified IDE files once before the loop.
@@ -3219,11 +3077,11 @@ begin
 
   FWaitingForCompile := False;
 
-  if Assigned(FProgressPanel) then
+  if Assigned(ProgressPanel) then
   begin
-    FProgressBar.Style := pbstNormal;
-    FProgressBar.Position := 0;
-    FProgressPanel.Visible := False;
+    ProgressBar.Style := pbstNormal;
+    ProgressBar.Position := 0;
+    ProgressPanel.Visible := False;
   end;
   TStopwatch(FStopwatch).Stop;
   UpdateTimingLabels;
@@ -3642,7 +3500,7 @@ begin
   end;
 
   DetailsMemo.Align := alNone;
-  FInspectorScroll.Align := alNone;
+  InspectorScroll.Align := alNone;
   FInspectorSplitter.Visible := False;
 
   case ALayout of
@@ -3653,14 +3511,14 @@ begin
       DetailsPanel.Align := alBottom;
       DetailsPanel.Height := 220;
 
-      FDetailsPageControl.Visible := True;
-      DetailsMemo.Parent := FConsoleTab;
+      DetailsPageControl.Visible := True;
+      DetailsMemo.Parent := ConsoleTab;
       DetailsMemo.Align := alClient;
       DetailsMemo.AlignWithMargins := False;
-      FInspectorScroll.Parent := FInspectorTab;
-      FInspectorScroll.Align := alClient;
-      FInspectorScroll.AlignWithMargins := False;
-      NameSplitter.Top := FInspectorScroll.Top - NameSplitter.Height;
+      InspectorScroll.Parent := InspectorTab;
+      InspectorScroll.Align := alClient;
+      InspectorScroll.AlignWithMargins := False;
+      NameSplitter.Top := InspectorScroll.Top - NameSplitter.Height;
     end;
 
     telSplitBottom:
@@ -3670,7 +3528,7 @@ begin
       DetailsPanel.Align := alBottom;
       DetailsPanel.Height := 150;
 
-      FDetailsPageControl.Visible := False;
+      DetailsPageControl.Visible := False;
 
       DetailsMemo.Parent := DetailsPanel;
       DetailsMemo.Align := alLeft;
@@ -3687,14 +3545,14 @@ begin
       FInspectorSplitter.Width := 6;
       FInspectorSplitter.Visible := True;
 
-      FInspectorScroll.Parent := DetailsPanel;
-      FInspectorScroll.Align := alClient;
-      FInspectorScroll.AlignWithMargins := True;
-      FInspectorScroll.Margins.Left := 0;
-      FInspectorScroll.Margins.Right := 6;
-      FInspectorScroll.Margins.Top := 6;
-      FInspectorScroll.Margins.Bottom := 6;
-      NameSplitter.Top := FInspectorScroll.Top - NameSplitter.Height;
+      InspectorScroll.Parent := DetailsPanel;
+      InspectorScroll.Align := alClient;
+      InspectorScroll.AlignWithMargins := True;
+      InspectorScroll.Margins.Left := 0;
+      InspectorScroll.Margins.Right := 6;
+      InspectorScroll.Margins.Top := 6;
+      InspectorScroll.Margins.Bottom := 6;
+      NameSplitter.Top := InspectorScroll.Top - NameSplitter.Height;
     end;
 
     telSplitRight:
@@ -3704,7 +3562,7 @@ begin
       DetailsPanel.Align := alRight;
       DetailsPanel.Width := 320;
 
-      FDetailsPageControl.Visible := False;
+      DetailsPageControl.Visible := False;
 
       DetailsMemo.Parent := DetailsPanel;
       DetailsMemo.Align := alBottom;
@@ -3721,13 +3579,13 @@ begin
       FInspectorSplitter.Height := 6;
       FInspectorSplitter.Visible := True;
 
-      FInspectorScroll.Parent := DetailsPanel;
-      FInspectorScroll.Align := alClient;
-      FInspectorScroll.AlignWithMargins := True;
-      FInspectorScroll.Margins.Left := 0;
-      FInspectorScroll.Margins.Right := 0;
-      FInspectorScroll.Margins.Top := 6;
-      FInspectorScroll.Margins.Bottom := 0;
+      InspectorScroll.Parent := DetailsPanel;
+      InspectorScroll.Align := alClient;
+      InspectorScroll.AlignWithMargins := True;
+      InspectorScroll.Margins.Left := 0;
+      InspectorScroll.Margins.Right := 0;
+      InspectorScroll.Margins.Top := 6;
+      InspectorScroll.Margins.Bottom := 0;
     end;
   end;
 
@@ -4082,16 +3940,16 @@ begin
   DetailsMemo.Clear;
   FTotalTests := 0;
   FCompletedTests := 0;
-  if Assigned(FProgressPanel) then
+  if Assigned(ProgressPanel) then
   begin
-    FProgressBar.Position := 0;
-    FProgressBar.Max := 100;
-    FProgressLabel.Caption := '...';
-    FProgressPanel.Visible := True;
+    ProgressBar.Position := 0;
+    ProgressBar.Max := 100;
+    ProgressLabel.Caption := '...';
+    ProgressPanel.Visible := True;
   end;
   // Focus Console Log
-  if Assigned(FDetailsPageControl) and Assigned(FConsoleTab) then
-    FDetailsPageControl.ActivePage := FConsoleTab;
+  if Assigned(DetailsPageControl) and Assigned(ConsoleTab) then
+    DetailsPageControl.ActivePage := ConsoleTab;
   LogMsg('Compiling project (Debug): ' + ExtractFileName(FActiveProjectFile));
 
   // Save all modified IDE files before compiling.
@@ -4685,13 +4543,13 @@ begin
   end;
 
   // Reset/Debounce the Idle timer upon saving a file
-  if FChkRunOnIdle.Checked and Assigned(FIdleTimer) then
+  if RunOnIdleCheckBox.Checked and Assigned(FIdleTimer) then
   begin
     FIdleTimer.Enabled := False;
     FIdleTimer.Enabled := True;
   end;
 
-  if FChkRunOnSave.Checked and not FRunningTests and not FWaitingForCompile and (FRunningProcessHandle = 0) then
+  if RunOnSaveCheckBox.Checked and not FRunningTests and not FWaitingForCompile and (FRunningProcessHandle = 0) then
   begin
     RunActiveProjectTests('', False);
   end;
@@ -4746,57 +4604,57 @@ end;
 
 class procedure TTelemetryTracker.AnalyzeHistory(const AProjectFile: string; AMemo: TMemo);
 var
-  LDir, LFile: string;
-  LText: string;
-  LArray: TJSONArray;
-  LIdx: Integer;
-  LVal: TJSONValue;
-  LObj: TJSONObject;
-  LName, LStatus: string;
-  LDurationMs: Integer;
-  LTestDurations: TDictionary<string, TList<Integer>>;
-  LTestStatuses: TDictionary<string, TList<string>>;
+  Directory, FileName: string;
+  DurationMs: Integer;
+  DurList: TList<Integer>;
+  i: Integer;
+  JsonArray: TJSONArray;
+  JsonObj: TJSONObject;
+  TestDurations: TDictionary<string, TList<Integer>>;
+  TestName, LStatus: string;
+  TestStatuses: TDictionary<string, TList<string>>;
+  Text: string;
+  Value: TJSONValue;
 begin
   if (AProjectFile = '') or (AMemo = nil) then Exit;
 
-  LDir := TPath.Combine(TPath.GetDirectoryName(AProjectFile), '.dext\testing');
-  LFile := TPath.Combine(LDir, 'history.json');
-  if not FileExists(LFile) then Exit;
+  Directory := TPath.Combine(TPath.GetDirectoryName(AProjectFile), '.dext\testing');
+  FileName := TPath.Combine(Directory, 'history.json');
+  if not FileExists(FileName) then Exit;
 
-  LTestDurations := TDictionary<string, TList<Integer>>.Create;
-  LTestStatuses := TDictionary<string, TList<string>>.Create;
+  TestDurations := TDictionary<string, TList<Integer>>.Create;
+  TestStatuses := TDictionary<string, TList<string>>.Create;
   try
     try
-      LText := TFile.ReadAllText(LFile, TEncoding.UTF8);
-      LArray := TJSONObject.ParseJSONValue(LText) as TJSONArray;
-      if LArray = nil then Exit;
+      Text := TFile.ReadAllText(FileName, TEncoding.UTF8);
+      JsonArray := TJSONObject.ParseJSONValue(Text) as TJSONArray;
+      if JsonArray = nil then Exit;
 
       try
         // 1. Group values by test name
-        for LIdx := 0 to LArray.Count - 1 do
+        for i := 0 to JsonArray.Count - 1 do
         begin
-          LVal := LArray.Items[LIdx];
-          if LVal is TJSONObject then
+          Value := JsonArray.Items[i];
+          if Value is TJSONObject then
           begin
-            LObj := TJSONObject(LVal);
-            if LObj.TryGetValue<string>('testName', LName) then
+            JsonObj := TJSONObject(Value);
+            if JsonObj.TryGetValue<string>('testName', TestName) then
             begin
-              LObj.TryGetValue<string>('status', LStatus);
-              LObj.TryGetValue<Integer>('durationMs', LDurationMs);
+              JsonObj.TryGetValue<string>('status', LStatus);
+              JsonObj.TryGetValue<Integer>('durationMs', DurationMs);
 
-              var LDurList: TList<Integer> := nil;
-              if not LTestDurations.TryGetValue(LName, LDurList) then
+              if not TestDurations.TryGetValue(TestName, DurList) then
               begin
-                LDurList := TList<Integer>.Create;
-                LTestDurations.Add(LName, LDurList);
+                DurList := TList<Integer>.Create;
+                TestDurations.Add(TestName, DurList);
               end;
-              LDurList.Add(LDurationMs);
+              DurList.Add(DurationMs);
 
               var LStatList: TList<string> := nil;
-              if not LTestStatuses.TryGetValue(LName, LStatList) then
+              if not TestStatuses.TryGetValue(TestName, LStatList) then
               begin
                 LStatList := TList<string>.Create;
-                LTestStatuses.Add(LName, LStatList);
+                TestStatuses.Add(TestName, LStatList);
               end;
               LStatList.Add(LStatus);
             end;
@@ -4805,19 +4663,19 @@ begin
 
         // 2. Perform regression and flakiness analysis
         var LHasHeader := False;
-        for var LPair in LTestStatuses do
+        for var LPair in TestStatuses do
         begin
           var LNameKey := LPair.Key;
           var LStatusesList := LPair.Value;
-          var LDurList := LTestDurations[LNameKey];
+          DurList := TestDurations[LNameKey];
 
           var LIsFlaky := False;
           if LStatusesList.Count >= 2 then
           begin
             var LLastStatus := LStatusesList[0];
-            for LIdx := 1 to LStatusesList.Count - 1 do
+            for i := 1 to LStatusesList.Count - 1 do
             begin
-              if LStatusesList[LIdx] <> LLastStatus then
+              if LStatusesList[i] <> LLastStatus then
               begin
                 LIsFlaky := True;
                 Break;
@@ -4828,13 +4686,13 @@ begin
           var LIsRegression := False;
           var LAvgDuration := 0.0;
           var LLastDuration := 0;
-          if LDurList.Count >= 3 then
+          if DurList.Count >= 3 then
           begin
-            LLastDuration := LDurList[LDurList.Count - 1];
+            LLastDuration := DurList[DurList.Count - 1];
             var LSum := 0;
-            for LIdx := 0 to LDurList.Count - 2 do
-              Inc(LSum, LDurList[LIdx]);
-            LAvgDuration := LSum / (LDurList.Count - 1);
+            for i := 0 to DurList.Count - 2 do
+              Inc(LSum, DurList[i]);
+            LAvgDuration := LSum / (DurList.Count - 1);
 
             if (LAvgDuration > 10) and (LLastDuration > LAvgDuration * 1.5) then
               LIsRegression := True;
@@ -4859,16 +4717,16 @@ begin
         if LHasHeader then
           AMemo.Lines.Add('========================================');
       finally
-        LArray.Free;
+        JsonArray.Free;
       end;
     except
       // ignore errors during analysis
     end;
   finally
-    for var LPair in LTestDurations do LPair.Value.Free;
-    LTestDurations.Free;
-    for var LPair in LTestStatuses do LPair.Value.Free;
-    LTestStatuses.Free;
+    for var LPair in TestDurations do LPair.Value.Free;
+    TestDurations.Free;
+    for var LPair in TestStatuses do LPair.Value.Free;
+    TestStatuses.Free;
   end;
 end;
 
@@ -4932,16 +4790,4 @@ finalization
   UnregisterDockableForm;
 
 end.
-
-
-
-
-
-
-
-
-
-
-
-
 

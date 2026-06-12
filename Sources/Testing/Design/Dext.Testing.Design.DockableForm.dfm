@@ -2,7 +2,7 @@ object FormDextTestRunner: TFormDextTestRunner
   Left = 0
   Top = 0
   Caption = 'Dext Test Explorer'
-  ClientHeight = 500
+  ClientHeight = 496
   ClientWidth = 571
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -13,7 +13,7 @@ object FormDextTestRunner: TFormDextTestRunner
   TextHeight = 13
   object NameSplitter: TSplitter
     Left = 0
-    Top = 277
+    Top = 273
     Width = 571
     Height = 3
     Cursor = crVSplit
@@ -23,9 +23,9 @@ object FormDextTestRunner: TFormDextTestRunner
   end
   object SessionsPageControl: TPageControl
     Left = 0
-    Top = 66
+    Top = 84
     Width = 571
-    Height = 211
+    Height = 189
     ActivePage = DefaultSessionTabSheet
     Align = alClient
     TabOrder = 0
@@ -35,7 +35,7 @@ object FormDextTestRunner: TFormDextTestRunner
         Left = 0
         Top = 0
         Width = 563
-        Height = 183
+        Height = 161
         Align = alClient
         Indent = 19
         ReadOnly = True
@@ -46,21 +46,164 @@ object FormDextTestRunner: TFormDextTestRunner
   end
   object DetailsPanel: TPanel
     Left = 0
-    Top = 280
+    Top = 276
     Width = 571
     Height = 220
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
-    object DetailsMemo: TMemo
+    object DetailsPageControl: TPageControl
       Left = 0
       Top = 30
       Width = 571
       Height = 190
+      ActivePage = ConsoleTab
       Align = alClient
-      ReadOnly = True
-      ScrollBars = ssBoth
       TabOrder = 0
+      object InspectorTab: TTabSheet
+        Caption = 'Test Inspector'
+        object InspectorScroll: TScrollBox
+          Left = 0
+          Top = 0
+          Width = 563
+          Height = 162
+          Align = alClient
+          BorderStyle = bsNone
+          TabOrder = 0
+          object InfoPanel: TPanel
+            Left = 0
+            Top = 0
+            Width = 563
+            Height = 98
+            Align = alTop
+            BevelOuter = bvNone
+            ParentColor = True
+            TabOrder = 0
+            object TestNameLabel: TLabel
+              Left = 6
+              Top = 6
+              Width = 130
+              Height = 13
+              Caption = 'Test Name: Select a test...'
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'Segoe UI'
+              Font.Style = [fsBold]
+              ParentFont = False
+            end
+            object StatusLabel: TLabel
+              Left = 6
+              Top = 24
+              Width = 57
+              Height = 13
+              Caption = 'Status: Idle'
+            end
+            object LocationLabel: TLabel
+              Left = 6
+              Top = 42
+              Width = 69
+              Height = 13
+              Caption = 'Location: N/A'
+            end
+            object DurationLabel: TLabel
+              Left = 6
+              Top = 60
+              Width = 71
+              Height = 13
+              Caption = 'Duration: N/A'
+            end
+            object ErrorHeaderLabel: TLabel
+              Left = 6
+              Top = 78
+              Width = 100
+              Height = 13
+              Caption = 'Errors / Stack Trace:'
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'Segoe UI'
+              Font.Style = [fsBold]
+              ParentFont = False
+            end
+          end
+          object ErrorMemo: TMemo
+            Left = 0
+            Top = 98
+            Width = 563
+            Height = 64
+            Align = alClient
+            ReadOnly = True
+            ScrollBars = ssBoth
+            TabOrder = 1
+          end
+        end
+      end
+      object ConfigTab: TTabSheet
+        Caption = 'Configurations'
+        ImageIndex = 1
+        object ConfigScroll: TScrollBox
+          Left = 0
+          Top = 0
+          Width = 563
+          Height = 162
+          Align = alClient
+          BorderStyle = bsNone
+          TabOrder = 0
+          object CustomParamsLabel: TLabel
+            Left = 10
+            Top = 10
+            Width = 180
+            Height = 13
+            Caption = 'Custom Command Line Parameters:'
+          end
+          object CustomParamsEdit: TEdit
+            Left = 10
+            Top = 28
+            Width = 350
+            Height = 21
+            TabOrder = 0
+          end
+          object RunOnSaveCheckBox: TCheckBox
+            Left = 10
+            Top = 65
+            Width = 200
+            Height = 17
+            Caption = 'Run tests automatically on Save'
+            TabOrder = 1
+          end
+          object RunOnIdleCheckBox: TCheckBox
+            Left = 10
+            Top = 90
+            Width = 200
+            Height = 17
+            Caption = 'Run tests automatically on Idle'
+            TabOrder = 2
+          end
+          object EnabledCheckBox: TCheckBox
+            Left = 10
+            Top = 115
+            Width = 200
+            Height = 17
+            Caption = 'Enable Dext Test Explorer'
+            TabOrder = 3
+          end
+        end
+      end
+      object ConsoleTab: TTabSheet
+        Caption = 'Console Log'
+        ImageIndex = 2
+        object DetailsMemo: TMemo
+          Left = 0
+          Top = 0
+          Width = 563
+          Height = 162
+          Align = alClient
+          ReadOnly = True
+          ScrollBars = ssBoth
+          TabOrder = 0
+        end
+      end
     end
     object SummaryPanel: TPanel
       Left = 0
@@ -274,6 +417,39 @@ object FormDextTestRunner: TFormDextTestRunner
     Style = csDropDownList
     TabOrder = 3
     OnChange = ProjectsComboBoxChange
+  end
+  object ProgressPanel: TPanel
+    Left = 0
+    Top = 66
+    Width = 571
+    Height = 18
+    Align = alTop
+    BevelOuter = bvNone
+    TabOrder = 4
+    Visible = False
+    object ProgressLabel: TLabel
+      Left = 0
+      Top = 0
+      Width = 2
+      Height = 12
+      Align = alLeft
+      Alignment = taCenter
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -9
+      Font.Name = 'Segoe UI'
+      Font.Style = []
+      ParentFont = False
+      Layout = tlCenter
+    end
+    object ProgressBar: TProgressBar
+      Left = 2
+      Top = 0
+      Width = 569
+      Height = 18
+      Align = alClient
+      TabOrder = 0
+    end
   end
   object ActionsPopupMenu: TPopupMenu
     Left = 396
