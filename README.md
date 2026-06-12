@@ -348,13 +348,24 @@ Dext is composed of flexible and minimalist modules. You retain full control ove
 
 ## Installation
 
-Dext distribution prioritizes minimalism, without opaque installers that inject clutter into your system directory:
+The easiest way to install Dext is using **TMS Smart Setup**. Alternatively, you can install it manually directly in the IDE.
 
-1. Download the source code: `git clone https://github.com/cesarliws/dext.git`
-2. Add `Library Paths` in Delphi referencing Dext's main modules.
-3. Compile the project through the `Sources\DextFramework.groupproj` group.
+### 1. Automated Installation (TMS Smart Setup - Recommended)
+You can install Dext either via the graphical user interface (GUI) or the command line:
+* **GUI**: Open the **TMS Smart Setup** client, search for `cesarliws.dext` (Dext Framework), select it, and click **Install**.
+* **CLI**: Run the following command in your terminal:
+  ```bash
+  tms install cesarliws.dext
+  ```
 
-**[Read Detailed Setup and Installation Instructions](Docs/Book/01-getting-started/installation.md)**
+> [!TIP]
+> Don't have TMS Smart Setup? Download it from the [TMS Smart Setup Download Page](https://doc.tmssoftware.com/smartsetup/download/).
+
+### 2. Manual Installation
+For manual compilation, configuration of environment variables/paths, customization via `Dext.inc`, and installing the design-time packages directly in the Delphi IDE:
+
+*   **[Read Detailed Setup and Installation Instructions](Docs/Book/01-getting-started/installation.md)**
+
 
 ### Requirements and Compatibility
 * **Delphi:** 10.3 Rio or higher (Full support for 10.4, 11, and 12 Athens).
