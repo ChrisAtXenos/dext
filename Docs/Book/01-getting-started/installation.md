@@ -6,10 +6,22 @@ This guide covers the installation of the Dext Framework. You can choose between
 
 ## 1. Automated Setup (TMS Smart Setup - Recommended)
 
-If you use **TMS Smart Setup**, the installation, compilation, and IDE configuration of the framework is fully automated. You can install it using either the Graphical User Interface (GUI) or the Command Line Interface (CLI):
+If you use **TMS Smart Setup**, the installation, compilation, and IDE configuration of the framework is fully automated.
+
+> [!IMPORTANT]
+> **Enabling the Community Server**  
+> Since Dext Framework is an open-source community package, you must ensure that the **Community Server** is enabled in your TMS Smart Setup workspace. You can enable it using either of the following methods:
+> 
+> * **Via Command Line**: Open your terminal and run:
+>   ```bash
+>   tms server-enable community
+>   ```
+> * **Via GUI Tool**: Launch the `tmsgui.exe` application. (If this is a new workspace, the initialization wizard will immediately ask you which servers to enable. Otherwise, click on the Settings gear icon in the top right and ensure the **Community Server** option is enabled).
+
+Once the Community Server is enabled, you can install Dext using either the Graphical User Interface (GUI) or the Command Line Interface (CLI):
 
 ### 1.1. GUI Installation
-1. Open the **TMS Smart Setup** application.
+1. Open the **TMS Smart Setup** application (`tmsgui.exe`).
 2. In the search box, type `cesarliws.dext`.
 3. Select **Dext Framework** from the product list.
 4. Click the **Install** button.

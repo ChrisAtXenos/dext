@@ -6,10 +6,22 @@ Este guia descreve os passos necessários para instalar e configurar o Dext Fram
 
 ## 1. Instalação Automática (TMS Smart Setup - Recomendado)
 
-Se você utiliza o **TMS Smart Setup**, a instalação, compilação e configuração do framework na IDE do Delphi são totalmente automatizadas. Você pode fazer a instalação tanto pela interface gráfica (GUI) quanto pela linha de comando (CLI):
+Se você utiliza o **TMS Smart Setup**, a instalação, compilação e configuração do framework na IDE do Delphi são totalmente automatizadas.
+
+> [!IMPORTANT]
+> **Habilitando o Servidor da Comunidade (Community Server)**  
+> Como o Dext Framework é um pacote open-source da comunidade, você deve garantir que o **Community Server** esteja habilitado no seu espaço de trabalho do TMS Smart Setup. Você pode ativá-lo usando um dos seguintes métodos:
+> 
+> * **Via Linha de Comando (CLI)**: Abra seu terminal e execute:
+>   ```bash
+>   tms server-enable community
+>   ```
+> * **Via Interface Gráfica (GUI)**: Abra o aplicativo `tmsgui.exe`. (Se for um novo workspace, o assistente de inicialização perguntará imediatamente quais servidores ativar. Caso contrário, clique no ícone de engrenagem de configurações no canto superior direito e certifique-se de habilitar a opção **Community Server**).
+
+Uma vez habilitado o Community Server, você pode instalar o Dext tanto pela interface gráfica (GUI) quanto pela linha de comando (CLI):
 
 ### 1.1. Instalação via GUI
-1. Abra o aplicativo **TMS Smart Setup**.
+1. Abra o aplicativo **TMS Smart Setup** (`tmsgui.exe`).
 2. No campo de busca, digite `cesarliws.dext`.
 3. Selecione **Dext Framework** na lista de produtos.
 4. Clique no botão **Install**.
