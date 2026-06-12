@@ -608,6 +608,8 @@ begin
   FilterEdit.Margins.Top := 3;
   FilterEdit.Margins.Bottom := 3;
   FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
+  if ATabSheet.Owner is TFormDextTestRunner then
+    FilterEdit.OnChange := TFormDextTestRunner(ATabSheet.Owner).FilterEditChange;
 end;
 
 destructor TTestSession.Destroy;
