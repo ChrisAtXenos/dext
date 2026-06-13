@@ -1,4 +1,4 @@
-﻿unit Dext.Testing.Design.DockableForm;
+unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -3259,12 +3259,22 @@ end;
 function TFormDextTestRunner.GetRunButtonRect(ANode: TTreeNode): TRect;
 var
   LTextRect: TRect;
+  LPPI: Integer;
+  LBtnWidth, LBtnHeight, LOffset: Integer;
 begin
+  LPPI := Self.CurrentPPI;
+  if LPPI = 0 then
+    LPPI := 96;
+
+  LBtnWidth := MulDiv(20, LPPI, 96);
+  LBtnHeight := MulDiv(13, LPPI, 96);
+  LOffset := MulDiv(8, LPPI, 96);
+
   LTextRect := ANode.DisplayRect(True);
-  Result.Left := LTextRect.Right + 3;
-  Result.Top := LTextRect.Top + (LTextRect.Height - 14) div 2;
-  Result.Right := Result.Left + 16;
-  Result.Bottom := Result.Top + 14;
+  Result.Left := LTextRect.Right + LOffset;
+  Result.Top := LTextRect.Top + (LTextRect.Height - LBtnHeight) div 2;
+  Result.Right := Result.Left + LBtnWidth;
+  Result.Bottom := Result.Top + LBtnHeight;
 end;
 
 procedure TFormDextTestRunner.TestsTreeViewMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -3384,6 +3394,20 @@ begin
         if PtInRect(LBtnRect, Point(X, Y)) then
         begin
           TestsTreeView.Selected := LNode;
+          
+          TestsTreeView.Items.BeginUpdate;
+          try
+            for var I := 0 to TestsTreeView.Items.Count - 1 do
+              TestsTreeView.Items[I].Checked := False;
+            LNode.Checked := True;
+            if LNode.Parent <> nil then
+              LNode.Parent.Checked := True;
+          finally
+            TestsTreeView.Items.EndUpdate;
+          end;
+          UpdateSummaryCounts;
+          TestsTreeView.Invalidate;
+
           RunActiveProjectTests(GetNodeFullTestName(LNode));
         end;
       end;
@@ -3717,7 +3741,7 @@ begin
     FixtureNodeCache := TDictionary<string, TTreeNode>.Create;
     try
     Filter := '';
-    ActiveFilterEdit := ActiveFilterEdit;
+    ActiveFilterEdit := Self.ActiveFilterEdit;
     if Assigned(ActiveFilterEdit) then
       Filter := Trim(ActiveFilterEdit.Text);
 
@@ -4002,6 +4026,7 @@ begin
         Sender.Canvas.Font.Color := TColor($3D8015); // Dark Green BGR
         Sender.Canvas.Font.Size := 7;
         Sender.Canvas.Font.Style := [fsBold];
+        Sender.Canvas.Brush.Style := bsClear;
         DrawText(Sender.Canvas.Handle, #$25B6, -1, LBtnRect, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
       end;
     end;
