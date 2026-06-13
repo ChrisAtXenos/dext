@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
-  Vcl.ExtCtrls, DockForm, ToolsAPI, Dext.Testing.Design.Server, Dext.Testing.Design.AST,
+  Vcl.ExtCtrls, Vcl.Buttons, DockForm, ToolsAPI, Dext.Testing.Design.Server, Dext.Testing.Design.AST,
   System.JSON, System.Generics.Collections, System.IOUtils, System.Threading,
   System.ImageList, Vcl.ImgList, Vcl.Menus, System.Math, System.Diagnostics, System.TimeSpan;
 
@@ -71,6 +71,7 @@ type
     TestLocations: TList<TTestLocation>;
     ActiveProjectFile: string;
     FilterEdit: TEdit;
+    ClearFilterButton: TSpeedButton;
     constructor Create(APageControl: TPageControl; const AName: string); overload;
     constructor CreateFromExisting(ATabSheet: TTabSheet; ATreeView: TTreeView; ALocations: TList<TTestLocation>; const AProjFile: string); overload;
     destructor Destroy; override;
@@ -279,6 +280,8 @@ type
     procedure UpdateTestNode(const ATestName, AStatus, AMessage, AStackTrace: string);
     procedure UpdateTimingLabels;
     procedure UpdateTotalTimeLabel;
+    procedure ApplyDpiScaling;
+    procedure ClearFilterButtonClick(Sender: TObject);
 
     // Process handling
     function GetProjectByFileName(const AFileName: string): IOTAProject;
@@ -557,18 +560,34 @@ begin
   TabSheet.PageControl := APageControl;
   TabSheet.Caption := AName;
 
+  var LPPI := 96;
+  if APageControl.Owner is TFormDextTestRunner then
+    LPPI := TFormDextTestRunner(APageControl.Owner).CurrentPPI;
+
   var LFilterPanel := TPanel.Create(TabSheet);
   LFilterPanel.Parent := TabSheet;
   LFilterPanel.Align := alTop;
-  LFilterPanel.Height := 28;
+  LFilterPanel.Height := MulDiv(28, LPPI, 96);
   LFilterPanel.BevelOuter := bvNone;
+
+  ClearFilterButton := TSpeedButton.Create(TabSheet);
+  ClearFilterButton.Parent := LFilterPanel;
+  ClearFilterButton.Align := alRight;
+  ClearFilterButton.Width := MulDiv(22, LPPI, 96);
+  ClearFilterButton.Caption := 'X';
+  ClearFilterButton.Flat := True;
+  ClearFilterButton.Hint := 'Clear filter';
+  ClearFilterButton.ShowHint := True;
+  ClearFilterButton.Visible := False;
+  if APageControl.Owner is TFormDextTestRunner then
+    ClearFilterButton.OnClick := TFormDextTestRunner(APageControl.Owner).ClearFilterButtonClick;
 
   FilterEdit := TEdit.Create(TabSheet);
   FilterEdit.Parent := LFilterPanel;
   FilterEdit.Align := alClient;
   FilterEdit.AlignWithMargins := True;
   FilterEdit.Margins.Left := 0;
-  FilterEdit.Margins.Right := 0;
+  FilterEdit.Margins.Right := 2;
   FilterEdit.Margins.Top := 3;
   FilterEdit.Margins.Bottom := 3;
   FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
@@ -593,18 +612,34 @@ begin
   TestLocations := ALocations;
   ActiveProjectFile := AProjFile;
 
+  var LPPI := 96;
+  if ATabSheet.Owner is TFormDextTestRunner then
+    LPPI := TFormDextTestRunner(ATabSheet.Owner).CurrentPPI;
+
   var LFilterPanel := TPanel.Create(ATabSheet);
   LFilterPanel.Parent := ATabSheet;
   LFilterPanel.Align := alTop;
-  LFilterPanel.Height := 28;
+  LFilterPanel.Height := MulDiv(28, LPPI, 96);
   LFilterPanel.BevelOuter := bvNone;
+
+  ClearFilterButton := TSpeedButton.Create(ATabSheet);
+  ClearFilterButton.Parent := LFilterPanel;
+  ClearFilterButton.Align := alRight;
+  ClearFilterButton.Width := MulDiv(22, LPPI, 96);
+  ClearFilterButton.Caption := 'X';
+  ClearFilterButton.Flat := True;
+  ClearFilterButton.Hint := 'Clear filter';
+  ClearFilterButton.ShowHint := True;
+  ClearFilterButton.Visible := False;
+  if ATabSheet.Owner is TFormDextTestRunner then
+    ClearFilterButton.OnClick := TFormDextTestRunner(ATabSheet.Owner).ClearFilterButtonClick;
 
   FilterEdit := TEdit.Create(ATabSheet);
   FilterEdit.Parent := LFilterPanel;
   FilterEdit.Align := alClient;
   FilterEdit.AlignWithMargins := True;
   FilterEdit.Margins.Left := 0;
-  FilterEdit.Margins.Right := 0;
+  FilterEdit.Margins.Right := 2;
   FilterEdit.Margins.Top := 3;
   FilterEdit.Margins.Bottom := 3;
   FilterEdit.TextHint := 'Filter tests (Ctrl+F)...';
@@ -1065,9 +1100,48 @@ begin
   inherited Destroy;
 end;
 
+procedure TFormDextTestRunner.ApplyDpiScaling;
+var
+  LPPI: Integer;
+begin
+  LPPI := Self.CurrentPPI;
+  if LPPI = 0 then
+    LPPI := 96;
+
+  ButtonsPanel.Height := MulDiv(31, LPPI, 96);
+  
+  RefreshButton.Height := MulDiv(25, LPPI, 96);
+  RefreshButton.Width := MulDiv(90, LPPI, 96);
+  
+  RunAllButton.Height := MulDiv(25, LPPI, 96);
+  RunAllButton.Width := MulDiv(95, LPPI, 96);
+  
+  RunSelectedButton.Height := MulDiv(25, LPPI, 96);
+  RunSelectedButton.Width := MulDiv(95, LPPI, 96);
+  
+  StopButton.Height := MulDiv(25, LPPI, 96);
+  StopButton.Width := MulDiv(65, LPPI, 96);
+  
+  ActionsButton.Height := MulDiv(25, LPPI, 96);
+  ActionsButton.Width := MulDiv(30, LPPI, 96);
+
+  if Assigned(FSessions) then
+  begin
+    for var I := 0 to FSessions.Count - 1 do
+    begin
+      var LSession := FSessions[I];
+      if Assigned(LSession.FilterEdit) and Assigned(LSession.FilterEdit.Parent) then
+        TPanel(LSession.FilterEdit.Parent).Height := MulDiv(28, LPPI, 96);
+      if Assigned(LSession.ClearFilterButton) then
+        LSession.ClearFilterButton.Width := MulDiv(22, LPPI, 96);
+    end;
+  end;
+end;
+
 procedure TFormDextTestRunner.DoShow;
 begin
   inherited DoShow;
+  ApplyDpiScaling;
   ApplyIDETheme;
 end;
 
@@ -3420,6 +3494,8 @@ end;
 
 procedure TFormDextTestRunner.FilterEditChange(Sender: TObject);
 begin
+  if (FActiveSession <> nil) and (FActiveSession.ClearFilterButton <> nil) then
+    FActiveSession.ClearFilterButton.Visible := Trim(ActiveFilterEdit.Text) <> '';
   RefreshTreeView;
 end;
 
@@ -3468,6 +3544,18 @@ begin
     Result := nil;
 end;
 
+procedure TFormDextTestRunner.ClearFilterButtonClick(Sender: TObject);
+var
+  LActiveFilter: TEdit;
+begin
+  LActiveFilter := ActiveFilterEdit;
+  if Assigned(LActiveFilter) then
+  begin
+    LActiveFilter.Text := '';
+    LActiveFilter.SetFocus;
+  end;
+end;
+
 procedure TFormDextTestRunner.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 var
   ActiveFilter: TEdit;
@@ -3478,6 +3566,15 @@ begin
     if Assigned(ActiveFilter) then
     begin
       ActiveFilter.SetFocus;
+      Key := 0;
+    end;
+  end
+  else if Key = VK_ESCAPE then
+  begin
+    ActiveFilter := ActiveFilterEdit;
+    if Assigned(ActiveFilter) and (ActiveFilter.Text <> '') then
+    begin
+      ActiveFilter.Text := '';
       Key := 0;
     end;
   end;
@@ -3598,181 +3695,186 @@ end;
 
 procedure TFormDextTestRunner.RefreshTreeView;
 var
-  LFilter: string;
-  LIdx: Integer;
-  LTest: TTestLocation;
-  LFixtureNode, LMethodNode: TTreeNode;
-  LClassMatches: Boolean;
-  LMethodMatches: Boolean;
-  LFixtureTestsCount: TDictionary<string, Integer>;
-  LActiveFilterEdit: TEdit;
-  LFailedNode, LPassedNode, LSkippedNode, LIdleNode: TTreeNode;
-  LFullTestName: string;
-  LInfo: TTestDetailInfo;
-  LStatus: string;
-  LTargetRoot: TTreeNode;
-  LFixtureNodeCache: TDictionary<string, TTreeNode>;
+  Filter: string;
+  i: Integer;
+  TestLocation: TTestLocation;
+  FixtureNode, MethodNode: TTreeNode;
+  ClassMatches: Boolean;
+  MethodMatches: Boolean;
+  FixtureTestsCount: TDictionary<string, Integer>;
+  ActiveFilterEdit: TEdit;
+  FailedNode, PassedNode, SkippedNode, IdleNode: TTreeNode;
+  FullTestName: string;
+  DetailInfo: TTestDetailInfo;
+  Status: string;
+  TargetRoot: TTreeNode;
+  FixtureNodeCache: TDictionary<string, TTreeNode>;
 begin
   TestsTreeView.Items.BeginUpdate;
   try
     TestsTreeView.Items.Clear;
     InitializeGroupSummaries;
-    LFixtureNodeCache := TDictionary<string, TTreeNode>.Create;
+    FixtureNodeCache := TDictionary<string, TTreeNode>.Create;
     try
-    LFilter := '';
-    LActiveFilterEdit := ActiveFilterEdit;
-    if Assigned(LActiveFilterEdit) then
-      LFilter := Trim(LActiveFilterEdit.Text);
+    Filter := '';
+    ActiveFilterEdit := ActiveFilterEdit;
+    if Assigned(ActiveFilterEdit) then
+      Filter := Trim(ActiveFilterEdit.Text);
 
     if FGroupingMode = tgmStatus then
     begin
-      LFailedNode := nil;
-      LPassedNode := nil;
-      LSkippedNode := nil;
-      LIdleNode := nil;
+      FailedNode := nil;
+      PassedNode := nil;
+      SkippedNode := nil;
+      IdleNode := nil;
 
-      for LIdx := 0 to FTestLocations.Count - 1 do
+      for i := 0 to FTestLocations.Count - 1 do
       begin
-        LTest := FTestLocations[LIdx];
-        LClassMatches := (LFilter = '') or LTest.ClassName.ToLower.Contains(LFilter.ToLower);
-        LMethodMatches := (LFilter = '') or LTest.MethodName.ToLower.Contains(LFilter.ToLower);
+        TestLocation := FTestLocations[i];
+        ClassMatches := (Filter = '') or TestLocation.ClassName.ToLower.Contains(Filter.ToLower);
+        MethodMatches := (Filter = '') or TestLocation.MethodName.ToLower.Contains(Filter.ToLower);
 
-        if LClassMatches or LMethodMatches then
+        if ClassMatches or MethodMatches then
         begin
-          LFullTestName := LTest.ClassName + '.' + LTest.MethodName;
-          LStatus := 'Idle';
-          if FTestDetails.TryGetValue(LFullTestName, LInfo) then
-            LStatus := LInfo.Status;
+          FullTestName := TestLocation.ClassName + '.' + TestLocation.MethodName;
+          Status := 'Idle';
+          if FTestDetails.TryGetValue(FullTestName, DetailInfo) then
+            Status := DetailInfo.Status;
 
-          if SameText(LStatus, 'Failed') or SameText(LStatus, 'Error') then
+          if SameText(Status, 'Failed') or SameText(Status, 'Error') then
           begin
-            if not Assigned(LFailedNode) then
+            if not Assigned(FailedNode) then
             begin
-              LFailedNode := TestsTreeView.Items.AddChild(nil, 'Failed');
-              LFailedNode.ImageIndex := 2;
-              LFailedNode.SelectedIndex := 2;
+              FailedNode := TestsTreeView.Items.AddChild(nil, 'Failed');
+              FailedNode.ImageIndex := 2;
+              FailedNode.SelectedIndex := 2;
+              if Filter <> '' then FailedNode.Expanded := True;
             end;
-            LTargetRoot := LFailedNode;
+            TargetRoot := FailedNode;
           end
-          else if SameText(LStatus, 'Passed') or SameText(LStatus, 'Success') then
+          else if SameText(Status, 'Passed') or SameText(Status, 'Success') then
           begin
-            if not Assigned(LPassedNode) then
+            if not Assigned(PassedNode) then
             begin
-              LPassedNode := TestsTreeView.Items.AddChild(nil, 'Passed');
-              LPassedNode.ImageIndex := 1;
-              LPassedNode.SelectedIndex := 1;
+              PassedNode := TestsTreeView.Items.AddChild(nil, 'Passed');
+              PassedNode.ImageIndex := 1;
+              PassedNode.SelectedIndex := 1;
+              if Filter <> '' then PassedNode.Expanded := True;
             end;
-            LTargetRoot := LPassedNode;
+            TargetRoot := PassedNode;
           end
-          else if SameText(LStatus, 'Skipped') then
+          else if SameText(Status, 'Skipped') then
           begin
-            if not Assigned(LSkippedNode) then
+            if not Assigned(SkippedNode) then
             begin
-              LSkippedNode := TestsTreeView.Items.AddChild(nil, 'Skipped');
-              LSkippedNode.ImageIndex := 0;
-              LSkippedNode.SelectedIndex := 0;
+              SkippedNode := TestsTreeView.Items.AddChild(nil, 'Skipped');
+              SkippedNode.ImageIndex := 0;
+              SkippedNode.SelectedIndex := 0;
+              if Filter <> '' then SkippedNode.Expanded := True;
             end;
-            LTargetRoot := LSkippedNode;
+            TargetRoot := SkippedNode;
           end
           else
           begin
-            if not Assigned(LIdleNode) then
+            if not Assigned(IdleNode) then
             begin
-              LIdleNode := TestsTreeView.Items.AddChild(nil, 'Idle');
-              LIdleNode.ImageIndex := 0;
-              LIdleNode.SelectedIndex := 0;
+              IdleNode := TestsTreeView.Items.AddChild(nil, 'Idle');
+              IdleNode.ImageIndex := 0;
+              IdleNode.SelectedIndex := 0;
+              if Filter <> '' then IdleNode.Expanded := True;
             end;
-            LTargetRoot := LIdleNode;
+            TargetRoot := IdleNode;
           end;
 
-          LMethodNode := TestsTreeView.Items.AddChild(LTargetRoot, LTest.ClassName + '.' + LTest.MethodName);
-          LMethodNode.Data := Pointer(LIdx + 1);
+          MethodNode := TestsTreeView.Items.AddChild(TargetRoot, TestLocation.ClassName + '.' + TestLocation.MethodName);
+          MethodNode.Data := Pointer(i + 1);
 
-          if SameText(LStatus, 'Failed') or SameText(LStatus, 'Error') then
+          if SameText(Status, 'Failed') or SameText(Status, 'Error') then
           begin
-            LMethodNode.ImageIndex := 2;
-            LMethodNode.SelectedIndex := 2;
+            MethodNode.ImageIndex := 2;
+            MethodNode.SelectedIndex := 2;
           end
-          else if SameText(LStatus, 'Passed') or SameText(LStatus, 'Success') then
+          else if SameText(Status, 'Passed') or SameText(Status, 'Success') then
           begin
-            LMethodNode.ImageIndex := 1;
-            LMethodNode.SelectedIndex := 1;
+            MethodNode.ImageIndex := 1;
+            MethodNode.SelectedIndex := 1;
           end;
         end;
       end;
     end
     else
     begin
-      LFixtureTestsCount := TDictionary<string, Integer>.Create;
+      FixtureTestsCount := TDictionary<string, Integer>.Create;
       try
-        for LIdx := 0 to FTestLocations.Count - 1 do
+        for i := 0 to FTestLocations.Count - 1 do
         begin
-          LTest := FTestLocations[LIdx];
-          LClassMatches := (LFilter = '') or LTest.ClassName.ToLower.Contains(LFilter.ToLower);
-          LMethodMatches := (LFilter = '') or LTest.MethodName.ToLower.Contains(LFilter.ToLower);
+          TestLocation := FTestLocations[i];
+          ClassMatches := (Filter = '') or TestLocation.ClassName.ToLower.Contains(Filter.ToLower);
+          MethodMatches := (Filter = '') or TestLocation.MethodName.ToLower.Contains(Filter.ToLower);
 
-          if LClassMatches or LMethodMatches then
+          if ClassMatches or MethodMatches then
           begin
-            if LFixtureTestsCount.ContainsKey(LTest.ClassName) then
-              LFixtureTestsCount[LTest.ClassName] := LFixtureTestsCount[LTest.ClassName] + 1
+            if FixtureTestsCount.ContainsKey(TestLocation.ClassName) then
+              FixtureTestsCount[TestLocation.ClassName] := FixtureTestsCount[TestLocation.ClassName] + 1
             else
-              LFixtureTestsCount.Add(LTest.ClassName, 1);
+              FixtureTestsCount.Add(TestLocation.ClassName, 1);
           end;
         end;
 
-        for LIdx := 0 to FTestLocations.Count - 1 do
+        for i := 0 to FTestLocations.Count - 1 do
         begin
-          LTest := FTestLocations[LIdx];
-          LClassMatches := (LFilter = '') or LTest.ClassName.ToLower.Contains(LFilter.ToLower);
-          LMethodMatches := (LFilter = '') or LTest.MethodName.ToLower.Contains(LFilter.ToLower);
+          TestLocation := FTestLocations[i];
+          ClassMatches := (Filter = '') or TestLocation.ClassName.ToLower.Contains(Filter.ToLower);
+          MethodMatches := (Filter = '') or TestLocation.MethodName.ToLower.Contains(Filter.ToLower);
 
-          if LClassMatches or LMethodMatches then
+          if ClassMatches or MethodMatches then
           begin
-            if not LFixtureNodeCache.TryGetValue(LTest.ClassName, LFixtureNode) then
+            if not FixtureNodeCache.TryGetValue(TestLocation.ClassName, FixtureNode) then
             begin
-              LFixtureNode := TestsTreeView.Items.AddChild(nil, LTest.ClassName);
-              LFixtureNode.ImageIndex := 3;
-              LFixtureNode.SelectedIndex := 3;
-              LFixtureNodeCache.Add(LTest.ClassName, LFixtureNode);
+              FixtureNode := TestsTreeView.Items.AddChild(nil, TestLocation.ClassName);
+              FixtureNode.ImageIndex := 3;
+              FixtureNode.SelectedIndex := 3;
+              FixtureNodeCache.Add(TestLocation.ClassName, FixtureNode);
+              if Filter <> '' then FixtureNode.Expanded := True;
             end;
 
-            LMethodNode := TestsTreeView.Items.AddChild(LFixtureNode, LTest.MethodName);
-            LMethodNode.Data := Pointer(LIdx + 1);
+            MethodNode := TestsTreeView.Items.AddChild(FixtureNode, TestLocation.MethodName);
+            MethodNode.Data := Pointer(i + 1);
 
-            LFullTestName := LTest.ClassName + '.' + LTest.MethodName;
-            LStatus := 'Idle';
-            if FTestDetails.TryGetValue(LFullTestName, LInfo) then
-              LStatus := LInfo.Status;
+            FullTestName := TestLocation.ClassName + '.' + TestLocation.MethodName;
+            Status := 'Idle';
+            if FTestDetails.TryGetValue(FullTestName, DetailInfo) then
+              Status := DetailInfo.Status;
 
-            if SameText(LStatus, 'Failed') or SameText(LStatus, 'Error') then
+            if SameText(Status, 'Failed') or SameText(Status, 'Error') then
             begin
-              LMethodNode.ImageIndex := 2;
-              LMethodNode.SelectedIndex := 2;
+              MethodNode.ImageIndex := 2;
+              MethodNode.SelectedIndex := 2;
             end
-            else if SameText(LStatus, 'Passed') or SameText(LStatus, 'Success') then
+            else if SameText(Status, 'Passed') or SameText(Status, 'Success') then
             begin
-              LMethodNode.ImageIndex := 1;
-              LMethodNode.SelectedIndex := 1;
+              MethodNode.ImageIndex := 1;
+              MethodNode.SelectedIndex := 1;
             end
-            else if SameText(LStatus, 'Skipped') then
+            else if SameText(Status, 'Skipped') then
             begin
-              LMethodNode.ImageIndex := 0;
-              LMethodNode.SelectedIndex := 0;
+              MethodNode.ImageIndex := 0;
+              MethodNode.SelectedIndex := 0;
             end
             else
             begin
-              LMethodNode.ImageIndex := 0;
-              LMethodNode.SelectedIndex := 0;
+              MethodNode.ImageIndex := 0;
+              MethodNode.SelectedIndex := 0;
             end;
           end;
         end;
       finally
-        LFixtureTestsCount.Free;
+        FixtureTestsCount.Free;
       end;
     end;
 
     finally
-      LFixtureNodeCache.Free;
+      FixtureNodeCache.Free;
     end;
   finally
     TestsTreeView.Items.EndUpdate;
