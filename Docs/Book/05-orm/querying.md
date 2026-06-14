@@ -282,6 +282,51 @@ var Users := Context.Users
 > For both forms, use qualified column/property names in the ON predicate
 > (for example: `users.address_id`, `a.id`).
 
+### Strongly-Typed Fluent Joins
+
+Dext Entity supports advanced, strongly-typed fluent joins that run entirely at the database provider level. These operations compile directly into optimized SQL joins (INNER, LEFT, RIGHT, FULL, CROSS).
+
+There are three main ways to write fluent joins:
+
+#### 1. Explicit Condition Joins
+Specify the tables, aliases, and explicit ON condition using Smart Properties:
+```pascal
+var u := TUser.Props;
+var a := TAddress.Props;
+
+var Results := Context.Users
+  .JoinLeft<TAddress>('u', 'a', u.AddressId = a.Id)
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### 2. Implicit Relationship Auto-Joins
+If the relationship is defined in your `TModelBuilder` configuration (e.g. HasOne/HasMany), Dext resolves the ON condition automatically from entity metadata:
+```pascal
+var u := TUser.Props;
+
+// Automatically resolves to: ON u.AddressId = a.Id
+var Results := Context.Users
+  .JoinInner<TAddress>
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### 3. Cross Joins (No ON condition)
+Generate a Cartesian product between two tables without an ON clause:
+```pascal
+var Results := Context.Users
+  .JoinCross<TDepartment>
+  .ToList;
+```
+
+Available strongly-typed fluent join methods:
+- `JoinInner<TInner>` (auto-resolved ON) or `JoinInner<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinLeft<TInner>` (auto-resolved ON) or `JoinLeft<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinRight<TInner>` (auto-resolved ON) or `JoinRight<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinFull<TInner>` (auto-resolved ON) or `JoinFull<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinCross<TInner>` (no ON condition) or `JoinCross<TInner>(AliasOuter, AliasInner)`
+
 ### Generic Join (`Join<TInner, TKey, TResult>`)
 
 Use this overload for projection/correlation scenarios where in-memory composition is acceptable:

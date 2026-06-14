@@ -310,6 +310,46 @@ var Users := Db.Users
   .ToList;
 ```
 
+### 6.1. Strongly-Typed Fluent Joins
+
+Dext Entity provides strongly-typed fluent join methods executing directly inside database queries.
+
+#### Explicit Join Condition
+```pascal
+var u := TUser.Props;
+var a := TAddress.Props;
+
+var Results := Db.Users
+  .JoinLeft<TAddress>('u', 'a', u.AddressId = a.Id)
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### Implicit Auto-Join (ON resolved from ModelBuilder metadata)
+```pascal
+var u := TUser.Props;
+
+// ON u.AddressId = a.Id resolved automatically
+var Results := Db.Users
+  .JoinInner<TAddress>
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### Cross Join (Cartesian Product, no ON condition)
+```pascal
+var Results := Db.Users
+  .JoinCross<TDepartment>
+  .ToList;
+```
+
+Available join methods:
+- `JoinInner<TInner>` / `JoinInner<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinLeft<TInner>` / `JoinLeft<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinRight<TInner>` / `JoinRight<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinFull<TInner>` / `JoinFull<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinCross<TInner>` / `JoinCross<TInner>(AliasOuter, AliasInner)`
+
 ## 7. `IList<T>` Collections
 
 ORM always returns `IList<T>`.

@@ -38,15 +38,28 @@ uses
   Dext.Collections.Comparers,
   Dext.Collections.Dict,
   System.Rtti,
+  System.TypInfo,
   System.SysUtils,
   Dext.Specifications.Base,
   Dext.Specifications.Interfaces,
   Dext.Specifications.Types,
   Dext.Threading.Async,
   Dext.Entity.Drivers.Interfaces, // Add IDbConnection
+  Dext.Entity.Mapping,
   Dext.Core.SmartTypes; // Add SmartTypes
 
 type
+  /// <summary>
+  ///   Helper class to handle join operations and metadata resolution.
+  /// </summary>
+  TQueryJoinHelper = class
+  public
+    class function GetDefaultAlias(ATypeInfo: PTypeInfo): string; static;
+    class function GetUniqueAlias(ATypeInfo: PTypeInfo; const AJoins: TArray<IJoin>; const ABaseTableAlias: string): string; static;
+    class function GetPKColumnName(AMap: TEntityMap): string; static;
+    class function ResolveJoinCondition(AOuterType, AInnerType: PTypeInfo; const AOuterAlias, AInnerAlias: string): IExpression; static;
+  end;
+
   /// <summary>
   ///   Represents the result of a paginated query, containing the items and page metadata.
   /// </summary>
@@ -233,13 +246,41 @@ type
       const AResultSelector: TFunc<T, TInner, TResult>
     ): TFluentQuery<TResult>; overload;
     
-    // SQL Based Joins
+    // SQL Based Joins (Legacy/Raw)
     function Join(const ATable, AAlias: string; const AType: TJoinType; const ACondition: IExpression): TFluentQuery<T>; overload;
     /// <summary>
     ///   Parses a simple join predicate in the form "left = right".
     ///   Example: Join('addresses', 'a', 'users.address_id = a.id')
     /// </summary>
     function Join(const ATable, AAlias: string; const ACondition: string; const AType: TJoinType = TJoinType.jtInner): TFluentQuery<T>; overload;
+
+    // Automatic ON condition resolution via metadata
+    function JoinInner<TInner: class>: TFluentQuery<T>; overload;
+    function JoinLeft<TInner: class>: TFluentQuery<T>; overload;
+    function JoinRight<TInner: class>: TFluentQuery<T>; overload;
+    function JoinFull<TInner: class>: TFluentQuery<T>; overload;
+
+    // Explicit ON conditions
+    function JoinInner<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+    function JoinLeft<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+    function JoinRight<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+    function JoinFull<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+
+    // Alias overrides + Automatic ON resolution
+    function JoinInner<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+    function JoinLeft<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+    function JoinRight<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+    function JoinFull<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+
+    // Alias overrides + Explicit ON conditions
+    function JoinInner<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+    function JoinLeft<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+    function JoinRight<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+    function JoinFull<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+
+    // Cross Joins (No ON condition)
+    function JoinCross<TInner: class>: TFluentQuery<T>; overload;
+    function JoinCross<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
     
     // Group By
     function GroupBy(const AColumn: string): TFluentQuery<T>; overload;
@@ -381,14 +422,193 @@ type
 implementation
 
 uses
-  System.TypInfo,
   System.Variants,
   Dext.Core.Reflection,
   Dext.Specifications.Evaluator,
   Dext.Specifications.OrderBy,
   Dext.Entity.Joining,
-  Dext.Entity.Mapping, // Added for TModelBuilder access and optimization
   Dext.Entity.Prototype; // Add Prototype
+
+class function TQueryJoinHelper.GetDefaultAlias(ATypeInfo: PTypeInfo): string;
+var
+  S: string;
+  I: Integer;
+begin
+  S := string(ATypeInfo.Name);
+  if (S <> '') and (S[1] = 'T') then
+    S := Copy(S, 2, MaxInt);
+  if S.StartsWith('Test', True) then
+    S := Copy(S, 5, MaxInt);
+  
+  Result := '';
+  for I := 1 to Length(S) do
+    if CharInSet(S[I], ['A'..'Z']) then
+      Result := Result + LowerCase(S[I]);
+      
+  if Result = '' then
+    Result := LowerCase(Copy(S, 1, 3));
+end;
+
+class function TQueryJoinHelper.GetUniqueAlias(ATypeInfo: PTypeInfo; const AJoins: TArray<IJoin>; const ABaseTableAlias: string): string;
+var
+  BaseAlias: string;
+  Candidate: string;
+  Suffix: Integer;
+  Collision: Boolean;
+  J: IJoin;
+begin
+  BaseAlias := GetDefaultAlias(ATypeInfo);
+  Candidate := BaseAlias;
+  Suffix := 1;
+  while True do
+  begin
+    Collision := SameText(Candidate, ABaseTableAlias);
+    if not Collision then
+    begin
+      for J in AJoins do
+        if SameText(J.GetAlias, Candidate) or SameText(J.GetTableName, Candidate) then
+        begin
+          Collision := True;
+          Break;
+        end;
+    end;
+    if not Collision then
+      Exit(Candidate);
+      
+    Inc(Suffix);
+    Candidate := BaseAlias + IntToStr(Suffix);
+  end;
+end;
+
+class function TQueryJoinHelper.GetPKColumnName(AMap: TEntityMap): string;
+var
+  PKPropName: string;
+  PKProp: TPropertyMap;
+begin
+  if AMap.Keys.Count > 0 then
+  begin
+    PKPropName := AMap.Keys[0];
+    if AMap.Properties.TryGetValue(PKPropName, PKProp) then
+    begin
+      if PKProp.ColumnName <> '' then Exit(PKProp.ColumnName);
+      Exit(PKProp.PropertyName);
+    end;
+  end;
+  Result := 'Id'; // Default fallback
+end;
+
+class function TQueryJoinHelper.ResolveJoinCondition(AOuterType, AInnerType: PTypeInfo; const AOuterAlias, AInnerAlias: string): IExpression;
+var
+  OuterMap, InnerMap: TEntityMap;
+  PropMap: TPropertyMap;
+  FKCol, PKCol: string;
+  RelationFound: Boolean;
+  CandidateFK, CandidatePK: string;
+  InnerNameClean, OuterNameClean, FallbackFKName: string;
+  FallbackFKProp: TPropertyMap;
+  FKProp: TPropertyMap;
+begin
+  OuterMap := TModelBuilder.Instance.GetMap(AOuterType);
+  InnerMap := TModelBuilder.Instance.GetMap(AInnerType);
+  if (OuterMap = nil) or (InnerMap = nil) then
+    raise Exception.Create('Metadata maps not found for Join types.');
+
+  RelationFound := False;
+
+  // Direction 1: Outer has ForeignKey referencing Inner
+  for PropMap in OuterMap.Properties.Values do
+  begin
+    if (PropMap.PropertyType = AInnerType) or 
+       ((PropMap.PropertyType <> nil) and SameText(string(PropMap.PropertyType.Name), string(PTypeInfo(AInnerType).Name))) then
+    begin
+      if PropMap.ForeignKeyColumn <> '' then
+      begin
+        CandidateFK := PropMap.ForeignKeyColumn;
+        if OuterMap.Properties.TryGetValue(CandidateFK, FKProp) then
+        begin
+          if FKProp.ColumnName <> '' then CandidateFK := FKProp.ColumnName;
+        end;
+        
+        CandidatePK := GetPKColumnName(InnerMap);
+        FKCol := AOuterAlias + '.' + CandidateFK;
+        PKCol := AInnerAlias + '.' + CandidatePK;
+        RelationFound := True;
+        Break;
+      end;
+    end;
+  end;
+
+  // Direction 2: Inner has ForeignKey referencing Outer
+  if not RelationFound then
+  begin
+    for PropMap in InnerMap.Properties.Values do
+    begin
+      if (PropMap.PropertyType = AOuterType) or 
+         ((PropMap.PropertyType <> nil) and SameText(string(PropMap.PropertyType.Name), string(PTypeInfo(AOuterType).Name))) then
+      begin
+        if PropMap.ForeignKeyColumn <> '' then
+        begin
+          CandidateFK := PropMap.ForeignKeyColumn;
+          if InnerMap.Properties.TryGetValue(CandidateFK, FKProp) then
+          begin
+            if FKProp.ColumnName <> '' then CandidateFK := FKProp.ColumnName;
+          end;
+          
+          CandidatePK := GetPKColumnName(OuterMap);
+          FKCol := AInnerAlias + '.' + CandidateFK;
+          PKCol := AOuterAlias + '.' + CandidatePK;
+          RelationFound := True;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
+  // Fallback 1: Naming convention Outer -> Inner (e.g. customer_id or CustomerId)
+  if not RelationFound then
+  begin
+    InnerNameClean := string(AInnerType.Name);
+    if InnerNameClean.StartsWith('T') then InnerNameClean := Copy(InnerNameClean, 2, MaxInt);
+    if InnerNameClean.StartsWith('Test') then InnerNameClean := Copy(InnerNameClean, 5, MaxInt);
+    FallbackFKName := InnerNameClean + 'Id';
+    if OuterMap.Properties.TryGetValue(FallbackFKName, FallbackFKProp) then
+    begin
+      CandidateFK := FallbackFKProp.ColumnName;
+      if CandidateFK = '' then CandidateFK := FallbackFKProp.PropertyName;
+      CandidatePK := GetPKColumnName(InnerMap);
+      FKCol := AOuterAlias + '.' + CandidateFK;
+      PKCol := AInnerAlias + '.' + CandidatePK;
+      RelationFound := True;
+    end;
+  end;
+
+  // Fallback 2: Naming convention Inner -> Outer (e.g. order_id or OrderId)
+  if not RelationFound then
+  begin
+    OuterNameClean := string(AOuterType.Name);
+    if OuterNameClean.StartsWith('T') then OuterNameClean := Copy(OuterNameClean, 2, MaxInt);
+    if OuterNameClean.StartsWith('Test') then OuterNameClean := Copy(OuterNameClean, 5, MaxInt);
+    FallbackFKName := OuterNameClean + 'Id';
+    if InnerMap.Properties.TryGetValue(FallbackFKName, FallbackFKProp) then
+    begin
+      CandidateFK := FallbackFKProp.ColumnName;
+      if CandidateFK = '' then CandidateFK := FallbackFKProp.PropertyName;
+      CandidatePK := GetPKColumnName(OuterMap);
+      FKCol := AInnerAlias + '.' + CandidateFK;
+      PKCol := AOuterAlias + '.' + CandidatePK;
+      RelationFound := True;
+    end;
+  end;
+
+  if not RelationFound then
+    raise Exception.CreateFmt('No mapped relationship found between %s and %s to automatically resolve join condition.',
+      [PTypeInfo(AOuterType).Name, PTypeInfo(AInnerType).Name]);
+
+  Result := TBinaryExpression.Create(
+    TPropertyExpression.Create(FKCol),
+    TPropertyExpression.Create(PKCol),
+    boEqual);
+end;
 
 { TEmptyIterator<T> }
 
@@ -1036,6 +1256,244 @@ function TFluentQuery<T>.Join(const ATable, AAlias: string; const ACondition: st
   const AType: TJoinType): TFluentQuery<T>;
 begin
   Result := Join(ATable, AAlias, AType, JoinStringToEqualsExpression(ACondition));
+end;
+
+function TFluentQuery<T>.JoinInner<TInner>: TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinInner<TInner>(LAlias);
+end;
+
+function TFluentQuery<T>.JoinInner<TInner>(const AAlias: string): TFluentQuery<T>;
+var
+  LOuterMap: TEntityMap;
+  LOuterAlias: string;
+  LCond: IExpression;
+begin
+  LOuterMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+  LOuterAlias := LOuterMap.TableName;
+  LCond := TQueryJoinHelper.ResolveJoinCondition(TypeInfo(T), TypeInfo(TInner), LOuterAlias, AAlias);
+  Result := JoinInner<TInner>(AAlias, LCond);
+end;
+
+function TFluentQuery<T>.JoinInner<TInner>(const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinInner<TInner>(LAlias, AOn);
+end;
+
+function TFluentQuery<T>.JoinInner<TInner>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  Result := Join(LInnerMap.TableName, AAlias, jtInner, AOn);
+end;
+
+function TFluentQuery<T>.JoinLeft<TInner>: TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinLeft<TInner>(LAlias);
+end;
+
+function TFluentQuery<T>.JoinLeft<TInner>(const AAlias: string): TFluentQuery<T>;
+var
+  LOuterMap: TEntityMap;
+  LOuterAlias: string;
+  LCond: IExpression;
+begin
+  LOuterMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+  LOuterAlias := LOuterMap.TableName;
+  LCond := TQueryJoinHelper.ResolveJoinCondition(TypeInfo(T), TypeInfo(TInner), LOuterAlias, AAlias);
+  Result := JoinLeft<TInner>(AAlias, LCond);
+end;
+
+function TFluentQuery<T>.JoinLeft<TInner>(const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinLeft<TInner>(LAlias, AOn);
+end;
+
+function TFluentQuery<T>.JoinLeft<TInner>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  Result := Join(LInnerMap.TableName, AAlias, jtLeft, AOn);
+end;
+
+function TFluentQuery<T>.JoinRight<TInner>: TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinRight<TInner>(LAlias);
+end;
+
+function TFluentQuery<T>.JoinRight<TInner>(const AAlias: string): TFluentQuery<T>;
+var
+  LOuterMap: TEntityMap;
+  LOuterAlias: string;
+  LCond: IExpression;
+begin
+  LOuterMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+  LOuterAlias := LOuterMap.TableName;
+  LCond := TQueryJoinHelper.ResolveJoinCondition(TypeInfo(T), TypeInfo(TInner), LOuterAlias, AAlias);
+  Result := JoinRight<TInner>(AAlias, LCond);
+end;
+
+function TFluentQuery<T>.JoinRight<TInner>(const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinRight<TInner>(LAlias, AOn);
+end;
+
+function TFluentQuery<T>.JoinRight<TInner>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  Result := Join(LInnerMap.TableName, AAlias, jtRight, AOn);
+end;
+
+function TFluentQuery<T>.JoinFull<TInner>: TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinFull<TInner>(LAlias);
+end;
+
+// Alias + Auto ON
+function TFluentQuery<T>.JoinFull<TInner>(const AAlias: string): TFluentQuery<T>;
+var
+  LOuterMap: TEntityMap;
+  LOuterAlias: string;
+  LCond: IExpression;
+begin
+  LOuterMap := TModelBuilder.Instance.GetMap(TypeInfo(T));
+  LOuterAlias := LOuterMap.TableName;
+  LCond := TQueryJoinHelper.ResolveJoinCondition(TypeInfo(T), TypeInfo(TInner), LOuterAlias, AAlias);
+  Result := JoinFull<TInner>(AAlias, LCond);
+end;
+
+function TFluentQuery<T>.JoinFull<TInner>(const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinFull<TInner>(LAlias, AOn);
+end;
+
+function TFluentQuery<T>.JoinFull<TInner>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  Result := Join(LInnerMap.TableName, AAlias, jtFull, AOn);
+end;
+
+function TFluentQuery<T>.JoinCross<TInner>: TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+  LAlias: string;
+  LJoins: TArray<IJoin>;
+  LOuterAlias: string;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  LJoins := [];
+  if FSpecification <> nil then LJoins := FSpecification.GetJoins;
+  LOuterAlias := TModelBuilder.Instance.GetMap(TypeInfo(T)).TableName;
+  LAlias := TQueryJoinHelper.GetUniqueAlias(TypeInfo(TInner), LJoins, LOuterAlias);
+  Result := JoinCross<TInner>(LAlias);
+end;
+
+function TFluentQuery<T>.JoinCross<TInner>(const AAlias: string): TFluentQuery<T>;
+var
+  LInnerMap: TEntityMap;
+begin
+  LInnerMap := TModelBuilder.Instance.GetMap(TypeInfo(TInner));
+  if LInnerMap = nil then raise Exception.Create('Inner type not mapped');
+  Result := Join(LInnerMap.TableName, AAlias, jtCross, nil);
 end;
 
 class function TFluentQuery<T>.JoinStringToEqualsExpression(const ACondition: string): IExpression;

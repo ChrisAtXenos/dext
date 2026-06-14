@@ -1,9 +1,9 @@
 # S19: FluentQuery Join Evolution (Post V1 Final)
 
 ## Status
-- **Planning only** (no implementation in RC1)
-- **Current release phase**: V1 RC1
-- **Execution window**: **after V1 Final**
+- **Completed** (Implementation Phase A fully executed)
+- **Current release phase**: post-V1 Final / Evolution
+- **Execution window**: June 2026 (Completed)
 
 ## Objective
 Define a safe and high-performance evolution path for `TFluentQuery` join capabilities, preserving ecosystem consistency and Dext principles:
@@ -58,12 +58,21 @@ Proposed fluent/type-safe shape:
 var p := Prototype.Entity<TProduct>;
 var oi := Prototype.Entity<TOrderItem>; // default alias auto-generated
 
+// 1. Explicit condition Join
 Context.Entities<TProduct>
   .AsNoTracking
   .JoinInner<TOrderItem>(p.Id = oi.ProductId)
   .Where(TProductType.Price > 10)
-  .OrderBy(TProductType.Name.Asc)
-  .Take(100)
+  .ToList;
+
+// 2. Implicit relationship-based Join (auto-resolves ON condition from metadata)
+Context.Entities<TProduct>
+  .JoinInner<TOrderItem> // Automatically uses mapping: Product.Id = OrderItem.ProductId
+  .ToList;
+
+// 3. Cross Join (no condition)
+Context.Entities<TProduct>
+  .JoinCross<TOrderItem>
   .ToList;
 ```
 
@@ -78,16 +87,37 @@ Context.Entities<TProduct>
 - Keep join condition strongly typed through expression tree.
 - Eliminate fragile string parsing from preferred path.
 - Preserve low-level API for compatibility/interoperability.
+- Automatically resolve ON conditions using Dext relationship metadata mapping (ForeignKey/Navigation attributes).
 
 #### Candidate signatures (additive)
 ```pascal
+// Automatic ON condition resolution via metadata
+function JoinInner<TInner: class>: TFluentQuery<T>; overload;
+function JoinLeft<TInner: class>: TFluentQuery<T>; overload;
+function JoinRight<TInner: class>: TFluentQuery<T>; overload;
+function JoinFull<TInner: class>: TFluentQuery<T>; overload;
+
+// Explicit ON conditions
 function JoinInner<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
 function JoinLeft<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
 function JoinRight<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
+function JoinFull<TInner: class>(const AOn: IExpression): TFluentQuery<T>; overload;
 
+// Alias overrides + Automatic ON resolution
+function JoinInner<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+function JoinLeft<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+function JoinRight<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+function JoinFull<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
+
+// Alias overrides + Explicit ON conditions
 function JoinInner<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
 function JoinLeft<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
 function JoinRight<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+function JoinFull<TInner: class>(const AAlias: string; const AOn: IExpression): TFluentQuery<T>; overload;
+
+// Cross Joins (No ON condition)
+function JoinCross<TInner: class>: TFluentQuery<T>; overload;
+function JoinCross<TInner: class>(const AAlias: string): TFluentQuery<T>; overload;
 ```
 
 #### Alias policy

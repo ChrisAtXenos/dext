@@ -2,7 +2,7 @@ object FormDextTestRunner: TFormDextTestRunner
   Left = 0
   Top = 0
   Caption = 'Dext Test Explorer'
-  ClientHeight = 496
+  ClientHeight = 730
   ClientWidth = 571
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -13,7 +13,7 @@ object FormDextTestRunner: TFormDextTestRunner
   TextHeight = 13
   object NameSplitter: TSplitter
     Left = 0
-    Top = 273
+    Top = 507
     Width = 571
     Height = 3
     Cursor = crVSplit
@@ -25,33 +25,39 @@ object FormDextTestRunner: TFormDextTestRunner
     Left = 0
     Top = 84
     Width = 571
-    Height = 189
+    Height = 423
     ActivePage = DefaultSessionTabSheet
     Align = alClient
     TabOrder = 0
+    ExplicitWidth = 559
+    ExplicitHeight = 383
     object DefaultSessionTabSheet: TTabSheet
       Caption = 'Tests'
       object TestsTreeView: TTreeView
         Left = 0
         Top = 0
-        Width = 563
-        Height = 161
+        Width = 551
+        Height = 376
         Align = alClient
         Indent = 19
         ReadOnly = True
         TabOrder = 0
         OnDblClick = TestsTreeViewDblClick
+        ExplicitWidth = 539
+        ExplicitHeight = 336
       end
     end
   end
   object DetailsPanel: TPanel
     Left = 0
-    Top = 276
+    Top = 510
     Width = 571
     Height = 220
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitTop = 470
+    ExplicitWidth = 559
     object DetailsPageControl: TPageControl
       Left = 0
       Top = 30
@@ -60,20 +66,21 @@ object FormDextTestRunner: TFormDextTestRunner
       ActivePage = ConsoleTab
       Align = alClient
       TabOrder = 0
+      ExplicitWidth = 559
       object InspectorTab: TTabSheet
         Caption = 'Test Inspector'
         object InspectorScroll: TScrollBox
           Left = 0
           Top = 0
-          Width = 563
-          Height = 162
+          Width = 551
+          Height = 143
           Align = alClient
           BorderStyle = bsNone
           TabOrder = 0
           object InfoPanel: TPanel
             Left = 0
             Top = 0
-            Width = 563
+            Width = 551
             Height = 98
             Align = alTop
             BevelOuter = bvNone
@@ -130,8 +137,8 @@ object FormDextTestRunner: TFormDextTestRunner
           object ErrorMemo: TMemo
             Left = 0
             Top = 98
-            Width = 563
-            Height = 64
+            Width = 551
+            Height = 45
             Align = alClient
             ReadOnly = True
             ScrollBars = ssBoth
@@ -145,8 +152,8 @@ object FormDextTestRunner: TFormDextTestRunner
         object ConfigScroll: TScrollBox
           Left = 0
           Top = 0
-          Width = 563
-          Height = 162
+          Width = 551
+          Height = 143
           Align = alClient
           BorderStyle = bsNone
           TabOrder = 0
@@ -196,12 +203,13 @@ object FormDextTestRunner: TFormDextTestRunner
         object DetailsMemo: TMemo
           Left = 0
           Top = 0
-          Width = 563
-          Height = 162
+          Width = 551
+          Height = 143
           Align = alClient
           ReadOnly = True
           ScrollBars = ssBoth
           TabOrder = 0
+          ExplicitWidth = 539
         end
       end
     end
@@ -213,12 +221,13 @@ object FormDextTestRunner: TFormDextTestRunner
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 1
+      ExplicitWidth = 559
       object SummaryTotalLabel: TLabel
         AlignWithMargins = True
         Left = 3
         Top = 6
         Width = 55
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -229,13 +238,14 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = [fsBold]
         ParentFont = False
+        ExplicitHeight = 13
       end
       object SummarySelectedLabel: TLabel
         AlignWithMargins = True
         Left = 64
         Top = 6
         Width = 73
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -246,13 +256,14 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
+        ExplicitHeight = 13
       end
       object SummarySuccessLabel: TLabel
         AlignWithMargins = True
         Left = 143
         Top = 6
         Width = 66
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -265,13 +276,14 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Style = [fsBold]
         ParentColor = False
         ParentFont = False
+        ExplicitHeight = 13
       end
       object SummaryFailedLabel: TLabel
         AlignWithMargins = True
         Left = 215
         Top = 6
         Width = 61
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -284,13 +296,14 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Style = [fsBold]
         ParentColor = False
         ParentFont = False
+        ExplicitHeight = 13
       end
       object SummarySkippedLabel: TLabel
         AlignWithMargins = True
         Left = 282
         Top = 6
         Width = 72
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -301,13 +314,14 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
+        ExplicitHeight = 13
       end
       object SummaryTimeLabel: TLabel
         AlignWithMargins = True
         Left = 360
         Top = 6
         Width = 87
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -318,13 +332,14 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = [fsBold]
         ParentFont = False
+        ExplicitHeight = 13
       end
       object SummaryTotalTimeLabel: TLabel
         AlignWithMargins = True
         Left = 453
         Top = 6
         Width = 112
-        Height = 13
+        Height = 18
         Margins.Top = 6
         Margins.Bottom = 6
         Align = alLeft
@@ -335,6 +350,7 @@ object FormDextTestRunner: TFormDextTestRunner
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
+        ExplicitHeight = 13
       end
     end
   end
@@ -349,6 +365,7 @@ object FormDextTestRunner: TFormDextTestRunner
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitWidth = 559
     object RefreshButton: TButton
       AlignWithMargins = True
       Left = 3
@@ -403,6 +420,7 @@ object FormDextTestRunner: TFormDextTestRunner
       Caption = '...'
       TabOrder = 4
       OnClick = ActionsButtonClick
+      ExplicitLeft = 531
     end
   end
   object ProjectsComboBox: TComboBox
@@ -417,6 +435,7 @@ object FormDextTestRunner: TFormDextTestRunner
     Style = csDropDownList
     TabOrder = 3
     OnChange = ProjectsComboBoxChange
+    ExplicitWidth = 553
   end
   object ProgressPanel: TPanel
     Left = 0
@@ -427,11 +446,12 @@ object FormDextTestRunner: TFormDextTestRunner
     BevelOuter = bvNone
     TabOrder = 4
     Visible = False
+    ExplicitWidth = 559
     object ProgressLabel: TLabel
       Left = 0
       Top = 0
       Width = 2
-      Height = 12
+      Height = 18
       Align = alLeft
       Alignment = taCenter
       Font.Charset = DEFAULT_CHARSET
@@ -441,6 +461,7 @@ object FormDextTestRunner: TFormDextTestRunner
       Font.Style = []
       ParentFont = False
       Layout = tlCenter
+      ExplicitHeight = 12
     end
     object ProgressBar: TProgressBar
       Left = 2
@@ -449,6 +470,7 @@ object FormDextTestRunner: TFormDextTestRunner
       Height = 18
       Align = alClient
       TabOrder = 0
+      ExplicitWidth = 557
     end
   end
   object ActionsPopupMenu: TPopupMenu

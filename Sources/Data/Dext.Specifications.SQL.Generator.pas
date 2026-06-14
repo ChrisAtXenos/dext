@@ -2624,6 +2624,7 @@ begin
     jtLeft: Result := 'LEFT JOIN';
     jtRight: Result := 'RIGHT JOIN';
     jtFull: Result := 'FULL JOIN';
+    jtCross: Result := 'CROSS JOIN';
   else
     Result := 'INNER JOIN';
   end;
@@ -2642,25 +2643,28 @@ begin
   try
     for JoinObj in AJoins do
     begin
-       WhereGen := TSQLWhereGenerator.Create(FDialect, nil); // No mapper, uses raw aliased columns
-       try
-         SB.Append(' ')
-           .Append(GetJoinTypeSQL(JoinObj.GetJoinType))
-           .Append(' ')
-           .Append(FDialect.QuoteIdentifier(JoinObj.GetTableName));
-           
-         if JoinObj.GetAlias <> '' then
-           SB.Append(' ').Append(FDialect.QuoteIdentifier(JoinObj.GetAlias));
-           
-         SB.Append(' ON ')
-           .Append(WhereGen.Generate(JoinObj.GetCondition));
-           
-         // Merge Params
-         for Pair in WhereGen.Params do
-           FParams.AddOrSetValue(Pair.Key, Pair.Value);
-           
-       finally
-         WhereGen.Free;
+       SB.Append(' ')
+         .Append(GetJoinTypeSQL(JoinObj.GetJoinType))
+         .Append(' ')
+         .Append(FDialect.QuoteIdentifier(JoinObj.GetTableName));
+         
+       if JoinObj.GetAlias <> '' then
+         SB.Append(' ').Append(FDialect.QuoteIdentifier(JoinObj.GetAlias));
+         
+       if JoinObj.GetJoinType <> jtCross then
+       begin
+         WhereGen := TSQLWhereGenerator.Create(FDialect, nil);
+         try
+           SB.Append(' ON ')
+             .Append(WhereGen.Generate(JoinObj.GetCondition));
+             
+           // Merge Params
+           for Pair in WhereGen.Params do
+             FParams.AddOrSetValue(Pair.Key, Pair.Value);
+             
+         finally
+           WhereGen.Free;
+         end;
        end;
     end;
     Result := SB.ToString;

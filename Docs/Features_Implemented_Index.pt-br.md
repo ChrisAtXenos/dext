@@ -325,6 +325,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 ### 4.2 Query Engine (LINQ-like)
 - Query fluída com **Projeção (Select)**, **Paging** (`Skip`/`Take`), **Aggregates** (`Count`, `Sum`, `Max`, `Min`, `Average`).
 - **SQL Cache** — Reaproveitamento de comandos SQL gerados para queries repetidas.
+- **Joins Fluentes Fortemente Tipados** (`JoinInner`, `JoinLeft`, `JoinRight`, `JoinFull`, `JoinCross`) — Compilam diretamente em joins SQL otimizados no banco de dados (INNER, LEFT, RIGHT, FULL, CROSS) usando expressões de condição explícitas, auto-resolução implícita via metadados de relacionamento (`TModelBuilder`), ou produto cartesiano via Cross Join.
 - **Pessimistic Locking** — `FOR UPDATE` para controle de concorrência.
 - **Multi-Mapping** (estilo Dapper) — Recursive hydration via atributo `[Nested]`.
 - **Integração com Validação Fluente** — Verificação automática de entidades no `SaveChanges` antes da execução das transações físicas no banco de dados.

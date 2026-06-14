@@ -111,6 +111,49 @@ var Orders := Db.Orders
   .ToList;
 ```
 
+### Strongly-Typed Fluent Joins
+
+Dext Entity provides a set of strongly-typed fluent join methods: `JoinInner`, `JoinLeft`, `JoinRight`, `JoinFull`, and `JoinCross`. These compile directly to optimized database-level joins.
+
+#### Explicit Join Condition
+Write explicit `ON` conditions using entity Smart Properties:
+```pascal
+var u := TUser.Props;
+var a := TAddress.Props;
+
+var Results := Db.Users
+  .JoinLeft<TAddress>('u', 'a', u.AddressId = a.Id)
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### Auto-Join via Relationship Metadata
+If the entity relationship is configured in `TModelBuilder`, Dext resolves the `ON` condition automatically:
+```pascal
+var u := TUser.Props;
+
+// ON condition is resolved automatically from the metadata relations
+var Results := Db.Users
+  .JoinInner<TAddress>
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### Cross Join (Cartesian Product)
+Creates a cartesian product, generating no `ON` clause in SQL:
+```pascal
+var Results := Db.Users
+  .JoinCross<TDepartment>
+  .ToList;
+```
+
+Available join methods:
+- `JoinInner<TInner>` / `JoinInner<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinLeft<TInner>` / `JoinLeft<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinRight<TInner>` / `JoinRight<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinFull<TInner>` / `JoinFull<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinCross<TInner>` / `JoinCross<TInner>(AliasOuter, AliasInner)`
+
 ### Cascade Delete
 
 ```pascal

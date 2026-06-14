@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -32,7 +32,7 @@ uses
 
 type
   TMatchMode = (mmExact, mmStart, mmEnd, mmAnywhere);
-  TJoinType = (jtInner, jtLeft, jtRight, jtFull);
+  TJoinType = (jtInner, jtLeft, jtRight, jtFull, jtCross);
 
   /// <summary>
   ///   Specifies the type of pessimistic lock to be applied to a query.

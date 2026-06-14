@@ -253,6 +253,51 @@ var Usuarios := Context.Users
 > Em ambos os casos, use nomes de coluna/propriedade qualificados no predicado ON
 > (ex.: `users.address_id`, `a.id`).
 
+### Joins Fluentes Fortemente Tipados (Strongly-Typed)
+
+O Dext Entity suporta joins fluentes avançados e fortemente tipados que rodam inteiramente no banco de dados. Essas operações compilam diretamente em joins SQL otimizados (INNER, LEFT, RIGHT, FULL, CROSS).
+
+Existem três formas principais de declarar joins fluentes:
+
+#### 1. Joins com Condição Explícita
+Especifique as tabelas, aliases e a condição ON explícita usando Smart Properties:
+```pascal
+var u := TUser.Props;
+var a := TAddress.Props;
+
+var Resultados := Context.Users
+  .JoinLeft<TAddress>('u', 'a', u.AddressId = a.Id)
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### 2. Auto-Joins por Relacionamento Implícito
+Se o relacionamento estiver configurado em seu `TModelBuilder` (ex. HasOne/HasMany), o Dext resolve a condição ON automaticamente a partir dos metadados da entidade:
+```pascal
+var u := TUser.Props;
+
+// Resolve automaticamente para: ON u.AddressId = a.Id
+var Resultados := Context.Users
+  .JoinInner<TAddress>
+  .Where(u.Age >= 18)
+  .ToList;
+```
+
+#### 3. Cross Joins (Sem condição ON)
+Gera o produto cartesiano entre duas tabelas sem cláusula ON:
+```pascal
+var Resultados := Context.Users
+  .JoinCross<TDepartment>
+  .ToList;
+```
+
+Métodos de join fluente disponíveis:
+- `JoinInner<TInner>` (ON auto-resolvido) ou `JoinInner<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinLeft<TInner>` (ON auto-resolvido) ou `JoinLeft<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinRight<TInner>` (ON auto-resolvido) ou `JoinRight<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinFull<TInner>` (ON auto-resolvido) ou `JoinFull<TInner>(AliasOuter, AliasInner, Condition)`
+- `JoinCross<TInner>` (sem condição ON) ou `JoinCross<TInner>(AliasOuter, AliasInner)`
+
 ### Join Genérico (`Join<TInner, TKey, TResult>`)
 
 Use este overload para cenários de projeção/correlação onde composição em memória é aceitável:
