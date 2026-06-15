@@ -57,9 +57,31 @@ implementation
 uses
   System.IOUtils;
 
+var
+  LServerLogLock: TObject = nil;
+
 procedure LogServerDebug(const AMsg: string);
+var
+  LPath: string;
+  LWriter: TStreamWriter;
 begin
-  // disabled
+  Winapi.Windows.OutputDebugString(PChar('[Dext.Server] ' + AMsg));
+  if LServerLogLock = nil then Exit;
+  System.TMonitor.Enter(LServerLogLock);
+  try
+    try
+      LPath := TPath.Combine(TPath.GetTempPath, 'DextExpert.log');
+      LWriter := TFile.AppendText(LPath);
+      try
+        LWriter.WriteLine(Format('[%s] [Server] %s', [FormatDateTime('yyyy-MM-dd hh:nn:ss.zzz', Now), AMsg]));
+      finally
+        LWriter.Free;
+      end;
+    except
+    end;
+  finally
+    System.TMonitor.Exit(LServerLogLock);
+  end;
 end;
 
 { TTestRunnerServerThread }
@@ -413,5 +435,11 @@ begin
     FreeAndNil(FThread);
   end;
 end;
+
+initialization
+  LServerLogLock := TObject.Create;
+
+finalization
+  FreeAndNil(LServerLogLock);
 
 end.

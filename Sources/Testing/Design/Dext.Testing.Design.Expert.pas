@@ -57,6 +57,7 @@ uses
 
 procedure LogExpert(const AMsg: string);
 begin
+  LogToFile('[Expert] ' + AMsg);
   Winapi.Windows.OutputDebugString(PChar('[Dext.Expert] ' + AMsg));
 end;
 

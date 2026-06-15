@@ -306,6 +306,7 @@ type
 procedure ShowDextTestExplorer;
 procedure RegisterDockableForm;
 procedure UnregisterDockableForm;
+procedure LogToFile(const AMsg: string);
 
 var
   FormDextTestRunner: TFormDextTestRunner = nil;
@@ -2919,8 +2920,35 @@ begin
     LogMsg('Failed to launch runner: ' + LExeFile);
 end;
 
+var
+  LLogLock: TObject = nil;
+
+procedure LogToFile(const AMsg: string);
+var
+  LPath: string;
+  LWriter: TStreamWriter;
+begin
+  if LLogLock = nil then Exit;
+  System.TMonitor.Enter(LLogLock);
+  try
+    try
+      LPath := TPath.Combine(TPath.GetTempPath, 'DextExpert.log');
+      LWriter := TFile.AppendText(LPath);
+      try
+        LWriter.WriteLine(Format('[%s] %s', [FormatDateTime('yyyy-MM-dd hh:nn:ss.zzz', Now), AMsg]));
+      finally
+        LWriter.Free;
+      end;
+    except
+    end;
+  finally
+    System.TMonitor.Exit(LLogLock);
+  end;
+end;
+
 procedure TFormDextTestRunner.LogMsg(const AMsg: string);
 begin
+  LogToFile('[UI] ' + AMsg);
   Winapi.Windows.OutputDebugString(PChar('[Dext.UI] ' + AMsg));
   {$IFDEF DEBUG}
   DetailsMemo.Lines.Add(Format('[%s] %s', [FormatDateTime('hh:nn:ss.zzz', Now), AMsg]));
@@ -4998,12 +5026,14 @@ begin
 end;
 
 initialization
+  LLogLock := TObject.Create;
 {$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
   PerfLogLock := TObject.Create;
 {$ENDIF}
   RegisterDockableForm;
 
 finalization
+  FreeAndNil(LLogLock);
 {$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
   PerfLogLock.Free;
 {$ENDIF}
