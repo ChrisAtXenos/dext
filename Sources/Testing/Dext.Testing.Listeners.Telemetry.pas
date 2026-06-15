@@ -13,7 +13,8 @@ uses
   Dext.Testing.Runner,
   Dext.Collections,
   Dext.Logging,
-  Dext.Logging.Global;
+  Dext.Logging.Global,
+  Dext.Testing.Integration;
 
 type
   TTelemetryTestListener = class(TInterfacedObject, ITestListener)

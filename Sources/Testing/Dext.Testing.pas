@@ -51,6 +51,7 @@ uses
   Dext.Testing.History,
   Dext.Testing.Report,
   Dext.Testing.Runner,
+  Dext.Testing.Integration,
   {$IFDEF DEXT_TESTINSIGHT}
   Dext.Testing.TestInsight,
   {$ENDIF}
@@ -193,8 +194,8 @@ type
   THTMLReporter = Dext.Testing.Report.THTMLReporter;
 
   // Dext.Testing.Runner
-  TTestResult = Dext.Testing.Runner.TTestResult;
-  TTestInfo = Dext.Testing.Runner.TTestInfo;
+  TTestResult = Dext.Testing.Integration.TTestResult;
+  TTestInfo = Dext.Testing.Integration.TTestInfo;
   TTestSummary = Dext.Testing.Runner.TTestSummary;
   TTestFilter = Dext.Testing.Runner.TTestFilter;
   TTestStartEvent = Dext.Testing.Runner.TTestStartEvent;
@@ -223,11 +224,11 @@ const
   rfSonarQube = Dext.Testing.Report.rfSonarQube;
   rfTRX = Dext.Testing.Report.rfTRX;
   // Dext.Testing.Runner
-  trPassed = Dext.Testing.Runner.trPassed;
-  trFailed = Dext.Testing.Runner.trFailed;
-  trSkipped = Dext.Testing.Runner.trSkipped;
-  trTimeout = Dext.Testing.Runner.trTimeout;
-  trError = Dext.Testing.Runner.trError;
+  trPassed = Dext.Testing.Integration.trPassed;
+  trFailed = Dext.Testing.Integration.trFailed;
+  trSkipped = Dext.Testing.Integration.trSkipped;
+  trTimeout = Dext.Testing.Integration.trTimeout;
+  trError = Dext.Testing.Integration.trError;
   ofConsole = Dext.Testing.Runner.ofConsole;
   ofXUnit = Dext.Testing.Runner.ofXUnit;
   ofJUnit = Dext.Testing.Runner.ofJUnit;

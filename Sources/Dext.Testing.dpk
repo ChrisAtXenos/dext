@@ -54,6 +54,7 @@ contains
   Dext.Testing.Runner in 'Testing\Dext.Testing.Runner.pas',
   Dext.Testing.Listeners.Telemetry in 'Testing\Dext.Testing.Listeners.Telemetry.pas',
   Dext.Testing in 'Testing\Dext.Testing.pas',
-  Dext.Testing.Host in 'Testing\Dext.Testing.Host.pas';
+  Dext.Testing.Host in 'Testing\Dext.Testing.Host.pas',
+  Dext.Testing.Integration in 'Common\Dext.Testing.Integration.pas';
 
 end.

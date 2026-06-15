@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   System.Classes,
   System.SyncObjs,
+  System.Generics.Collections,
   Winapi.Windows,
   Winapi.WinSock2;
 
@@ -20,6 +21,8 @@ type
     FSocket: TSocket;
     FOnTestResult: TTestResultEvent;
     FOnGetSelectedTests: TGetSelectedTestsEvent;
+    FClientSockets: TList<TSocket>;
+    FLock: TCriticalSection;
     procedure TriggerTestResult(const AData: string);
     procedure QueueResult(const AJSON: string);
   protected
@@ -27,6 +30,7 @@ type
   public
     constructor Create(APort: Word; AOnTestResult: TTestResultEvent; AOnGetSelectedTests: TGetSelectedTestsEvent);
     destructor Destroy; override;
+    procedure CloseAllClientSockets;
   end;
 
   TTestRunnerServer = class
@@ -65,16 +69,37 @@ begin
   FOnTestResult := AOnTestResult;
   FOnGetSelectedTests := AOnGetSelectedTests;
   FSocket := INVALID_SOCKET;
+  FClientSockets := TList<TSocket>.Create;
+  FLock := TCriticalSection.Create;
   FreeOnTerminate := False;
 end;
 
 destructor TTestRunnerServerThread.Destroy;
 begin
+  CloseAllClientSockets;
   if FSocket <> INVALID_SOCKET then
   begin
     closesocket(FSocket);
   end;
+  FClientSockets.Free;
+  FLock.Free;
   inherited;
+end;
+
+procedure TTestRunnerServerThread.CloseAllClientSockets;
+var
+  LSock: TSocket;
+begin
+  FLock.Enter;
+  try
+    for LSock in FClientSockets do
+    begin
+      closesocket(LSock);
+    end;
+    FClientSockets.Clear;
+  finally
+    FLock.Leave;
+  end;
 end;
 
 procedure TTestRunnerServerThread.TriggerTestResult(const AData: string);
@@ -169,6 +194,19 @@ begin
         if Terminated then Break;
         LogServerDebug('Accept failed or socket closed');
         Continue;
+      end;
+
+      FLock.Enter;
+      try
+        if not Terminated then
+          FClientSockets.Add(ClientSock)
+        else
+        begin
+          closesocket(ClientSock);
+          Continue;
+        end;
+      finally
+        FLock.Leave;
       end;
 
       LogServerDebug('Connection accepted');
@@ -291,6 +329,12 @@ begin
       end;
 
       closesocket(ClientSock);
+      FLock.Enter;
+      try
+        FClientSockets.Remove(ClientSock);
+      finally
+        FLock.Leave;
+      end;
     end;
 
   finally
@@ -342,6 +386,7 @@ begin
   if Assigned(FThread) then
   begin
     FThread.Terminate;
+    FThread.CloseAllClientSockets;
     // Close listening socket to unblock accept()
     if FThread.FSocket <> INVALID_SOCKET then
       closesocket(FThread.FSocket);

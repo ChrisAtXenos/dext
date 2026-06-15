@@ -42,36 +42,14 @@ uses
   System.TypInfo,
   Dext.Collections,
   Dext.Core.Debug,
-  Dext.Testing.Attributes;
+  Dext.Testing.Attributes,
+  Dext.Testing.Integration;
 
 type
-  /// <summary>
-  ///   Result of a single test execution.
-  /// </summary>
-  TTestResult = (trNone, trPassed, trFailed, trSkipped, trTimeout, trError);
-
   /// <summary>
   ///   Output verbosity levels for test execution.
   /// </summary>
   TOutputVerbosity = (ovSilent, ovDefault, ovVerbose);
-
-  /// <summary>
-  ///   Detailed information about a test execution.
-  /// </summary>
-  TTestInfo = record
-    FixtureName: string;
-    UnitName: string;
-    ClassName: string;
-    TestName: string;
-    DisplayName: string;
-    Result: TTestResult;
-    Duration: TTimeSpan;
-    ErrorMessage: string;
-    ExceptionName: string;
-    StackTrace: string;
-    CodeAddress: Pointer;
-    Categories: TArray<string>;
-  end;
 
   /// <summary>
   ///   Summary of test run results.

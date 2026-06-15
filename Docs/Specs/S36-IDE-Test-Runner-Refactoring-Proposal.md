@@ -8,10 +8,12 @@ This document analyzes the root causes of IDE freezes/hangs during compilation a
 
 Our technical audit identified three structural flaws in the current implementation of the IDE Expert:
 
-### A. BPL Dependency Lock (The `Requires` Trap)
-*   **The Problem:** The design-time package `Dext.Testing.Design.dpk` currently references `Dext.Testing` in its `requires` clause and imports implementation units (`Dext.Testing.Runner`, `Dext.Testing.Report`) in the implementation section of the dockable form.
-*   **The Consequence:** When the IDE loads the expert, `bds.exe` locks `Dext.Testing.bpl` in memory. If the developer tries to compile or rebuild the core framework (`Dext.Testing.dpk`) within the IDE, the compiler encounters a file write lock error, freezing or crashing the compilation pipeline.
-*   **The Solution:** Remove the `requires Dext.Testing` dependency. The expert must be 100% decoupled from the framework it tests. All communication is already done via TCP/JSON, so the expert only needs to parse simple JSON structures natively, requiring no runtime framework units.
+### A. BPL Dependency Lock & Finalization Freeze
+*   **The Problem:** The design-time package `Dext.Testing.Design.dpk` previously referenced `Dext.Testing` in its `requires` clause and imported framework units directly in the IDE expert. When a developer compiles the core framework (`Dext.Testing.dpk`), the IDE automatically attempts to unload dependent design-time packages. 
+*   **The Consequence:** Because of the deadlock during package finalization (caused by the blocking socket thread in `FServer.Stop` and `FThread.WaitFor`), the IDE freezes during this automatic unloading sequence. Furthermore, trying to manually uninstall the package before compiling also deadlocks the IDE UI thread for the exact same reason.
+*   **The Solution:** 
+    1. Resolve the finalization deadlock so that unloading packages never hangs the IDE (completed).
+    2. Decouple `Dext.Testing.Design.dpk` from `Dext.Testing` completely, ensuring that the IDE doesn't even need to unload or load packages when the core framework changes, providing a seamless development experience.
 
 ### B. Infinite Socket `recv` Block During Finalization
 *   **The Problem:** When the package is uninstalled or the IDE closes, `TFormDextTestRunner.Destroy` invokes `FServer.Stop`. This calls `FThread.Terminate`, closes the listening socket (`FSocket`), and calls `FThread.WaitFor` on the main thread.

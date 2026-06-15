@@ -24,7 +24,26 @@ interface
 
 uses
   System.SysUtils,
-  System.Classes;
+  System.Classes,
+  System.TimeSpan;
+
+type
+  TTestResult = (trNone, trPassed, trFailed, trSkipped, trTimeout, trError);
+
+  TTestInfo = record
+    FixtureName: string;
+    UnitName: string;
+    ClassName: string;
+    TestName: string;
+    DisplayName: string;
+    Result: TTestResult;
+    Duration: TTimeSpan;
+    ErrorMessage: string;
+    ExceptionName: string;
+    StackTrace: string;
+    CodeAddress: Pointer;
+    Categories: TArray<string>;
+  end;
 
 type
   ITestRunnerIntegration = interface

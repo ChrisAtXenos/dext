@@ -35,7 +35,8 @@ uses
   System.SyncObjs,
   System.SysUtils,
   Dext.Testing.Fluent,
-  Dext.Testing.Runner;
+  Dext.Testing.Runner,
+  Dext.Testing.Integration;
 
 type
   /// <summary>Manages the lifecycle and execution environment during tests (Console, IDE, or CI).</summary>

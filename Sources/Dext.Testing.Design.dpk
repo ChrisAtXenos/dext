@@ -35,8 +35,7 @@ requires
   designide,
   vcl,
   Dext.Core,
-  Dext.Net,
-  Dext.Testing;
+  Dext.Net;
 
 contains
   Dext.Testing.Design.Registration in 'Testing\Design\Dext.Testing.Design.Registration.pas',
@@ -45,6 +44,9 @@ contains
   Dext.Testing.Design.Server in 'Testing\Design\Dext.Testing.Design.Server.pas',
   Dext.Testing.Design.AST in 'Testing\Design\Dext.Testing.Design.AST.pas',
   Dext.Testing.Design.Gutter in 'Testing\Design\Dext.Testing.Design.Gutter.pas',
-  Dext.Testing.Design.Coverage in 'Testing\Design\Dext.Testing.Design.Coverage.pas';
+  Dext.Testing.Design.Coverage in 'Testing\Design\Dext.Testing.Design.Coverage.pas',
+  Dext.Testing.Integration in 'Common\Dext.Testing.Integration.pas',
+  Dext.Testing.Report in 'Testing\Dext.Testing.Report.pas',
+  Dext.Testing.Design.Presenter in 'Testing\Design\Dext.Testing.Design.Presenter.pas';
 
 end.

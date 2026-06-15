@@ -32,7 +32,7 @@ uses
   Dext.Collections.Dict,
   Dext.Templating,
   Dext.Text.Escaping,
-  Dext.Testing.Runner;
+  Dext.Testing.Integration;
 
 type
   TReportFormat = (rfJUnit, rfXUnit, rfJSON, rfSonarQube, rfTRX);

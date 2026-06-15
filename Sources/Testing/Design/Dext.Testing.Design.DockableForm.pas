@@ -318,7 +318,7 @@ implementation
 
 uses
   DeskUtil, Dext.Utils, System.Actions, Vcl.ActnList, Dext.Testing.Design.Coverage, System.IniFiles,
-  Winapi.CommCtrl, Dext.Testing.Report, Dext.Testing.Runner;
+  Winapi.CommCtrl, Dext.Testing.Report, Dext.Testing.Runner, Dext.Testing.Integration;
 
 {$IFDEF DEXT_TEST_EXPLORER_PERF_LOG}
 var
@@ -1586,7 +1586,7 @@ var
   SonarReporter: TSonarQubeReporter;
   SuiteName: string;
   TestDetailInfo: TTestDetailInfo;
-  TestInfo: TTestInfo;
+  TestInfo: Dext.Testing.Integration.TTestInfo;
   XUnitReporter: TXUnitReporter;
 begin
   SuiteName := ExtractFileName(ChangeFileExt(FActiveProjectFile, ''));
@@ -1613,10 +1613,10 @@ begin
           TestInfo.TestName := TestDetailInfo.TestName;
         end;
         TestInfo.DisplayName := TestDetailInfo.TestName;
-        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
-        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
-        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
-        else TestInfo.Result := trNone;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := TTestResult.trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := TTestResult.trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := TTestResult.trSkipped
+        else TestInfo.Result := TTestResult.trNone;
         TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
         TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
         TestInfo.StackTrace := TestDetailInfo.StackTrace;
@@ -1650,10 +1650,10 @@ begin
           TestInfo.TestName := TestDetailInfo.TestName;
         end;
         TestInfo.DisplayName := TestDetailInfo.TestName;
-        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
-        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
-        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
-        else TestInfo.Result := trNone;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := TTestResult.trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := TTestResult.trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := TTestResult.trSkipped
+        else TestInfo.Result := TTestResult.trNone;
         TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
         TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
         TestInfo.StackTrace := TestDetailInfo.StackTrace;
@@ -1687,10 +1687,10 @@ begin
           TestInfo.TestName := TestDetailInfo.TestName;
         end;
         TestInfo.DisplayName := TestDetailInfo.TestName;
-        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
-        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
-        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
-        else TestInfo.Result := trNone;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := TTestResult.trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := TTestResult.trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := TTestResult.trSkipped
+        else TestInfo.Result := TTestResult.trNone;
         TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
         TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
         TestInfo.StackTrace := TestDetailInfo.StackTrace;
@@ -1760,10 +1760,10 @@ begin
           TestInfo.TestName := TestDetailInfo.TestName;
         end;
         TestInfo.DisplayName := TestDetailInfo.TestName;
-        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := trPassed
-        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := trFailed
-        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := trSkipped
-        else TestInfo.Result := trNone;
+        if SameText(TestDetailInfo.Status, 'Passed') then TestInfo.Result := TTestResult.trPassed
+        else if SameText(TestDetailInfo.Status, 'Failed') or SameText(TestDetailInfo.Status, 'Error') then TestInfo.Result := TTestResult.trFailed
+        else if SameText(TestDetailInfo.Status, 'Skipped') then TestInfo.Result := TTestResult.trSkipped
+        else TestInfo.Result := TTestResult.trNone;
         TestInfo.Duration := TTimeSpan.FromMilliseconds(TestDetailInfo.DurationMs);
         TestInfo.ErrorMessage := TestDetailInfo.ErrorMessage;
         TestInfo.StackTrace := TestDetailInfo.StackTrace;
