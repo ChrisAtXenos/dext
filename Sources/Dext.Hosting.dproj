@@ -3,7 +3,7 @@
         <ProjectGuid>{91A46546-DF97-485C-B110-5FE4216D15D3}</ProjectGuid>
         <MainSource>Dext.Hosting.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>32899</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>

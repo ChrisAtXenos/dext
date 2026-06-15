@@ -3,7 +3,7 @@
         <ProjectGuid>{F2A3B4C5-D6E7-8F90-A1B2-C3D4E5F6A7B8}</ProjectGuid>
         <MainSource>Dext.Events.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>32899</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>

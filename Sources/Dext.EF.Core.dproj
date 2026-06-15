@@ -3,7 +3,7 @@
         <ProjectGuid>{4E4AC89E-3AE7-42E3-BC30-DA50C065D579}</ProjectGuid>
         <MainSource>Dext.EF.Core.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>32899</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>

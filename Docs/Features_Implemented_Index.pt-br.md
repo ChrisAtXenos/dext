@@ -510,6 +510,8 @@ API fluente baseada no padrão `Should(Value)`.
 - **Multi-Format Export** — JUnit XML, xUnit XML, TRX (Azure DevOps), HTML (Dark Theme), JSON.
 - **SonarQube Integration** — Geração de relatórios de cobertura de código e falhas compatíveis com Quality Gates.
 - **TestInsight Integration** — Suporte nativo para visualização direta na IDE Delphi.
+- **Decoupled Test Runner Integration & Registry** (`Dext.Testing.Integration`) — Registro por linha de comando e processamento de parâmetros para execução desacoplada do executor de testes a partir da IDE ou da CLI, sem dependências de BPLs intermediárias.
+- **Native DUnitX Integration** (`Dext.Testing.DUnitX`) — Adaptador de runner desacoplado para DUnitX que trafega resultados, status em tempo real e filtros via HTTP/SSE locais para o Expert Dext Test Explorer.
 - **Test Context Injection** — `ITestContext` injetável via parâmetro para `WriteLine`, `AttachFile` (screenshots) e metadados de execução.
 
 ---

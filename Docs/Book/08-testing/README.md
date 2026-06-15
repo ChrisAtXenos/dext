@@ -189,6 +189,39 @@ Dext includes native high-level support for the **Dext Test Explorer**, a full-f
 *   **Test Inspector**: Displays detailed error details, stack traces, precise duration, and source code location. Double-clicking a test navigates directly to the line of code in the IDE editor.
 *   **Visual Reports**: Visual menu `...` to instantly export results to **JUnit XML**, **XUnit XML**, **JSON**, **SonarQube XML**, or **HTML Report**.
 
+## Native DUnitX Integration
+
+If your project already uses **DUnitX** and you want to view and execute your tests directly in the **Dext Test Explorer** without depending on TestInsight as an intermediary, you can enable native decoupled integration in a few steps:
+
+### How to configure your DUnitX project:
+
+1. **Add Files to search path**: Make sure the Dext common sources directory (`\Sources\Common`) is present in your project's search paths.
+2. **Define Compiler Directive**: Add the `DEXT_DUNITX` compiler directive in your project options (or in your `Dext.inc` file).
+3. **Update Uses Clause**: In your project's `.dpr` file, add the following units:
+   ```pascal
+   {$IFDEF DEXT_DUNITX}
+   Dext.Testing.Integration,
+   Dext.Testing.DUnitX,
+   {$ENDIF}
+   ```
+4. **Trigger CommandLine Interceptor**: In the main block (`begin ... end.`) of your `.dpr` file, before running the default DUnitX runner, invoke the command line check:
+   ```pascal
+   begin
+     ReportMemoryLeaksOnShutdown := True;
+     // ... other initializations ...
+
+   {$IFDEF DEXT_DUNITX}
+     if TTestRunnerRegistry.TryExecuteFromCommandLine then
+       Exit;
+   {$ENDIF}
+
+     // Default DUnitX runner code (Console or GUI)
+     // ...
+   end.
+   ```
+
+This approach allows the **Dext Test Explorer** and the **Dext CLI** to run DUnitX tests by passing background communication parameters in a completely decoupled way, free of `IFDEFs` or heavy dependencies in the IDE.
+
 ---
 
 ## Alternative Integration (TestInsight)

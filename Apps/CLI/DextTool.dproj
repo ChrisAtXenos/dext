@@ -3,7 +3,7 @@
         <ProjectGuid>{1A75A0FB-06A4-4EE9-B72B-1F4D07B11A57}</ProjectGuid>
         <MainSource>DextTool.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>

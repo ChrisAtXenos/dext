@@ -1,4 +1,4 @@
-# Specification: S27 — Native Delphi IDE Test Runner (VCL Premium)
+# Specification: S36 — Native Delphi IDE Test Runner (VCL Premium)
 
 Esta especificação detalha o **Dext IDE Test Runner**, um plugin nativo integrado diretamente ao Embarcadero Delphi usando a **Open Tools API (OTA)** e construído inteiramente com **VCL Nativa**. Esta abordagem garante baixíssimo consumo de memória, alta performance e estabilidade dentro do processo da IDE (`bds.exe`), trazendo a experiência de produtividade de nível internacional do **JetBrains Rider** e **Visual Studio Test Explorer** para o ecossistema Delphi.
 

@@ -189,6 +189,39 @@ O Dext inclui suporte nativo de alto nível com o **Dext Test Explorer**, um Exp
 *   **Test Inspector**: Exibe detalhes completos sobre o erro, stack trace, duração e localização física do teste. Dê duplo clique no teste para ir direto para a linha do código correspondente.
 *   **Exportação Visual**: Menu integrado `...` que permite exportar relatórios diretamente para os formatos **JUnit XML**, **XUnit XML**, **JSON**, **SonarQube XML** ou **HTML Report**.
 
+## Integração Nativa com DUnitX
+
+Se o seu projeto já utiliza o **DUnitX** e você deseja visualizar e executar seus testes diretamente no **Dext Test Explorer** sem depender do intermediário do TestInsight, você pode habilitar a integração nativa e desacoplada em poucos passos:
+
+### Como configurar seu projeto DUnitX:
+
+1. **Adicionar os Arquivos ao Path**: Certifique-se de que a pasta de fontes comuns do Dext (`\Sources\Common`) está presente nos caminhos de pesquisa (Search Path) do seu projeto.
+2. **Definir a Diretiva do Compilador**: Adicione a diretiva de compilação `DEXT_DUNITX` nas configurações do projeto (ou no arquivo `Dext.inc`).
+3. **Atualizar a Cláusula Uses**: No seu arquivo `.dpr` (projeto principal), adicione as seguintes units:
+   ```pascal
+   {$IFDEF DEXT_DUNITX}
+   Dext.Testing.Integration,
+   Dext.Testing.DUnitX,
+   {$ENDIF}
+   ```
+4. **Acionar o Interceptador de CommandLine**: No bloco principal (`begin ... end.`) do arquivo `.dpr`, antes de rodar o runner padrão do DUnitX, execute a verificação da linha de comando:
+   ```pascal
+   begin
+     ReportMemoryLeaksOnShutdown := True;
+     // ... outras inicializações ...
+
+   {$IFDEF DEXT_DUNITX}
+     if TTestRunnerRegistry.TryExecuteFromCommandLine then
+       Exit;
+   {$ENDIF}
+
+     // Código padrão de execução do DUnitX (Console ou GUI)
+     // ...
+   end.
+   ```
+
+Essa abordagem permite que o **Dext Test Explorer** e o **Dext CLI** executem os testes DUnitX passando parâmetros de comunicação em segundo plano de forma 100% desacoplada e livre de `IFDEFs` ou dependências pesadas na IDE.
+
 ---
 
 ## Integração Alternativa com TestInsight

@@ -3,7 +3,7 @@
         <ProjectGuid>{E4D3E1C7-B51F-4C53-BC24-CC9175D63920}</ProjectGuid>
         <MainSource>Dext.Testing.Design.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">Dext.Testing.Design</ProjectName>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>

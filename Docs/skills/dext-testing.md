@@ -279,6 +279,39 @@ begin
 end;
 ```
 
+## DUnitX Native Integration
+
+To execute existing DUnitX test projects inside the **Dext Test Explorer** or via the **Dext CLI** without TestInsight:
+
+1. Add the Dext common sources directory (`\Sources\Common`) to your project's search paths.
+2. Add the `DEXT_DUNITX` compiler define in your project settings.
+3. Reference `Dext.Testing.Integration` and `Dext.Testing.DUnitX` in your `.dpr` uses block.
+4. Call `TTestRunnerRegistry.TryExecuteFromCommandLine` at the start of your `.dpr` main block:
+
+```pascal
+program MyProject.Tests;
+
+uses
+  System.SysUtils,
+  DUnitX.TestFramework,
+  {$IFDEF DEXT_DUNITX}
+  Dext.Testing.Integration,
+  Dext.Testing.DUnitX,
+  {$ENDIF}
+  MyTestUnits in 'MyTestUnits.pas';
+
+begin
+  ReportMemoryLeaksOnShutdown := True;
+
+  {$IFDEF DEXT_DUNITX}
+  if TTestRunnerRegistry.TryExecuteFromCommandLine then
+    Exit;
+  {$ENDIF}
+
+  // Standard DUnitX runner setup (Console/GUI)
+end.
+```
+
 ## Running Tests
 
 ```bash

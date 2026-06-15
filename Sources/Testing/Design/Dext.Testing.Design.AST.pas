@@ -1,4 +1,4 @@
-﻿unit Dext.Testing.Design.AST;
+unit Dext.Testing.Design.AST;
 
 interface
 
@@ -93,7 +93,9 @@ begin
     Lower.StartsWith('[test(') or
     Lower.StartsWith('[testcase') or
     Lower.StartsWith('[testcasesource') or
-    Lower.StartsWith('[fact(');
+    Lower.StartsWith('[fact(') or
+    Lower.StartsWith('[customtestcase') or
+    Lower.StartsWith('[autonametestcase');
 end;
 
 class function TTestASTScanner.ScanText(const AText: string; out ATests: TList<TTestLocation>): Boolean;
