@@ -415,35 +415,34 @@ end;
 
 procedure TTestExplorerModel.ScanProjectTests(const AProjFile: string; AOnScanFinished: TProc<TList<TTestLocation>>);
 begin
-  TTask.Run(procedure
+  TTask.Run(TProc(procedure
     var
-      LList: TList<TTestLocation>;
-      LContent: string;
-      LFile: string;
-      LProjDir: string;
+      List: TList<TTestLocation>;
+      FileName: string;
+      ProjectDirectory: string;
     begin
-      LList := TList<TTestLocation>.Create;
+      List := TList<TTestLocation>.Create;
       try
-        LProjDir := ExtractFilePath(AProjFile);
-        if TDirectory.Exists(LProjDir) then
+        ProjectDirectory := ExtractFilePath(AProjFile);
+        if TDirectory.Exists(ProjectDirectory) then
         begin
-          for LFile in TDirectory.GetFiles(LProjDir, '*.pas', TSearchOption.soAllDirectories) do
+          for FileName in TDirectory.GetFiles(ProjectDirectory, '*.pas', TSearchOption.soAllDirectories) do
           begin
-            TTestASTScanner.ScanFile(LFile, LList);
+            TTestASTScanner.ScanFile(FileName, List);
           end;
         end;
       finally
         TThread.Queue(nil, TThreadProcedure(procedure
           begin
-            AOnScanFinished(LList);
+            AOnScanFinished(List);
           end));
       end;
-    end);
+    end));
 end;
 
 procedure TTestExplorerModel.CompileAndRunTests(const AProjFile: string; const ATestFilter: string; ACheckedTests: TArray<string>; AOnStart: TProc; AOnFinished: TProc; AOnConsole: TProc<string>);
 begin
-  TTask.Run(procedure
+  TTask.Run(TProc(procedure
     var
       IsPackage: Boolean;
       Output: string;
@@ -520,7 +519,7 @@ begin
       end;
 
       TThread.Queue(nil, TThreadProcedure(AOnFinished));
-    end);
+    end));
 end;
 
 procedure TTestExplorerModel.StopTests;
