@@ -1804,12 +1804,18 @@ begin
     FIdleTimer.Enabled := RunOnIdleCheckBox.Checked;
 end;
 
-function GetProjectTargetInfo(const ADprojPath: string; out AIsPackage: Boolean; out AExeOutput: string): Boolean;
+function GetProjectTargetInfo(const ADprojPath: string; out AIsPackage: Boolean; out AExeOutput: string; const APlatform: string = 'Win32'; const AConfig: string = 'Debug'): Boolean;
 var
   LContent: string;
   LMainSourceStart, LMainSourceEnd: Integer;
   LMainSource: string;
   LExeOutStart, LExeOutEnd: Integer;
+  LPlatformTag: string;
+  LPlatformGroupStart, LPlatformGroupEnd: Integer;
+  LPlatformGroup: string;
+  LOutStart, LOutEnd: Integer;
+  LBaseGroupStart, LBaseGroupEnd: Integer;
+  LBaseGroup: string;
 begin
   Result := False;
   AIsPackage := False;
@@ -1840,15 +1846,69 @@ begin
         AIsPackage := True;
     end;
 
-    // Get DCC_ExeOutput
-    LExeOutStart := LContent.LastIndexOf('<DCC_ExeOutput>');
-    if LExeOutStart >= 0 then
+    // 1. Try platform-specific base property group, e.g., Base_Win32
+    LPlatformTag := 'Base_' + APlatform;
+    LPlatformGroupStart := LContent.IndexOf('Condition="''$(' + LPlatformTag + ')''!=''''"');
+    if LPlatformGroupStart < 0 then
+      LPlatformGroupStart := LContent.IndexOf('Condition="''$(Platform)''==''' + APlatform + '''"');
+
+    if LPlatformGroupStart >= 0 then
     begin
-      Inc(LExeOutStart, Length('<DCC_ExeOutput>'));
-      LExeOutEnd := LContent.IndexOf('</DCC_ExeOutput>', LExeOutStart);
-      if LExeOutEnd > LExeOutStart then
+      LPlatformGroupStart := LContent.LastIndexOf('<PropertyGroup', LPlatformGroupStart);
+      if LPlatformGroupStart >= 0 then
       begin
-        AExeOutput := LContent.Substring(LExeOutStart, LExeOutEnd - LExeOutStart).Trim;
+        LPlatformGroupEnd := LContent.IndexOf('</PropertyGroup>', LPlatformGroupStart);
+        if LPlatformGroupEnd > LPlatformGroupStart then
+        begin
+          LPlatformGroup := LContent.Substring(LPlatformGroupStart, LPlatformGroupEnd - LPlatformGroupStart);
+          LOutStart := LPlatformGroup.IndexOf('<DCC_ExeOutput>');
+          if LOutStart >= 0 then
+          begin
+            Inc(LOutStart, Length('<DCC_ExeOutput>'));
+            LOutEnd := LPlatformGroup.IndexOf('</DCC_ExeOutput>', LOutStart);
+            if LOutEnd > LOutStart then
+              AExeOutput := LPlatformGroup.Substring(LOutStart, LOutEnd - LOutStart).Trim;
+          end;
+        end;
+      end;
+    end;
+
+    // 2. Try base configurations
+    if AExeOutput = '' then
+    begin
+      LBaseGroupStart := LContent.IndexOf('Condition="''$(Base)''!=''''"');
+      if LBaseGroupStart >= 0 then
+      begin
+        LBaseGroupStart := LContent.LastIndexOf('<PropertyGroup', LBaseGroupStart);
+        if LBaseGroupStart >= 0 then
+        begin
+          LBaseGroupEnd := LContent.IndexOf('</PropertyGroup>', LBaseGroupStart);
+          if LBaseGroupEnd > LBaseGroupStart then
+          begin
+            LBaseGroup := LContent.Substring(LBaseGroupStart, LBaseGroupEnd - LBaseGroupStart);
+            LOutStart := LBaseGroup.IndexOf('<DCC_ExeOutput>');
+            if LOutStart >= 0 then
+            begin
+              Inc(LOutStart, Length('<DCC_ExeOutput>'));
+              LOutEnd := LBaseGroup.IndexOf('</DCC_ExeOutput>', LOutStart);
+              if LOutEnd > LOutStart then
+                AExeOutput := LBaseGroup.Substring(LOutStart, LOutEnd - LOutStart).Trim;
+            end;
+          end;
+        end;
+      end;
+    end;
+
+    // 3. Fallback to last occurrence
+    if AExeOutput = '' then
+    begin
+      LExeOutStart := LContent.LastIndexOf('<DCC_ExeOutput>');
+      if LExeOutStart >= 0 then
+      begin
+        Inc(LExeOutStart, Length('<DCC_ExeOutput>'));
+        LExeOutEnd := LContent.IndexOf('</DCC_ExeOutput>', LExeOutStart);
+        if LExeOutEnd > LExeOutStart then
+          AExeOutput := LContent.Substring(LExeOutStart, LExeOutEnd - LExeOutStart).Trim;
       end;
     end;
 
@@ -1858,7 +1918,7 @@ begin
   end;
 end;
 
-function ResolveExePath(const ADprojPath, AExeOutput: string): string;
+function ResolveExePath(const ADprojPath, AExeOutput: string; const APlatform: string = 'Win32'; const AConfig: string = 'Debug'): string;
 var
   LProjectDir: string;
   LOutputDir: string;
@@ -1869,14 +1929,15 @@ begin
 
   if AExeOutput <> '' then
   begin
-    if TPath.IsRelativePath(AExeOutput) then
-      LOutputDir := TPath.GetFullPath(TPath.Combine(LProjectDir, AExeOutput))
+    LOutputDir := AExeOutput.Replace('$(Platform)', APlatform).Replace('$(Config)', AConfig);
+    if TPath.IsRelativePath(LOutputDir) then
+      LOutputDir := TPath.GetFullPath(TPath.Combine(LProjectDir, LOutputDir))
     else
-      LOutputDir := AExeOutput;
+      LOutputDir := LOutputDir;
   end
   else
   begin
-    LOutputDir := TPath.Combine(LProjectDir, 'Win32\Debug');
+    LOutputDir := TPath.Combine(LProjectDir, TPath.Combine(APlatform, AConfig));
   end;
 
   Result := TPath.Combine(LOutputDir, LProjectName + '.exe');
@@ -2753,8 +2814,23 @@ var
 begin
   LIsPackage := False;
   LOutput := '';
-  GetProjectTargetInfo(FActiveProjectFile, LIsPackage, LOutput);
-  LExeFile := ResolveExePath(FActiveProjectFile, LOutput);
+  var LPlatform := 'Win32';
+  var LConfig := 'Debug';
+  var LProj := GetProjectByFileName(FActiveProjectFile);
+  if Assigned(LProj) then
+  begin
+    LOutput := LProj.ProjectOptions.Values['OutputDir'];
+    var LConfigs: IOTAProjectOptionsConfigurations;
+    if Supports(LProj.ProjectOptions, IOTAProjectOptionsConfigurations, LConfigs) then
+    begin
+      LPlatform := LConfigs.ActivePlatformName;
+      if Assigned(LConfigs.ActiveConfiguration) then
+        LConfig := LConfigs.ActiveConfiguration.Name;
+    end;
+  end;
+  if LOutput = '' then
+    GetProjectTargetInfo(FActiveProjectFile, LIsPackage, LOutput, LPlatform, LConfig);
+  LExeFile := ResolveExePath(FActiveProjectFile, LOutput, LPlatform, LConfig);
 
   if not FileExists(LExeFile) then
   begin
@@ -3079,8 +3155,22 @@ begin
 
         LIsPackage := False;
         LOutput := '';
-        GetProjectTargetInfo(LProjFile, LIsPackage, LOutput);
-        LExeFile := ResolveExePath(LProjFile, LOutput);
+        var LPlatform := 'Win32';
+        var LConfig := 'Debug';
+        if Assigned(LProj) then
+        begin
+          LOutput := LProj.ProjectOptions.Values['OutputDir'];
+          var LConfigs: IOTAProjectOptionsConfigurations;
+          if Supports(LProj.ProjectOptions, IOTAProjectOptionsConfigurations, LConfigs) then
+          begin
+            LPlatform := LConfigs.ActivePlatformName;
+            if Assigned(LConfigs.ActiveConfiguration) then
+              LConfig := LConfigs.ActiveConfiguration.Name;
+          end;
+        end;
+        if LOutput = '' then
+          GetProjectTargetInfo(LProjFile, LIsPackage, LOutput);
+        LExeFile := ResolveExePath(LProjFile, LOutput, LPlatform, LConfig);
 
         if FileExists(LExeFile) then
         begin

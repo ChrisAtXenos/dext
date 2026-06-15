@@ -23,6 +23,7 @@ type
     FOnGetSelectedTests: TGetSelectedTestsEvent;
     FClientSockets: TList<TSocket>;
     FLock: TCriticalSection;
+    FFinished: Boolean;
     procedure TriggerTestResult(const AData: string);
     procedure QueueResult(const AJSON: string);
   protected
@@ -31,6 +32,7 @@ type
     constructor Create(APort: Word; AOnTestResult: TTestResultEvent; AOnGetSelectedTests: TGetSelectedTestsEvent);
     destructor Destroy; override;
     procedure CloseAllClientSockets;
+    property Finished: Boolean read FFinished;
   end;
 
   TTestRunnerServer = class
@@ -71,6 +73,7 @@ begin
   FSocket := INVALID_SOCKET;
   FClientSockets := TList<TSocket>.Create;
   FLock := TCriticalSection.Create;
+  FFinished := False;
   FreeOnTerminate := False;
 end;
 
@@ -342,6 +345,7 @@ begin
     if FSocket <> INVALID_SOCKET then
       closesocket(FSocket);
     WSACleanup;
+    FFinished := True;
   end;
 end;
 
@@ -382,6 +386,8 @@ begin
 end;
 
 procedure TTestRunnerServer.Stop;
+var
+  LStart: DWORD;
 begin
   if Assigned(FThread) then
   begin
@@ -390,7 +396,20 @@ begin
     // Close listening socket to unblock accept()
     if FThread.FSocket <> INVALID_SOCKET then
       closesocket(FThread.FSocket);
-    FThread.WaitFor;
+    
+    // Safety check: wait up to 150ms for thread to exit normally
+    LStart := GetTickCount;
+    while not FThread.Finished and (GetTickCount - LStart < 150) do
+    begin
+      Sleep(10);
+    end;
+    
+    // If still not finished, force terminate it to avoid IDE uninstallation freeze
+    if not FThread.Finished then
+    begin
+      TerminateThread(FThread.Handle, 0);
+    end;
+    
     FreeAndNil(FThread);
   end;
 end;

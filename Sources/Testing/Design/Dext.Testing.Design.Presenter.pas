@@ -51,8 +51,8 @@ type
     FTestLocations: TList<TTestLocation>;
     FActiveProjectFile: string;
     FRunningProcessHandle: THandle;
-    function GetProjectTargetInfo(const AProjFile: string; out AIsPackage: Boolean; out AOutput: string): Boolean;
-    function ResolveExePath(const AProjFile, AOutput: string): string;
+    function GetProjectTargetInfo(const AProjFile: string; out AIsPackage: Boolean; out AOutput: string; const APlatform: string = 'Win32'; const AConfig: string = 'Debug'): Boolean;
+    function ResolveExePath(const AProjFile, AOutput: string; const APlatform: string = 'Win32'; const AConfig: string = 'Debug'): string;
     function ExtractTagValue(const AContent, ATagName: string): string;
     function GetDelphiProductVersion: string;
     function ExecuteAndCapture(const ACommandLine, AWorkDir: string; out AOutput: string): Boolean;
@@ -104,7 +104,8 @@ implementation
 uses
   System.JSON,
   System.IOUtils,
-  System.Math;
+  System.Math,
+  ToolsAPI;
 
 { TTestExplorerModel }
 
@@ -379,9 +380,15 @@ begin
   end;
 end;
 
-function TTestExplorerModel.GetProjectTargetInfo(const AProjFile: string; out AIsPackage: Boolean; out AOutput: string): Boolean;
+function TTestExplorerModel.GetProjectTargetInfo(const AProjFile: string; out AIsPackage: Boolean; out AOutput: string; const APlatform: string; const AConfig: string): Boolean;
 var
   LContent: string;
+  LPlatformTag: string;
+  LPlatformGroupStart, LPlatformGroupEnd: Integer;
+  LPlatformGroup: string;
+  LOutStart, LOutEnd: Integer;
+  LBaseGroupStart, LBaseGroupEnd: Integer;
+  LBaseGroup: string;
 begin
   Result := False;
   AIsPackage := False;
@@ -390,13 +397,70 @@ begin
   try
     LContent := TFile.ReadAllText(AProjFile);
     AIsPackage := LContent.Contains('<AppType>Package</AppType>');
-    AOutput := ExtractTagValue(LContent, 'DCC_ExeOutput');
+
+    // 1. Try platform-specific base property group
+    LPlatformTag := 'Base_' + APlatform;
+    LPlatformGroupStart := LContent.IndexOf('Condition="''$(' + LPlatformTag + ')''!=''''"');
+    if LPlatformGroupStart < 0 then
+      LPlatformGroupStart := LContent.IndexOf('Condition="''$(Platform)''==''' + APlatform + '''"');
+
+    if LPlatformGroupStart >= 0 then
+    begin
+      LPlatformGroupStart := LContent.LastIndexOf('<PropertyGroup', LPlatformGroupStart);
+      if LPlatformGroupStart >= 0 then
+      begin
+        LPlatformGroupEnd := LContent.IndexOf('</PropertyGroup>', LPlatformGroupStart);
+        if LPlatformGroupEnd > LPlatformGroupStart then
+        begin
+          LPlatformGroup := LContent.Substring(LPlatformGroupStart, LPlatformGroupEnd - LPlatformGroupStart);
+          LOutStart := LPlatformGroup.IndexOf('<DCC_ExeOutput>');
+          if LOutStart >= 0 then
+          begin
+            Inc(LOutStart, Length('<DCC_ExeOutput>'));
+            LOutEnd := LPlatformGroup.IndexOf('</DCC_ExeOutput>', LOutStart);
+            if LOutEnd > LOutStart then
+              AOutput := LPlatformGroup.Substring(LOutStart, LOutEnd - LOutStart).Trim;
+          end;
+        end;
+      end;
+    end;
+
+    // 2. Try base configurations
+    if AOutput = '' then
+    begin
+      LBaseGroupStart := LContent.IndexOf('Condition="''$(Base)''!=''''"');
+      if LBaseGroupStart >= 0 then
+      begin
+        LBaseGroupStart := LContent.LastIndexOf('<PropertyGroup', LBaseGroupStart);
+        if LBaseGroupStart >= 0 then
+        begin
+          LBaseGroupEnd := LContent.IndexOf('</PropertyGroup>', LBaseGroupStart);
+          if LBaseGroupEnd > LBaseGroupStart then
+          begin
+            LBaseGroup := LContent.Substring(LBaseGroupStart, LBaseGroupEnd - LBaseGroupStart);
+            LOutStart := LBaseGroup.IndexOf('<DCC_ExeOutput>');
+            if LOutStart >= 0 then
+            begin
+              Inc(LOutStart, Length('<DCC_ExeOutput>'));
+              LOutEnd := LBaseGroup.IndexOf('</DCC_ExeOutput>', LOutStart);
+              if LOutEnd > LOutStart then
+                AOutput := LBaseGroup.Substring(LOutStart, LOutEnd - LOutStart).Trim;
+            end;
+          end;
+        end;
+      end;
+    end;
+
+    // 3. Fallback
+    if AOutput = '' then
+      AOutput := ExtractTagValue(LContent, 'DCC_ExeOutput');
+
     Result := True;
   except
   end;
 end;
 
-function TTestExplorerModel.ResolveExePath(const AProjFile, AOutput: string): string;
+function TTestExplorerModel.ResolveExePath(const AProjFile, AOutput: string; const APlatform: string; const AConfig: string): string;
 var
   LWorkDir: string;
   LProjName: string;
@@ -409,7 +473,7 @@ begin
     LOutDir := LWorkDir;
   if not TPath.IsPathRooted(LOutDir) then
     LOutDir := TPath.Combine(LWorkDir, LOutDir);
-  LOutDir := LOutDir.Replace('$(Platform)', 'Win32').Replace('$(Config)', 'Debug');
+  LOutDir := LOutDir.Replace('$(Platform)', APlatform).Replace('$(Config)', AConfig);
   Result := TPath.Combine(TPath.GetFullPath(LOutDir), LProjName + '.exe');
 end;
 
@@ -462,8 +526,39 @@ begin
         Exit;
       end;
 
-      GetProjectTargetInfo(AProjFile, IsPackage, Output);
-      ExeFile := ResolveExePath(AProjFile, Output);
+      var LPlatform := 'Win32';
+      var LConfig := 'Debug';
+      var LModuleServices: IOTAModuleServices;
+      var LGroup: IOTAProjectGroup;
+      var LProj: IOTAProject := nil;
+      if Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
+      begin
+        LGroup := LModuleServices.MainProjectGroup;
+        if Assigned(LGroup) then
+        begin
+          for var I := 0 to LGroup.ProjectCount - 1 do
+          begin
+            if SameText(LGroup.Projects[I].FileName, AProjFile) then
+            begin
+              LProj := LGroup.Projects[I];
+              Break;
+            end;
+          end;
+        end;
+      end;
+      if Assigned(LProj) then
+      begin
+        var LConfigs: IOTAProjectOptionsConfigurations;
+        if Supports(LProj.ProjectOptions, IOTAProjectOptionsConfigurations, LConfigs) then
+        begin
+          LPlatform := LConfigs.ActivePlatformName;
+          if Assigned(LConfigs.ActiveConfiguration) then
+            LConfig := LConfigs.ActiveConfiguration.Name;
+        end;
+      end;
+
+      GetProjectTargetInfo(AProjFile, IsPackage, Output, LPlatform, LConfig);
+      ExeFile := ResolveExePath(AProjFile, Output, LPlatform, LConfig);
 
       if not FileExists(ExeFile) then
       begin
