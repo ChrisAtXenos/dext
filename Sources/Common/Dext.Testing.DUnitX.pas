@@ -249,7 +249,7 @@ procedure TDextDUnitXLogger.OnTestingStarts(const ThreadId: TThreadID; TestCount
 begin
   FTestCount := TestCount;
   try
-    FClient.Post(FBaseUrl + Format('tests/started?totalcount=%d', [FTestCount]), nil);
+    FClient.Post(FBaseUrl + Format('tests/started?totalcount=%d', [FTestCount]), TStream(nil));
   except
     // Silent fail
   end;
@@ -258,7 +258,7 @@ end;
 procedure TDextDUnitXLogger.OnTestingEnds(const RunResults: IRunResults);
 begin
   try
-    FClient.Post(FBaseUrl + 'tests/finished', nil);
+    FClient.Post(FBaseUrl + 'tests/finished', TStream(nil));
   except
     // Silent fail
   end;
