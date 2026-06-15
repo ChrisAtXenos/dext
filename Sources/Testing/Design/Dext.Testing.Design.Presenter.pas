@@ -711,10 +711,7 @@ end;
 
 procedure TTestExplorerPresenter.OnTestResultReceived(const AJSONData: string);
 begin
-  TThread.Queue(nil, TThreadProcedure(procedure
-    begin
-      ProcessSingleResult(AJSONData);
-    end));
+  ProcessSingleResult(AJSONData);
 end;
 
 procedure TTestExplorerPresenter.ProcessSingleResult(const AJSON: string);

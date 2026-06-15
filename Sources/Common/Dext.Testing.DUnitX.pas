@@ -87,12 +87,12 @@ type
     FSelectTest: Boolean;
     FBaseUrl: string;
     FClient: THTTPClient;
-    procedure AddSkipped(const Test: ITest);
   public
     constructor Create(const ABaseUrl: string);
     destructor Destroy; override;
     function Match(const Test: ITest): Boolean;
     function IsEmpty: Boolean;
+    procedure AddSkipped(const Test: ITest);
   end;
 
 { TDUnitXRunnerIntegration }
@@ -111,7 +111,7 @@ var
   Filter: ITestFilter;
   AndFilter: IAndFilter;
 begin
-  Url := 'http://localhost:' + APort.ToString + '/';
+  Url := 'http://127.0.0.1:' + APort.ToString + '/';
 
   Runner := TDUnitX.CreateRunner;
   Logger := TDextDUnitXLogger.Create(Url);
@@ -453,6 +453,10 @@ begin
     if FSelectedTests.ContainsKey(TestName) then
       Exit(True);
 
+    TestName := Test.Fixture.Name + '.' + Test.Name;
+    if FSelectedTests.ContainsKey(TestName) then
+      Exit(True);
+
     Matched := False;
     if Assigned(Test.Fixture.FixtureInstance) then
     begin
@@ -460,6 +464,12 @@ begin
       while Cls <> TObject do
       begin
         TestName := Cls.UnitName + '.' + Cls.ClassName + '.' + Test.MethodName;
+        if FSelectedTests.ContainsKey(TestName) then
+        begin
+          Matched := True;
+          Break;
+        end;
+        TestName := Cls.ClassName + '.' + Test.MethodName;
         if FSelectedTests.ContainsKey(TestName) then
         begin
           Matched := True;
@@ -473,7 +483,7 @@ begin
       Exit(True);
 
     Result := False;
-    AddSkipped(Test);
+    // AddSkipped(Test);
   end
   else
     Result := True;

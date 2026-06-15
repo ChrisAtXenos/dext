@@ -1,9 +1,9 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{E4D3E1C7-B51F-4C53-BC24-CC9175D63920}</ProjectGuid>
         <MainSource>Dext.Testing.Design.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <ProjectName Condition="'$(ProjectName)'==''">Dext.Testing.Design</ProjectName>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
@@ -91,10 +91,10 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <DCC_UsePackage>rtl;designide;vcl;Dext.Core;Dext.Net;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;designide;vcl;Dext.Core;Dext.Net;Dext.Testing;$(DCC_UsePackage)</DCC_UsePackage>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <DCC_UsePackage>rtl;designide;vcl;Dext.Core;Dext.Net;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;designide;vcl;Dext.Core;Dext.Net;Dext.Testing;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <BT_BuildType>Debug</BT_BuildType>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
@@ -152,7 +152,7 @@
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="Dext.Net.dcp"/>
-
+        <DCCReference Include="Dext.Testing.dcp"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Registration.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Expert.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.DockableForm.pas"/>
@@ -160,8 +160,6 @@
         <DCCReference Include="Testing\Design\Dext.Testing.Design.AST.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Gutter.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Coverage.pas"/>
-        <DCCReference Include="Common\Dext.Testing.Integration.pas"/>
-        <DCCReference Include="Testing\Dext.Testing.Report.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Presenter.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

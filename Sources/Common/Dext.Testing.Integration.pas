@@ -85,7 +85,7 @@ var
   Runner: ITestRunnerIntegration;
 begin
   Result := False;
-  if FindCmdLineSwitch('port', PortStr, True) then
+  if FindCmdLineSwitch('port', PortStr, True) or FindCmdLineSwitch('-port', PortStr, True) then
   begin
     Port := StrToIntDef(PortStr, 8102);
     if GetIntegrations.Count > 0 then
@@ -107,3 +107,4 @@ finalization
     TTestRunnerRegistry.FIntegrations.Free;
 
 end.
+

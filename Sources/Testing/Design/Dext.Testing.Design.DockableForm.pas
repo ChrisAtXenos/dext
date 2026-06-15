@@ -1,4 +1,4 @@
-unit Dext.Testing.Design.DockableForm;
+﻿unit Dext.Testing.Design.DockableForm;
 
 interface
 
@@ -2427,11 +2427,10 @@ end;
 
 procedure TFormDextTestRunner.CollapseSuccessAndFocusFailures;
 var
-  I: Integer;
-  LNode: TTreeNode;
-  LChild: TTreeNode;
-  LHasFailures: Boolean;
-  LFirstFailedNode: TTreeNode;
+  Node: TTreeNode;
+  Child: TTreeNode;
+  HasFailures: Boolean;
+  FirstFailedNode: TTreeNode;
 begin
   if TestsTreeView = nil then Exit;
 
@@ -2440,58 +2439,57 @@ begin
 
   TestsTreeView.Items.BeginUpdate;
   try
-    LFirstFailedNode := nil;
+    FirstFailedNode := nil;
 
-    // Iterate through all nodes to find top-level nodes
-    for I := 0 to TestsTreeView.Items.Count - 1 do
+    Node := TestsTreeView.Items.GetFirstNode;
+    while Assigned(Node) do
     begin
-      LNode := TestsTreeView.Items[I];
-
       // We only care about root nodes that have children
-      if (LNode.Parent = nil) and (LNode.Count > 0) then
+      if (Node.Parent = nil) and (Node.Count > 0) then
       begin
         if FGroupingMode = tgmStatus then
         begin
-          if SameText(LNode.Text, 'Failed') then
+          if SameText(Node.Text, 'Failed') then
           begin
-            LNode.Expanded := True;
-            LChild := LNode.GetFirstChild;
-            if Assigned(LChild) and not Assigned(LFirstFailedNode) then
-              LFirstFailedNode := LChild;
+            Node.Expanded := True;
+            Child := Node.GetFirstChild;
+            if Assigned(Child) and not Assigned(FirstFailedNode) then
+              FirstFailedNode := Child;
           end
           else
           begin
-            LNode.Expanded := False;
+            Node.Expanded := False;
           end;
         end
         else
         begin
-          LHasFailures := False;
+          HasFailures := False;
 
-          LChild := LNode.GetFirstChild;
-          while Assigned(LChild) do
+          Child := Node.GetFirstChild;
+          while Assigned(Child) do
           begin
-            if LChild.ImageIndex = 2 then
+            if Child.ImageIndex = 2 then
             begin
-              LHasFailures := True;
-              if not Assigned(LFirstFailedNode) then
-                LFirstFailedNode := LChild;
+              HasFailures := True;
+              if not Assigned(FirstFailedNode) then
+                FirstFailedNode := Child;
             end;
 
-            LChild := LChild.GetNextSibling;
+            Child := Child.GetNextSibling;
           end;
 
-          if LHasFailures then
-            LNode.Expanded := True;
+          if HasFailures then
+            Node.Expanded := True;
         end;
       end;
+      Node := Node.GetNext;
     end;
 
     // Focus the first failure if found
-    if Assigned(LFirstFailedNode) then
+    if Assigned(FirstFailedNode) then
     begin
-      TestsTreeView.Selected := LFirstFailedNode;
-      LFirstFailedNode.MakeVisible;
+      TestsTreeView.Selected := FirstFailedNode;
+      FirstFailedNode.MakeVisible;
     end;
   finally
     TestsTreeView.Items.EndUpdate;
@@ -4106,7 +4104,7 @@ begin
       LFullTestName := GetNodeFullTestName(Node);
       if FTestDetails.TryGetValue(LFullTestName, LInfo) then
       begin
-        if LInfo.DurationMs > 0 then
+        if (LInfo.Status <> '') and not SameText(LInfo.Status, 'Idle') then
         begin
           if LInfo.DurationMs < 1.0 then
             LDurText := Format('[%.3f ms]', [LInfo.DurationMs])

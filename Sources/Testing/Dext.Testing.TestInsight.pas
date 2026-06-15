@@ -107,11 +107,11 @@ begin
   TTestRunner.SetTestInsightActive(True);
 
   LPort := 8102;
-  if FindCmdLineSwitch('port', LPortStr, True) then
+  if FindCmdLineSwitch('port', LPortStr, True) or FindCmdLineSwitch('-port', LPortStr, True) then
     LPort := StrToIntDef(LPortStr, 8102);
 
   if ABaseUrl = '' then
-    LUrl := 'http://localhost:' + LPort.ToString + '/'
+    LUrl := 'http://127.0.0.1:' + LPort.ToString + '/'
   else
     LUrl := ABaseUrl;
 

@@ -3,7 +3,7 @@
         <ProjectGuid>{D5E361B7-B50F-4C43-AB14-BB9175D53829}</ProjectGuid>
         <MainSource>Dext.EF.Design.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <ProjectName Condition="'$(ProjectName)'==''">Dext.EF.Design</ProjectName>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
