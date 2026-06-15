@@ -2921,6 +2921,7 @@ end;
 
 procedure TFormDextTestRunner.LogMsg(const AMsg: string);
 begin
+  Winapi.Windows.OutputDebugString(PChar('[Dext.UI] ' + AMsg));
   {$IFDEF DEBUG}
   DetailsMemo.Lines.Add(Format('[%s] %s', [FormatDateTime('hh:nn:ss.zzz', Now), AMsg]));
   {$ELSE}

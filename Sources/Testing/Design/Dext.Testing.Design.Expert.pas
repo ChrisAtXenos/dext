@@ -55,6 +55,11 @@ uses
   Dext.Testing.Design.Gutter,
   Dext.Testing.Design.Coverage;
 
+procedure LogExpert(const AMsg: string);
+begin
+  Winapi.Windows.OutputDebugString(PChar('[Dext.Expert] ' + AMsg));
+end;
+
 type
   TDextMenuHelper = class
   public
@@ -80,6 +85,7 @@ var
   I: Integer;
 begin
   if Assigned(FTestExplorerMenu) then Exit;
+  LogExpert('SetupMenus: Creating menu item');
   
   if Supports(BorlandIDEServices, INTAServices, LNTAServices) then
   begin
@@ -114,6 +120,7 @@ end;
 
 procedure RemoveMenus;
 begin
+  LogExpert('RemoveMenus: Removing menu item');
   if Assigned(FTestExplorerMenu) then
   begin
     FTestExplorerMenu.Free;
@@ -136,6 +143,7 @@ var
 begin
   if not SameText(ExtractFileExt(AFileName), '.pas') then Exit;
   if not Assigned(FAttachedNotifiers) then Exit;
+  LogExpert('AttachNotifierToModule: ' + AFileName);
 
   // Check if already attached
   for I := 0 to FAttachedNotifiers.Count - 1 do
@@ -179,6 +187,7 @@ var
 begin
   if not Assigned(FAttachedNotifiers) then Exit;
   if not Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then Exit;
+  LogExpert('RemoveAllModuleNotifiers: Removing ' + FAttachedNotifiers.Count.ToString + ' notifiers');
   
   for I := FAttachedNotifiers.Count - 1 downto 0 do
   begin
@@ -197,6 +206,7 @@ procedure RegisterExpert;
 var
   LOTAServices: IOTAServices;
 begin
+  LogExpert('RegisterExpert: Registering expert plugins');
   if FNotifierIndex = -1 then
   begin
     if Supports(BorlandIDEServices, IOTAServices, LOTAServices) then
@@ -213,6 +223,7 @@ end;
 
 procedure TDextTestRunnerIDENotifier.AfterCompile(Succeeded: Boolean);
 begin
+  LogExpert('AfterCompile: Compilation finished. Success = ' + BoolToStr(Succeeded, True));
   if Assigned(FormDextTestRunner) then
     FormDextTestRunner.NotifyCompileComplete(Succeeded);
 end;
@@ -234,6 +245,7 @@ procedure TDextTestRunnerIDENotifier.FileNotification(NotifyCode: TOTAFileNotifi
 begin
   if NotifyCode = ofnFileOpened then
   begin
+    LogExpert('FileNotification: File Opened = ' + FileName);
     TCoverageManager.GetInstance.RefreshActiveViews;
     AttachNotifierToModule(FileName);
   end;
@@ -244,6 +256,7 @@ begin
        ((NotifyCode in [ofnFileOpened, ofnFileClosing, ofnEndProjectGroupOpen, ofnEndProjectGroupClose]) and 
         (SameText(ExtractFileExt(FileName), '.dproj') or SameText(ExtractFileExt(FileName), '.groupproj'))) then
     begin
+      LogExpert('FileNotification: Project change/event for ' + FileName);
       TThread.ForceQueue(nil, TThreadProcedure(procedure
         begin
           if Assigned(FormDextTestRunner) then
@@ -324,21 +337,27 @@ begin
 end;
 
 initialization
+  LogExpert('Unit initialization: creating notifiers list');
   FAttachedNotifiers := TList<TModuleNotifierInfo>.Create;
 
 finalization
+  LogExpert('Unit finalization: package unloading/uninstalling');
   if Assigned(BorlandIDEServices) then
   begin
     RemoveAllModuleNotifiers;
     if FNotifierIndex <> -1 then
     begin
+      LogExpert('Unit finalization: removing IDE notifier');
       (BorlandIDEServices as IOTAServices).RemoveNotifier(FNotifierIndex);
       FNotifierIndex := -1;
     end;
   end;
   RemoveMenus;
+  LogExpert('Unit finalization: unregistering dockable form');
   UnregisterDockableForm;
+  LogExpert('Unit finalization: unregistering gutter visualizer');
   UnregisterGutterVisualizer;
   FAttachedNotifiers.Free;
+  LogExpert('Unit finalization: complete');
 
 end.
