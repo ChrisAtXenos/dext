@@ -1,8 +1,6 @@
 ﻿program Dext.Core.UnitTests;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
@@ -26,9 +24,6 @@ uses
   Dext.BackgroundJobs.Storage.Sqlite in '..\..\..\Sources\Data\Dext.BackgroundJobs.Storage.Sqlite.pas';
 
 begin
-  {$IFDEF TESTINSIGHT}
-  HideConsoleIfAutocreated;
-  {$ENDIF}
   SetConsoleCharSet();
   try
     SafeWriteLn;
@@ -38,9 +33,6 @@ begin
 
     RunTests(ConfigureTests
       .Verbose
-      {$IFDEF TESTINSIGHT}
-      .UseTestInsight
-      {$ENDIF}
       .RegisterFixtures([
         TConfigFeaturesTests,
         TConfigurationHashingTests,

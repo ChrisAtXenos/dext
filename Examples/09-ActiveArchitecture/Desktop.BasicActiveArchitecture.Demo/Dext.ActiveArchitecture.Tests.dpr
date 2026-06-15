@@ -1,8 +1,6 @@
 program Dext.ActiveArchitecture.Tests;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
@@ -28,9 +26,6 @@ begin
     // Registra e executa todas as fixtures da nossa unit de testes
     TTest.SetExitCode(
       TTest.Configure
-       {$IFDEF TESTINSIGHT}
-       .UseTestInsight
-       {$ENDIF}
        .Verbose
        .RegisterFixtures([
          TOrderDetailsTests,

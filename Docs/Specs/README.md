@@ -37,7 +37,7 @@ ID | Title | Status | Goal
 **S33** | [Persistent Background Jobs](S33-Background-Jobs.md) | ✅ Finalized | Out-of-process scheduled/recurring background tasks with database/Redis persistence.
 **S34** | [Dynamic Query Filters](S34-Dynamic-Query-Filters.md) | ✅ Finalized | Bypassing global query filters (soft-delete, multi-tenancy) dynamically via `IgnoreQueryFilters`.
 **S35** | [APM Log Sinks & Unified Telemetry Pipeline (OTLP & Seq)](S35-APM-Log-Sinks.md) | ✅ Finalized | Asynchronous batch-oriented telemetry sinks targeting Seq and OpenTelemetry (OTLP) collectors.
-**S36** | [Native Delphi IDE Test Runner (VCL Premium)](S36-IDE-Test-Runner.md) | ✅ Finalized | Native IDE Test Runner expert with decoupled DUnitX integration and rich reporting.
+**S36** | [Native Delphi IDE Test Runner (VCL Premium)](S36-IDE-Test-Runner.md) | ✅ Finalized | Native IDE Test Runner expert with decoupled DUnitX, DUnit, DUnit2, and TestInsight integrations and rich reporting.
 ---
 
 ## 🔍 Project Status & Roadmap

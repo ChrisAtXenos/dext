@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils,
   System.Rtti,
-{$IFNDEF TESTINSIGHT}
+{$IFDEF CONSOLE}
   FireDAC.ConsoleUI.Wait,
 {$ELSE}
   FireDAC.VCLUI.Wait,

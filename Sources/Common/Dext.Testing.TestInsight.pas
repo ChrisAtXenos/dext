@@ -2,7 +2,7 @@
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
-{           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
+{           Copyright (C) 2026 Cesar Romero & Dext Contributors             }
 {                                                                           }
 {           Licensed under the Apache License, Version 2.0 (the "License"); }
 {           you may not use this file except in compliance with the License.}
@@ -20,23 +20,19 @@
 {***************************************************************************}
 {                                                                           }
 {  Author:  Cesar Romero                                                    }
-{  Created: 2026-04-07                                                      }
+{  Created: 2026-06-15                                                      }
 {                                                                           }
-{  Dext.Testing.TestInsight - IDE Integration Listener                      }
+{  Dext.Testing.TestInsight - Decoupled IDE Integration Listener & Hook     }
 {***************************************************************************}
 unit Dext.Testing.TestInsight;
-
-{$IFDEF TESTINSIGHT}
-  {$MESSAGE HINT 'Dext: TestInsight integration is enabled. Ensure TestInsight.Client.pas is in your Delphi Library Path.'}
-{$ENDIF}
 
 interface
 
 uses
   System.SysUtils,
-  Dext.Testing.Runner,
   System.SyncObjs,
-//  System.Generics.Collections,
+  Dext.Testing.Runner,
+  Dext.Testing.Integration,
   TestInsight.Client;
 
 type
@@ -68,6 +64,15 @@ type
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   TTestInsightExecutionHook executes the test run under TestInsight.
+  /// </summary>
+  TTestInsightExecutionHook = class(TInterfacedObject, ITestExecutionHook)
+  public
+    function IsActive: Boolean;
+    procedure Execute(const ARunProc: TProc);
+  end;
+
 implementation
 
 uses
@@ -79,6 +84,8 @@ procedure LogDebug(const AMsg: string);
 begin
   // disabled
 end;
+
+{ TTestInsightListener }
 
 constructor TTestInsightListener.Create(const ABaseUrl: string);
 var
@@ -104,7 +111,7 @@ begin
      Exit;
   end;
 
-  TTestRunner.SetTestInsightActive(True);
+  TTestRunner.SetExternalTestServerActive(True);
 
   LPort := 8102;
   if FindCmdLineSwitch('port', LPortStr, True) or FindCmdLineSwitch('-port', LPortStr, True) then
@@ -126,13 +133,13 @@ begin
     try
        FClient.Options; 
        FEnabled := True;
-       TTestRunner.SetTestInsightActive(True);
+       TTestRunner.SetExternalTestServerActive(True);
        LogDebug('TTestInsightListener.Create: Handshake Options success.');
     except
        on E: Exception do
        begin
          FEnabled := False;
-         TTestRunner.SetTestInsightActive(False);
+         TTestRunner.SetExternalTestServerActive(False);
          LogDebug('TTestInsightListener.Create: Handshake Options failed: ' + E.Message);
        end;
     end;
@@ -158,7 +165,6 @@ begin
     on E: Exception do;
   end;
 end;
-
 
 procedure TTestInsightListener.OnRunStart(TotalTests: Integer);
 begin
@@ -236,9 +242,7 @@ begin
     LogDebug('TTestInsightListener.OnTestComplete: ' + Info.ClassName + '.' + Info.DisplayName + ' - Result: ' + Integer(Info.Result).ToString);
   except
   end;
-  // Removed suppression to ensure TotalTests count matches reported results
-  // if (Info.Result = trSkipped) and (Info.ErrorMessage = 'Not in selection') then
-  //   Exit;
+  
   case Info.Result of
     trNone:    ResultType := TResultType.Skipped;
     trPassed:  ResultType := TResultType.Passed;
@@ -334,5 +338,69 @@ begin
     
   Result := FFinishedEvent.WaitFor(Timeout);
 end;
+
+{ TTestInsightExecutionHook }
+
+function TTestInsightExecutionHook.IsActive: Boolean;
+var
+  ParentProcess: string;
+begin
+  ParentProcess := GetParentProcessName;
+  Result := FindCmdLineSwitch('X', ['-', '/'], True) or 
+            FindCmdLineSwitch('TestInsight', ['-', '/'], True) or
+            (ParentProcess = 'bds.exe');
+end;
+
+procedure TTestInsightExecutionHook.Execute(const ARunProc: TProc);
+var
+  ListenerObj: TTestInsightListener;
+  Selected: TArray<string>;
+  InsightOptions: TTestInsightOptions;
+  StartTime: DWORD;
+begin
+  ListenerObj := TTestInsightListener.Create;
+  try
+    TTestRunner.RegisterListener(ListenerObj);
+    
+    if not ListenerObj.Enabled then
+    begin
+      SafeAttachConsole;
+      SafeWriteLn('Dext Test Host - Console Fallback Mode');
+      ARunProc();
+    end
+    else
+    begin
+      InsightOptions := ListenerObj.GetOptions;
+      if not InsightOptions.ExecuteTests then
+      begin
+        TTestRunner.SetDiscoveryMode(True);
+        ARunProc();
+      end
+      else
+      begin
+        Selected := ListenerObj.GetSelectedTests;
+        if (Length(Selected) > 0) then
+        begin
+          TTestRunner.SetSelectedTests(Selected);
+          ARunProc();
+        end
+        else if TTestRunner.IsExternalTestServerActive then
+          TTestRunner.RunAll
+        else
+          ARunProc();
+      end;
+
+      // Wait for completion
+      StartTime := GetTickCount;
+      while (ListenerObj.WaitForCompletion(100) = wrTimeout) and (GetTickCount - StartTime < 30000) do
+        Sleep(10); 
+    end;
+  finally
+    // TTestRunner retains listener in FListeners
+  end;
+end;
+
+initialization
+  TTestRunnerRegistry.RegisterExecutionHook(TTestInsightExecutionHook.Create);
 
 end.

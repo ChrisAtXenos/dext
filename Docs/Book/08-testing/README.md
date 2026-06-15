@@ -189,48 +189,59 @@ Dext includes native high-level support for the **Dext Test Explorer**, a full-f
 *   **Test Inspector**: Displays detailed error details, stack traces, precise duration, and source code location. Double-clicking a test navigates directly to the line of code in the IDE editor.
 *   **Visual Reports**: Visual menu `...` to instantly export results to **JUnit XML**, **XUnit XML**, **JSON**, **SonarQube XML**, or **HTML Report**.
 
-## Native DUnitX Integration
+## Native DUnitX, DUnit and DUnit2 Integration
 
-If your project already uses **DUnitX** and you want to view and execute your tests directly in the **Dext Test Explorer** without depending on TestInsight as an intermediary, you can enable native decoupled integration in a few steps:
+If your project already uses **DUnitX**, **DUnit** (classic) or **DUnit2** and you want to view and execute your tests directly in the **Dext Test Explorer**, you can enable native decoupled integration in a few steps:
 
-### How to configure your DUnitX project:
+### How to configure your test project:
 
 1. **Add Files to search path**: Make sure the Dext common sources directory (`\Sources\Common`) is present in your project's search paths.
-2. **Define Compiler Directive**: Add the `DEXT_DUNITX` compiler directive in your project options (or in your `Dext.inc` file).
+2. **Define Compiler Directive**: Add the compiler directive corresponding to your framework in your project options (or in your `Dext.inc` file):
+   * For DUnitX: `DEXT_DUNITX`
+   * For DUnit: `DEXT_DUNIT`
+   * For DUnit2: `DEXT_DUNIT2`
 3. **Update Uses Clause**: In your project's `.dpr` file, add the following units:
    ```pascal
    {$IFDEF DEXT_DUNITX}
    Dext.Testing.Integration,
    Dext.Testing.DUnitX,
    {$ENDIF}
+   {$IFDEF DEXT_DUNIT}
+   Dext.Testing.Integration,
+   Dext.Testing.DUnit,
+   {$ENDIF}
+   {$IFDEF DEXT_DUNIT2}
+   Dext.Testing.Integration,
+   Dext.Testing.DUnit2,
+   {$ENDIF}
    ```
-4. **Trigger CommandLine Interceptor**: In the main block (`begin ... end.`) of your `.dpr` file, before running the default DUnitX runner, invoke the command line check:
+4. **Trigger CommandLine Interceptor**: In the main block (`begin ... end.`) of your `.dpr` file, before running the default runner, invoke the command line check:
    ```pascal
    begin
      ReportMemoryLeaksOnShutdown := True;
      // ... other initializations ...
 
-   {$IFDEF DEXT_DUNITX}
+   {$IF (defined(DEXT_DUNITX) or defined(DEXT_DUNIT) or defined(DEXT_DUNIT2))}
      if TTestRunnerRegistry.TryExecuteFromCommandLine then
        Exit;
    {$ENDIF}
 
-     // Default DUnitX runner code (Console or GUI)
+     // Default DUnitX, DUnit or DUnit2 runner code (Console or GUI)
      // ...
    end.
    ```
 
-This approach allows the **Dext Test Explorer** and the **Dext CLI** to run DUnitX tests by passing background communication parameters in a completely decoupled way, free of `IFDEFs` or heavy dependencies in the IDE.
+This approach allows the **Dext Test Explorer** and the **Dext CLI** to run your tests by passing background communication parameters in a completely decoupled way, free of heavy dependencies in the IDE.
 
 ---
 
 ## Alternative Integration (TestInsight)
 
-Dext also retains backward compatibility with the classic **TestInsight** plugin by Stefan Gliener.
+Dext also retains backward compatibility with the classic **TestInsight** plugin by Stefan Gliener to run tests written in Dext.
 
 ### How to Enable TestInsight:
 1. Install [TestInsight](https://github.com/stefangliener/TestInsight).
-2. Enable the `TESTINSIGHT` directive in your `Dext.inc` file (Disabled by default).
+2. Add the unit `Dext.Testing.TestInsight` to the `uses` clause in your `.dpr` file.
 3. The framework will automatically detect runs triggered via TestInsight.
 
 ---

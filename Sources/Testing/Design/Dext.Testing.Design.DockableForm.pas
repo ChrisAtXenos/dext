@@ -2290,7 +2290,7 @@ var
       Exit;
     end;
 
-    // Detect if this is a standard result or a TestInsight result
+    // Detect if this is a standard result
     TestName := '';
     Status := '';
     Msg := '';
@@ -2310,10 +2310,10 @@ var
     end
     else if ItemJson.TryGetValue<string>('testname', TestName) then
     begin
-      // TestInsight compatibility result format
+      // External tests compatibility result format
       ItemJson.TryGetValue<string>('resulttype', Status);
 
-      // Map TestInsight status to Dext status standard values ('Passed', 'Failed', 'Skipped', 'Error')
+      // Map external tests status to Dext status standard values ('Passed', 'Failed', 'Skipped', 'Error')
       if SameText(Status, 'Passed') then Status := 'Passed'
       else if SameText(Status, 'Failed') then Status := 'Failed'
       else if SameText(Status, 'Error') then Status := 'Error'

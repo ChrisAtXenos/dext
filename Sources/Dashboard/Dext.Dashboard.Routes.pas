@@ -781,7 +781,7 @@ begin
               SelectedTestsList.Free;
             end;
             
-            // Set global active selection for TestInsight server compatibility
+            // Set global active selection for external test server compatibility
             TTestCompatServer.SetSelectedTests(SelectedTests);
             
             CombinedResult := TDextJson.Provider.CreateArray;

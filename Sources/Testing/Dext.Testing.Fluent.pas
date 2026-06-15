@@ -66,7 +66,7 @@ type
     FFixturePattern: string;
     FIncludeExplicit: Boolean;
     FFixtureClasses: TArray<TClass>;
-    FUseTestInsight: Boolean;
+    FUseExternalUI: Boolean;
   public
     /// <summary>
     ///   Enables verbose output with detailed test information.
@@ -97,10 +97,9 @@ type
     // function UseDashboard(Port: Integer = 9000; WaitAfterRun: Boolean = True): TTestConfigurator;
 
     /// <summary>
-    ///   Enables integration with TestInsight IDE plugin.
+    ///   Enables integration with external IDE plugins.
     /// </summary>
-    function UseTestInsight: TTestConfigurator;
-
+    function UseExternalUI: TTestConfigurator;
     /// <summary>
     ///   Configures JUnit XML export.
     /// </summary>
@@ -171,7 +170,7 @@ type
     /// </summary>
     function RegisterFixtures(const Classes: array of TClass): TTestConfigurator;
 
-    function IsTestInsightActive: Boolean;
+    function IsExternalUIActive: Boolean;
     function IsDashboardActive: Boolean;
     function GetFixtureClasses: TArray<TClass>;
 
@@ -234,9 +233,9 @@ type
     class procedure SetResultError; static;
     
     /// <summary>
-    ///   Checks if we are running in TestInsight mode (either by define or config).
+    ///   Checks if we are running in External UI mode
     /// </summary>
-    class function IsTestInsight: Boolean; static;
+    class function IsExternalUI: Boolean; static;
   end;
 
 function ConfigureTests: TTestConfigurator;
@@ -249,9 +248,7 @@ uses
   {$ENDIF}
   Dext.Testing.Report,
   //Dext.Testing.Dashboard,
-  {$IFDEF DEXT_TESTINSIGHT}
-  Dext.Testing.TestInsight,
-  {$ENDIF}
+
   Dext.Utils;
 
 function ConfigureTests: TTestConfigurator;
@@ -293,9 +290,9 @@ end;
 //  Result := Self;
 //end;
 
-function TTestConfigurator.UseTestInsight: TTestConfigurator;
+function TTestConfigurator.UseExternalUI: TTestConfigurator;
 begin
-  FUseTestInsight := True;
+  FUseExternalUI := True;
   Result := Self;
 end;
 
@@ -438,20 +435,17 @@ begin
       FWaitDashboard := False
     else if (P = '-no-dashboard') or (P = '/no-dashboard') then
       FUseDashboard := False
-    else if (P = '-testinsight') or (P = '/testinsight') then
-      FUseTestInsight := True;
+    else if (P = '-externalui') or (P = '/externalui') then
+      FUseExternalUI := True;
   end;
 
-  // Start TestInsight
-  if FUseTestInsight and not TTestRunner.IsTestInsightActive then
+  // Start External UI
+  if FUseExternalUI and not TTestRunner.IsExternalUIActive then
   begin
-    // This is a fallback for when TTest.Run is used without TTestHost.
-    // We register the listener here ONLY if it's not already active.
-    {$IFDEF DEXT_TESTINSIGHT}
-    TTestRunner.RegisterListener(TTestInsightListener.Create);
-    {$ELSE}
-    SafeWriteLn('Warning: TestInsight support is disabled in this build.');
-    {$ENDIF}
+    // Since the framework no longer directly depends on External UI
+    // the integration should be registered externally via uses clause.
+    if not TTestRunner.IsExternalUIActive then
+      SafeWriteLn('Warning: External UI integration is not active. Please add Dext\Sources\Common\Dext.Testing.* to your uses clause.');
   end;
 
   // Start Dashboard
@@ -505,9 +499,9 @@ begin
   // Return success status
   Result := TTestRunner.Summary.Failed = 0;
 
-  // Let Sidecar Sinks (Logging) and TestInsight REST posts flush properly
+  // Let Sidecar Sinks (Logging) and External UI REST posts flush properly
   // This avoids premature process kill before all data is sent.
-  if FUseTestInsight or FUseDashboard then
+  if FUseExternalUI or FUseDashboard then
     Sleep(500);
 
   if FUseDashboard and FWaitDashboard then
@@ -526,9 +520,9 @@ begin
   TTestRunner.ClearListeners;
 end;
 
-function TTestConfigurator.IsTestInsightActive: Boolean;
+function TTestConfigurator.IsExternalUIActive: Boolean;
 begin
-  Result := FUseTestInsight;
+  Result := FUseExternalUI;
 end;
 
 function TTestConfigurator.IsDashboardActive: Boolean;
@@ -600,9 +594,9 @@ begin
   ExitCode := 1;
 end;
 
-class function TTest.IsTestInsight: Boolean;
+class function TTest.IsExternalUI: Boolean;
 begin
-  Result := TTestRunner.IsTestInsightActive;
+  Result := TTestRunner.IsExternalUIActive;
 end;
 
 initialization

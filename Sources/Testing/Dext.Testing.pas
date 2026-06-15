@@ -52,9 +52,7 @@ uses
   Dext.Testing.Report,
   Dext.Testing.Runner,
   Dext.Testing.Integration,
-  {$IFDEF DEXT_TESTINSIGHT}
-  Dext.Testing.TestInsight,
-  {$ENDIF}
+
   Dext.Testing.Host
   // {END_DEXT_USES}
   ;
@@ -164,10 +162,7 @@ type
   // Dext.Testing.Dashboard
   // TDashboardListener = Dext.Testing.Dashboard.TDashboardListener;
 
-  // Dext.Testing.TestInsight
-  {$IFDEF DEXT_TESTINSIGHT}
-  TTestInsightListener = Dext.Testing.TestInsight.TTestInsightListener;
-  {$ENDIF}
+
 
   // Dext.Testing.Host
   TTestHost = Dext.Testing.Host.TTestHost;

@@ -52,13 +52,24 @@ type
     procedure Execute(const APort: Integer);
   end;
 
+  ITestExecutionHook = interface
+    ['{E4B8B67D-89C0-466D-B029-44F43F96245F}']
+    function IsActive: Boolean;
+    procedure Execute(const ARunProc: TProc);
+  end;
+
   TTestRunnerRegistry = class
   private
     class var FIntegrations: TInterfaceList;
+    class var FExecutionHooks: TInterfaceList;
     class function GetIntegrations: TInterfaceList; static;
+    class function GetExecutionHooks: TInterfaceList; static;
   public
     class procedure RegisterIntegration(const AIntegration: ITestRunnerIntegration); static;
     class function TryExecuteFromCommandLine: Boolean; static;
+    class procedure RegisterExecutionHook(const AHook: ITestExecutionHook); static;
+    class function TryExecuteActiveHook(const ARunProc: TProc): Boolean; static;
+    class function IsAnyHookActive: Boolean; static;
   end;
 
 implementation
@@ -100,11 +111,64 @@ begin
   end;
 end;
 
+class function TTestRunnerRegistry.GetExecutionHooks: TInterfaceList;
+begin
+  if FExecutionHooks = nil then
+    FExecutionHooks := TInterfaceList.Create;
+  Result := FExecutionHooks;
+end;
+
+class procedure TTestRunnerRegistry.RegisterExecutionHook(const AHook: ITestExecutionHook);
+begin
+  GetExecutionHooks.Add(AHook);
+end;
+
+class function TTestRunnerRegistry.TryExecuteActiveHook(const ARunProc: TProc): Boolean;
+var
+  I: Integer;
+  Intf: IInterface;
+  Hook: ITestExecutionHook;
+begin
+  Result := False;
+  for I := 0 to GetExecutionHooks.Count - 1 do
+  begin
+    Intf := GetExecutionHooks[I];
+    if Supports(Intf, ITestExecutionHook, Hook) then
+    begin
+      if Hook.IsActive then
+      begin
+        Hook.Execute(ARunProc);
+        Exit(True);
+      end;
+    end;
+  end;
+end;
+
+class function TTestRunnerRegistry.IsAnyHookActive: Boolean;
+var
+  I: Integer;
+  Intf: IInterface;
+  Hook: ITestExecutionHook;
+begin
+  Result := False;
+  for I := 0 to GetExecutionHooks.Count - 1 do
+  begin
+    Intf := GetExecutionHooks[I];
+    if Supports(Intf, ITestExecutionHook, Hook) then
+    begin
+      if Hook.IsActive then
+        Exit(True);
+    end;
+  end;
+end;
+
 initialization
 
 finalization
   if TTestRunnerRegistry.FIntegrations <> nil then
     TTestRunnerRegistry.FIntegrations.Free;
+  if TTestRunnerRegistry.FExecutionHooks <> nil then
+    TTestRunnerRegistry.FExecutionHooks.Free;
 
 end.
 

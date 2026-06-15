@@ -279,38 +279,73 @@ begin
 end;
 ```
 
-## DUnitX Native Integration
+## Native DUnitX, DUnit, DUnit2 and TestInsight Integration
 
-To execute existing DUnitX test projects inside the **Dext Test Explorer** or via the **Dext CLI** without TestInsight:
+### Decoupled DUnit/DUnit2/DUnitX IDE Runner Integration
 
-1. Add the Dext common sources directory (`\Sources\Common`) to your project's search paths.
-2. Add the `DEXT_DUNITX` compiler define in your project settings.
-3. Reference `Dext.Testing.Integration` and `Dext.Testing.DUnitX` in your `.dpr` uses block.
-4. Call `TTestRunnerRegistry.TryExecuteFromCommandLine` at the start of your `.dpr` main block:
+This configuration enables existing DUnit, DUnit2, or DUnitX test projects to run directly inside the **Dext Test Explorer** in RAD Studio or via the **Dext CLI**, while keeping the project completely decoupled from Dext at runtime (meaning it can still run as a standard standalone VCL/Console test suite when executed normally).
 
+#### 1. Configure Project Options in RAD Studio
+1. Open your test project in RAD Studio.
+2. Go to **Project > Options** (Shift+Ctrl+F11).
+3. Under **Building > Delphi Compiler**, add the relative path to Dext's common sources directory (`\Sources\Common` or your relative equivalent) to the **Search Path**.
+4. Under **Conditional defines**, add the compiler directive corresponding to your testing framework:
+   - For DUnitX: `DEXT_DUNITX`
+   - For DUnit: `DEXT_DUNIT`
+   - For DUnit2: `DEXT_DUNIT2`
+
+#### 2. Update your `.dpr` Uses Block
+Add the conditional integration units to the project uses block:
 ```pascal
 program MyProject.Tests;
 
 uses
   System.SysUtils,
-  DUnitX.TestFramework,
   {$IFDEF DEXT_DUNITX}
   Dext.Testing.Integration,
   Dext.Testing.DUnitX,
   {$ENDIF}
+  {$IFDEF DEXT_DUNIT}
+  Dext.Testing.Integration,
+  Dext.Testing.DUnit,
+  {$ENDIF}
+  {$IFDEF DEXT_DUNIT2}
+  Dext.Testing.Integration,
+  Dext.Testing.DUnit2,
+  {$ENDIF}
+  // Your normal test units below:
   MyTestUnits in 'MyTestUnits.pas';
+```
 
+#### 3. Add CommandLine Interceptor in the main block
+Add the `TryExecuteFromCommandLine` check at the very beginning of the `begin..end` block. If the project is executed by Dext's background runner, it will capture command-line parameters, run the tests silently, report results to the IDE/CLI, and exit early.
+```pascal
 begin
   ReportMemoryLeaksOnShutdown := True;
 
-  {$IFDEF DEXT_DUNITX}
+  // Intercept Dext execution calls (runs silently and exits if called via CLI or Test Explorer)
+  {$IF (defined(DEXT_DUNITX) or defined(DEXT_DUNIT) or defined(DEXT_DUNIT2))}
   if TTestRunnerRegistry.TryExecuteFromCommandLine then
     Exit;
   {$ENDIF}
 
-  // Standard DUnitX runner setup (Console/GUI)
+  // Your standard framework initialization (VCL GUI or Console runner)
+  // ...
 end.
 ```
+
+### Decoupled TestInsight Integration
+To run **Dext** test projects (using the Dext framework) and display results inside Stefan Gliener's **TestInsight IDE plugin**:
+
+1. Add the Dext common sources directory (`\Sources\Common`) to your project's search paths.
+2. Add the `Dext.Testing.TestInsight` unit to your `.dpr` file's uses clause:
+   ```pascal
+   uses
+     Dext.Testing,
+     Dext.Testing.TestInsight, // Registers the TestInsight execution hook
+     MyTests in 'MyTests.pas';
+   ```
+3. When executed from the TestInsight plugin inside the IDE, Dext will automatically detect the `/X` or `/TestInsight` parameters and route all results to TestInsight.
 
 ## Running Tests
 

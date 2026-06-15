@@ -1,8 +1,6 @@
-program Dext.Entity.UnitTests;
+﻿program Dext.Entity.UnitTests;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
@@ -36,9 +34,6 @@ uses
   Dext.Entity.DynamicQueryFilter.Tests in 'Dext.Entity.DynamicQueryFilter.Tests.pas';
 
 begin
-  {$IFDEF TESTINSIGHT}
-  HideConsoleIfAutocreated;
-  {$ENDIF}
   SetConsoleCharSet();
   try
     SafeWriteLn;
@@ -48,9 +43,6 @@ begin
 
     RunTests(ConfigureTests
       .VeryVerbose
-      {$IFDEF TESTINSIGHT}
-      .UseTestInsight
-      {$ENDIF}
       .RegisterFixtures([
         TCalculatedFieldsTests,
         TDataSetSmartTypesTests,

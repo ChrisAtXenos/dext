@@ -29,9 +29,7 @@
 {***************************************************************************}
 program TestAttributeRunner;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
@@ -42,9 +40,6 @@ uses
   Dext.Testing.Attributes,
   Dext.Testing.Runner,
   Dext.Testing.Fluent,
-{$IFDEF DEXT_TESTINSIGHT}
-  Dext.Testing.TestInsight,
-{$ENDIF}
   Dext.Utils,
   Dext.Core.SmartTypes,
   Dext.Entity.Prototype,
@@ -460,7 +455,6 @@ begin
 
     RunTests(ConfigureTests
       .Verbose
-      //.UseTestInsight
       .RegisterFixtures([
         TGlobalSetup,
         TCalculatorTests,

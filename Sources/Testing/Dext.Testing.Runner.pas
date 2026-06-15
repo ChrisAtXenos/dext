@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -208,7 +208,7 @@ type
     class var FOnFixtureComplete: TFixtureCompleteEvent;
 
     class var FListeners: IList<ITestListener>;
-    class var FIsTestInsightActive: Boolean;
+    class var FIsExternalUIActive: Boolean;
 
     class procedure NotifyRunStart(TotalTests: Integer);
     class procedure NotifyRunComplete(const Summary: TTestSummary);
@@ -357,8 +357,8 @@ type
     /// </summary>
     class function GetSelectedTests: TArray<string>;
     class function GetAllTestPaths: TArray<string>;
-    class function IsTestInsightActive: Boolean; static;
-    class procedure SetTestInsightActive(Value: Boolean); static;
+    class function IsExternalUIActive: Boolean; static;
+    class procedure SetExternalUIActive(Value: Boolean); static;
 
     /// <summary>
     ///   Configures automatic report file generation after test run.
@@ -483,7 +483,7 @@ begin
   // If we have selected tests, only run those
   if Length(ASelectedTests) > 0 then
   begin
-    // TestInsight and IDEs usually send: Unit.Class.Method OR Class.Method
+    // ExternalUI and IDEs usually send: Unit.Class.Method OR Class.Method
     FullName := AUnitName + '.' + AClassName + '.' + ATestName;
     FullNameAlt := AClassName + '.' + ATestName;
 
@@ -2166,14 +2166,14 @@ begin
   end;
 end;
 
-class function TTestRunner.IsTestInsightActive: Boolean;
+class function TTestRunner.IsExternalUIActive: Boolean;
 begin
-  Result := FIsTestInsightActive;
+  Result := FIsExternalUIActive;
 end;
 
-class procedure TTestRunner.SetTestInsightActive(Value: Boolean);
+class procedure TTestRunner.SetExternalUIActive(Value: Boolean);
 begin
-  FIsTestInsightActive := Value;
+  FIsExternalUIActive := Value;
 end;
 
 initialization

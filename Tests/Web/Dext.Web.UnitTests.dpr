@@ -1,8 +1,6 @@
 ﻿program Dext.Web.UnitTests;
 
-{$IFNDEF TESTINSIGHT}
-   {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 {$R *.res}
 
@@ -36,9 +34,6 @@ begin
     RunTests(TTest
       .Configure
       .Verbose
-      {$IFDEF TESTINSIGHT}
-      .UseTestInsight
-      {$ENDIF}
       .RegisterFixtures([
         TWebBindingTests,
         TEntityIdResolverTests,

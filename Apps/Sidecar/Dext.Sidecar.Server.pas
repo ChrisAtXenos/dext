@@ -32,14 +32,14 @@ type
     FHost: IWebHost;
     FPort: Integer;
     FRunning: Boolean;
-    FTestInsightServer: TTestCompatServer;
+    FTestingServer: TTestCompatServer;
   public
     constructor Create(APort: Integer = 3030);
     destructor Destroy; override;
-    
+
     procedure Start;
     procedure Stop;
-    
+
     function GetUrl: string;
     property Port: Integer read FPort;
     property Running: Boolean read FRunning;
@@ -74,9 +74,9 @@ begin
   if FRunning then Exit;
   FRunning := True;
 
-  // Start TestInsight compatibility server on port 8102
-  FTestInsightServer := TTestCompatServer.Create(8102);
-  FTestInsightServer.Start;
+  // Start external server compatibility server on port 8102
+  FTestingServer := TTestCompatServer.Create(8102);
+  FTestingServer.Start;
 
   // Build the host in the main thread
   // Using Start (non-blocking) allows us to run on Main Thread without freezing UI
@@ -137,22 +137,22 @@ begin
 
   // Signal the SSE and background threads to stop immediately
   TDashboardRoutes.StopServer;
-  
+
   // 1. First, shutdown Hub connections (SSE loops need to exit before Indy stops)
   THubExtensions.ShutdownHubs;
 
   // 2. Stop and free compatibility server
-  if FTestInsightServer <> nil then
+  if FTestingServer <> nil then
   begin
-    FTestInsightServer.Stop;
-    FTestInsightServer.Free;
-    FTestInsightServer := nil;
+    FTestingServer.Stop;
+    FTestingServer.Free;
+    FTestingServer := nil;
   end;
-  
+
   // 3. Capture local reference and clear field
   WebHost := FHost;
   FHost := nil;
-  
+
   // 4. Signal stop on the local reference
   // This now triggers StopApplication inside TDextApplication
   if WebHost <> nil then
@@ -164,10 +164,11 @@ begin
         OutputDebugString(PChar('DextSidecar: Stop Signal Error: ' + E.Message));
     end;
   end;
-  
+
   // 5. Finally release the interface
   WebHost := nil;
   FRunning := False;
 end;
 
 end.
+

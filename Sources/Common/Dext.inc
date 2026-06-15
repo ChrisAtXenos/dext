@@ -125,9 +125,4 @@
   {.$DEFINE DEXT_ENABLE_DB_MSACC}       // MS Access
   {.$DEFINE DEXT_ENABLE_DB_TERADATA}    // Teradata
 {$ENDIF}
-
-// Define TESTINSIGHT to enable TestInsight IDE integration.
-// Note: Requires TestInsight.Client.pas to be in the Delphi Library Path.
-{.$DEFINE DEXT_TESTINSIGHT}
-
 {$ENDIF} // close {$IFNDEF DEXT_INC}

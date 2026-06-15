@@ -59,10 +59,7 @@ uses
   {$ENDIF}
   System.IOUtils,
   Dext.Utils,
-  {$IFDEF DEXT_TESTINSIGHT}
-  TestInsight.Client,
-  Dext.Testing.TestInsight,
-  {$ENDIF}
+
   Dext.Core.Writers,
   System.Net.HttpClient,
   System.Net.Mime,
@@ -246,13 +243,7 @@ var
   {$IFNDEF MSWINDOWS}
   i: Integer;
   {$ENDIF}
-  {$IFDEF DEXT_TESTINSIGHT}
-  Listener: ITestListener;
-  Selected: TArray<string>;
-  StartTime: DWORD;
-  ListenerObj: TTestInsightListener;
-  InsightOptions: TTestInsightOptions;
-  {$ENDIF}
+
 begin
   ParentProcess := GetParentProcessName;
   // 1. Detect parameters first
@@ -276,25 +267,16 @@ begin
       if (Index < ParamCount) and (not ParamStr(Index + 1).StartsWith('-')) then
         LPort := StrToIntDef(ParamStr(Index + 1), 0);
     end;
-    {$IFDEF MSWINDOWS}
-    // Detect TestInsight
-    if (CompareText(P, '/X') = 0) or (CompareText(P, '-X') = 0) or
-       (CompareText(P, '/TestInsight') = 0) then
-    begin
-      TTestRunner.SetTestInsightActive(True);
-      IsUI := True;
-    end;
-    {$ENDIF}
+
   end;
 
 
   // 2. Decide if we need UI or Console and Setup Environment
   {$IFDEF MSWINDOWS}
-  // Auto-detect UI if configured and running inside IDE
-  if (not IsUI) and Config.IsTestInsightActive and (ParentProcess = 'bds.exe') then
+  // Auto-detect UI if any execution hook is active
+  if (not IsUI) and TTestRunnerRegistry.IsAnyHookActive then
   begin
     IsUI := True;
-    TTestRunner.SetTestInsightActive(True);
   end;
 
   if not IsUI then
@@ -320,57 +302,16 @@ begin
     end;
     
     {$IFDEF MSWINDOWS}
-    {$IFDEF DEXT_TESTINSIGHT}
     if IsUI then
     begin
-      ListenerObj := TTestInsightListener.Create;
-      Listener := ListenerObj; 
-      TTestRunner.RegisterListener(Listener);
-      
-      if not ListenerObj.Enabled then
+      if not TTestRunnerRegistry.TryExecuteActiveHook(procedure begin Config.Run; end) then
       begin
+        SafeWriteLn('Warning: No UI test hook is active or registered.');
         SafeAttachConsole;
-        SafeWriteLn('Dext Test Host - Console Fallback Mode');
         Config.Run;
-      end
-      else
-      begin
-        InsightOptions := ListenerObj.GetOptions;
-        if not InsightOptions.ExecuteTests then
-        begin
-          TTestRunner.SetDiscoveryMode(True);
-          Config.Run;
-        end
-        else
-        begin
-          Selected := ListenerObj.GetSelectedTests;
-          if (Length(Selected) > 0) then
-          begin
-            TTestRunner.SetSelectedTests(Selected);
-            Config.Run;
-          end
-          else if TTestRunner.IsTestInsightActive then
-            TTestRunner.RunAll
-          else
-            Config.Run;
-        end;
-
-        // Wait for completion
-        StartTime := GetTickCount;
-        while (ListenerObj.WaitForCompletion(100) = wrTimeout) and (GetTickCount - StartTime < 30000) do
-          Sleep(10); 
       end;
     end
     else
-    {$ELSE}
-    if IsUI then
-    begin
-       SafeWriteLn('Warning: TestInsight support is disabled in this build.');
-       SafeAttachConsole;
-       Config.Run;
-    end
-    else
-    {$ENDIF}
     {$ENDIF}
     begin
       SafeWriteLn('Dext Test Host - Console Mode');

@@ -1,8 +1,6 @@
 ﻿program Web.TicketSales.Tests;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 {***************************************************************************}
 {                                                                           }
@@ -40,9 +38,6 @@ begin
     TTest.SetExitCode(
       TTest.Configure
         .Verbose
-        {$IFDEF TESTINSIGHT}
-        .UseTestInsight
-        {$ENDIF}
         .RegisterFixtures([
           TEventEntityTests,
           TCustomerEntityTests,

@@ -1,8 +1,6 @@
 ﻿program Dext.Templating.UnitTests;
 
-{$IFNDEF TESTINSIGHT}
-  {$APPTYPE CONSOLE}
-{$ENDIF}
+{$APPTYPE CONSOLE}
 
 uses
   Dext.MM,
@@ -24,9 +22,6 @@ begin
 
     RunTests(ConfigureTests
       .Verbose
-      {$IFDEF TESTINSIGHT}
-      .UseTestInsight
-      {$ENDIF}
       .RegisterFixtures([
         TTemplatingTests
       ]));
