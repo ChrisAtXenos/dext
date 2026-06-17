@@ -1,0 +1,60 @@
+package Dext.Hosting.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD OFF}
+{$DESCRIPTION 'Dext Framework - Hosting & CLI'}
+{$RUNONLY}
+{$LIBSUFFIX '160'}
+
+requires
+  rtl,
+  dbrtl,
+  xmlrtl,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACCommon,
+  FireDACSqliteDriver,
+  Dext.Core,
+  Dext.EF.Core,
+  Dext.Web.Core,
+  Dext.Web.Hubs.Core;
+
+contains
+  Dext.Hosting.CLI.Logger in 'Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas',
+  Dext.Hosting.CLI.Args in 'Hosting\CLI\Dext.Hosting.CLI.Args.pas',
+  Dext.Hosting.CLI.Config in 'Hosting\CLI\Dext.Hosting.CLI.Config.pas',
+  Dext.Hosting.CLI in 'Hosting\CLI\Dext.Hosting.CLI.pas',
+  Dext.Hosting.CLI.Registry in 'Hosting\CLI\Dext.Hosting.CLI.Registry.pas',
+  Dext.Hosting.CLI.Tools.CodeCoverage in 'Hosting\CLI\Dext.Hosting.CLI.Tools.CodeCoverage.pas',
+  Dext.Hosting.CLI.Tools.Sonar in 'Hosting\CLI\Dext.Hosting.CLI.Tools.Sonar.pas',
+  Dext.Hosting.CLI.Tools.FacadeGenerator in 'Hosting\CLI\Tools\Dext.Hosting.CLI.Tools.FacadeGenerator.pas',
+  Dext.Hosting in 'Hosting\Dext.Hosting.pas';
+
+end.

@@ -1,0 +1,51 @@
+package Dext.Testing.Design;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD OFF}
+{$DESCRIPTION 'Dext Framework - Native IDE Test Explorer & Runner'}
+{$DESIGNONLY}
+{$LIBSUFFIX '260'}
+
+requires
+  rtl,
+  designide,
+  vcl,
+  Dext.Core,
+  Dext.Net.Core,
+  Dext.Testing.Core;
+
+contains
+  Dext.Testing.Design.Registration in 'Testing\Design\Dext.Testing.Design.Registration.pas',
+  Dext.Testing.Design.Expert in 'Testing\Design\Dext.Testing.Design.Expert.pas',
+  Dext.Testing.Design.DockableForm in 'Testing\Design\Dext.Testing.Design.DockableForm.pas',
+  Dext.Testing.Design.Server in 'Testing\Design\Dext.Testing.Design.Server.pas',
+  Dext.Testing.Design.AST in 'Testing\Design\Dext.Testing.Design.AST.pas',
+  Dext.Testing.Design.Gutter in 'Testing\Design\Dext.Testing.Design.Gutter.pas',
+  Dext.Testing.Design.Coverage in 'Testing\Design\Dext.Testing.Design.Coverage.pas',
+  Dext.Testing.Design.Presenter in 'Testing\Design\Dext.Testing.Design.Presenter.pas';
+
+end.
