@@ -9,7 +9,7 @@ uses
   Dext.Testing.Attributes,
   Dext.Assertions,
   Dext.Web.Interfaces,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.DataApi,
   Dext.Entity,
   System.Classes,

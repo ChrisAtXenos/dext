@@ -65,7 +65,7 @@ Middlewares podem modificar requisições ou abortá-las precocemente.
 Se você suspeita que um middleware está interferindo:
 1. **Logging HTTP**: Use `App.UseHttpLogging`. Ele mostrará exatamente até qual passo a requisição chegou.
 2. **Trajetória Passo a Passo**:
-   - Abra o arquivo `Dext.Web.Core.pas`.
+   - Abra o arquivo `Dext.Web.Builder.pas`.
    - Procure por `TMiddlewarePipeline.Process`.
    - Siga com `F7` cada delegado de middleware para ver qual deles encerra a requisição.
 

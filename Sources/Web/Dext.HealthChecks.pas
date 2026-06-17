@@ -32,7 +32,7 @@ uses
   System.SysUtils,
   System.Classes,
   Dext.DI.Attributes,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.Collections,
   Dext.Collections.Dict,

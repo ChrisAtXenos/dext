@@ -65,7 +65,7 @@ Middlewares can modify requests or abort them early.
 If you suspect a middleware is interfering:
 1. **HTTP Logging**: Use `App.UseHttpLogging`. It will show exactly which step the request reached.
 2. **Step-by-Step Traversal**:
-   - Open `Dext.Web.Core.pas`.
+   - Open `Dext.Web.Builder.pas`.
    - Look for `TMiddlewarePipeline.Process`.
    - Step through (`F7`) each middleware delegate to see which one terminates the request.
 

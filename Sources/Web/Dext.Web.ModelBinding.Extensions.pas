@@ -31,7 +31,7 @@ uses
   System.SysUtils,
   System.Rtti,
   Dext.Web.Interfaces,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.ModelBinding;
 
 type

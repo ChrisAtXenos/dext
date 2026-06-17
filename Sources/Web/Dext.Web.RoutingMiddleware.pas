@@ -30,7 +30,7 @@ interface
 
 uses
   Dext.Collections, Dext.Collections.Dict,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.Web.Routing;  // For IRouteMatcher
 

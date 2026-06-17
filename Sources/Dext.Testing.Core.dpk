@@ -1,4 +1,4 @@
-package Dext.Testing;
+package Dext.Testing.Core;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -58,3 +58,4 @@ contains
   Dext.Testing.Integration in 'Common\Dext.Testing.Integration.pas';
 
 end.
+

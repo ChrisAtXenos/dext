@@ -1,4 +1,4 @@
-package Dext.Web.Hubs;
+package Dext.Web.Hubs.Core;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -50,3 +50,4 @@ contains
   Dext.Web.Hubs.Transport.SSE in 'Hubs\Transports\Dext.Web.Hubs.Transport.SSE.pas';
 
 end.
+

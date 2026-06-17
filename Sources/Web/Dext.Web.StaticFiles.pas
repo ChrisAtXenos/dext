@@ -34,7 +34,7 @@ uses
   Dext.Collections,
   Dext.Collections.Dict,
   Dext.Web.Interfaces,
-  Dext.Web.Core;
+  Dext.Web.Builder;
 
 type
   /// <summary>

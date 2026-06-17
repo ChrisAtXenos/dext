@@ -23,8 +23,7 @@
 {  Created: 2025-12-08                                                      }
 {                                                                           }
 {***************************************************************************}
-// Dext.Web.Core.pas - Corrected Version
-unit Dext.Web.Core;
+unit Dext.Web.Builder;
 
 interface
 

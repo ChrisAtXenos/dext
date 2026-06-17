@@ -13,7 +13,7 @@ uses
   Dext.Json.Types,
   Dext.DI.Core,
   Dext.DI.Interfaces,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.Web.ApplicationBuilder.Extensions,
   Dext.Web.ModelBinding,

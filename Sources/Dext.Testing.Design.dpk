@@ -36,7 +36,7 @@ requires
   vcl,
   Dext.Core,
   Dext.Net,
-  Dext.Testing;
+  Dext.Testing.Core;
 
 contains
   Dext.Testing.Design.Registration in 'Testing\Design\Dext.Testing.Design.Registration.pas',

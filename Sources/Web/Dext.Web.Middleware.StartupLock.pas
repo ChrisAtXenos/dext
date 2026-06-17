@@ -29,7 +29,7 @@ interface
 
 uses
   System.SysUtils,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.Hosting.AppState,
   Dext.Logging;

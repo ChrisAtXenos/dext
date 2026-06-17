@@ -57,7 +57,7 @@ uses
   Dext.RateLimiting,
   Dext.RateLimiting.Policy,
   Dext.Swagger.Middleware,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Cors,
   {$IFDEF DEXT_ENABLE_ENTITY}
   Dext.Web.DataApi,
@@ -90,7 +90,7 @@ uses
   Dext.Web.Versioning,
   Dext.WebHost,
   Dext.Caching,
-  Dext.Caching.Redis,
+  //Dext.Caching.Redis,
   Dext.Web.ApplicationBuilder.Extensions,
   Dext.Web.WebApplication,
   Dext.Web.Indy.SSL.Interfaces,
@@ -176,7 +176,7 @@ type
 
   // Dext.Caching.Redis
   /// <summary> Distributed cache implementation using Redis. </summary>
-  TRedisCacheStore = Dext.Caching.Redis.TRedisCacheStore;
+  //TRedisCacheStore = Dext.Caching.Redis.TRedisCacheStore;
 
   // Dext.DI.Middleware
   TServiceScopeMiddleware = Dext.DI.Middleware.TServiceScopeMiddleware;
@@ -301,11 +301,11 @@ type
   IControllerScanner = Dext.Web.ControllerScanner.IControllerScanner;
   TControllerScanner = Dext.Web.ControllerScanner.TControllerScanner;
 
-  // Dext.Web.Core
-  TMiddlewareRegistration = Dext.Web.Core.TMiddlewareRegistration;
-  TAnonymousMiddleware = Dext.Web.Core.TAnonymousMiddleware;
-  TApplicationBuilder = Dext.Web.Core.TApplicationBuilder;
-  TMiddleware = Dext.Web.Core.TMiddleware;
+  // Dext.Web.Builder
+  TMiddlewareRegistration = Dext.Web.Builder.TMiddlewareRegistration;
+  TAnonymousMiddleware = Dext.Web.Builder.TAnonymousMiddleware;
+  TApplicationBuilder = Dext.Web.Builder.TApplicationBuilder;
+  TMiddleware = Dext.Web.Builder.TMiddleware;
 
   // Dext.Web.Cors
   /// <summary> Options for configuring Cross-Origin Resource Sharing (CORS). </summary>

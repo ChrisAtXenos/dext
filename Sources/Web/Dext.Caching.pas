@@ -36,7 +36,7 @@ uses
   System.SyncObjs,
   Dext.Collections,
   Dext.Collections.Dict,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces;
 
 type

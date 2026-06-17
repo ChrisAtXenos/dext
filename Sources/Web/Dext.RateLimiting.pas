@@ -30,7 +30,7 @@ interface
 uses
   System.SysUtils,
   System.SyncObjs,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.RateLimiting.Core,
   Dext.RateLimiting.Limiters,

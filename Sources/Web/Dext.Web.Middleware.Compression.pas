@@ -8,7 +8,7 @@ uses
   System.Rtti,
   System.SysUtils,
   System.ZLib,
-  Dext.Web.Interfaces, Dext.Web.Core, Dext.Collections.Dict;
+  Dext.Web.Interfaces, Dext.Web.Builder, Dext.Collections.Dict;
 
 type
   TCompressionMiddleware = class(TMiddleware)
