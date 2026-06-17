@@ -1,28 +1,3 @@
-﻿{***************************************************************************}
-{                                                                           }
-{           Dext Framework                                                  }
-{                                                                           }
-{           Copyright (C) 2025 Cesar Romero & Dext Contributors             }
-{                                                                           }
-{           Licensed under the Apache License, Version 2.0 (the "License"); }
-{           you may not use this file except in compliance with the License.}
-{           You may obtain a copy of the License at                         }
-{                                                                           }
-{               http://www.apache.org/licenses/LICENSE-2.0                  }
-{                                                                           }
-{           Unless required by applicable law or agreed to in writing,      }
-{           software distributed under the License is distributed on an     }
-{           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,    }
-{           either express or implied. See the License for the specific     }
-{           language governing permissions and limitations under the        }
-{           License.                                                        }
-{                                                                           }
-{***************************************************************************}
-{                                                                           }
-{  Author:  Cesar Romero & Antigravity                                      }
-{  Created: 2026-01-21                                                      }
-{                                                                           }
-{***************************************************************************}
 unit Dext.Net.ConnectionPool;
 
 interface
@@ -31,17 +6,17 @@ uses
   System.Classes,
   Dext.Collections,
   Dext.Collections.Stack,
-  System.Net.HttpClient,
+  Dext.Net.Engine,
   System.SyncObjs,
   System.SysUtils;
 
 type
   /// <summary>
-  ///   Connection Pool for THttpClient instances to improve performance through reuse.
+  ///   Connection Pool for IDextHttpEngine instances to improve performance through reuse.
   /// </summary>
   TConnectionPool = class
   private
-    FPool: IStack<THttpClient>;
+    FPool: IStack<IDextHttpEngine>;
     FLock: TCriticalSection;
     FMaxPoolSize: Integer;
     FCount: Integer;
@@ -49,8 +24,8 @@ type
     constructor Create(AMaxPoolSize: Integer = 32);
     destructor Destroy; override;
     
-    function Acquire: THttpClient;
-    procedure Release(AClient: THttpClient);
+    function Acquire: IDextHttpEngine;
+    procedure Release(AClient: IDextHttpEngine);
     procedure Clear;
     
     property MaxPoolSize: Integer read FMaxPoolSize write FMaxPoolSize;
@@ -65,7 +40,7 @@ constructor TConnectionPool.Create(AMaxPoolSize: Integer);
 begin
   inherited Create;
   FMaxPoolSize := AMaxPoolSize;
-  FPool := TCollections.CreateStack<THttpClient>;
+  FPool := TCollections.CreateStack<IDextHttpEngine>;
   FLock := TCriticalSection.Create;
   FCount := 0;
 end;
@@ -78,7 +53,7 @@ begin
   inherited;
 end;
 
-function TConnectionPool.Acquire: THttpClient;
+function TConnectionPool.Acquire: IDextHttpEngine;
 begin
   FLock.Enter;
   try
@@ -88,7 +63,7 @@ begin
     end
     else
     begin
-      Result := THttpClient.Create;
+      Result := CreateHttpEngine;
       Inc(FCount);
     end;
   finally
@@ -96,7 +71,7 @@ begin
   end;
 end;
 
-procedure TConnectionPool.Release(AClient: THttpClient);
+procedure TConnectionPool.Release(AClient: IDextHttpEngine);
 begin
   if not Assigned(AClient) then Exit;
   
@@ -108,7 +83,6 @@ begin
     end
     else
     begin
-      AClient.Free;
       Dec(FCount);
     end;
   finally
@@ -121,7 +95,7 @@ begin
   FLock.Enter;
   try
     while FPool.Count > 0 do
-      FPool.Pop.Free;
+      FPool.Pop;
     FCount := 0;
   finally
     FLock.Leave;

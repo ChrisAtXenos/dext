@@ -164,6 +164,7 @@
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="Net\Dext.Http.Executor.pas"/>
+        <DCCReference Include="Net\Dext.Net.Engine.pas"/>
         <DCCReference Include="Net\Dext.Net.Authentication.pas"/>
         <DCCReference Include="Net\Dext.Net.ConnectionPool.pas"/>
         <DCCReference Include="Net\Dext.Net.RestClient.pas"/>

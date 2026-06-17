@@ -190,6 +190,12 @@ Client.Get('/data')
 
 No configuration needed; pooling is on by default.
 
+## Legacy Delphi Compatibility & Indy Fallback
+
+When compiling on legacy Delphi compilers (Delphi XE2 to XE7), `Dext.Net` replaces the native `THttpClient` engine with an Indy-based `TIdHTTP` engine (`TDextIndyHttpEngine`) automatically.
+
+- **OpenSSL Requirement**: When Indy fallback is active (on legacy compilers or if forced via define `DEXT_FORCE_INDY`), HTTPS requests require OpenSSL DLLs (`ssleay32.dll` and `libeay32.dll` on Windows) to be present in the executable directory or path.
+
 ## DI Registration
 
 Register as singleton for the best pool reuse:
@@ -202,4 +208,5 @@ Services.AddSingleton<IExternalApiClient, TExternalApiClient>(
       TRestClient.Create('https://api.external.com'));
   end);
 ```
+
 

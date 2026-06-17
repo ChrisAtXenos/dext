@@ -32,8 +32,7 @@ uses
   System.Classes,
   System.DateUtils,
   System.NetConsts,
-  System.Net.HttpClient,
-  System.Net.URLClient,
+  Dext.Net.Engine,
   System.NetEncoding,
   System.SyncObjs;
 
@@ -184,50 +183,55 @@ end;
 
 procedure TOAuth2ClientCredentialsProvider.RefreshToken;
 var
-  HttpClient: THTTPClient;
-  Response: IHTTPResponse;
+  HttpClient: IDextHttpEngine;
+  Response: IDextHttpResponse;
   Body: TStringStream;
   BodyContent: string;
   TokenResponse: TOAuth2TokenResponse;
+  LStream: TStream;
+  LBytes: TBytes;
+  LResponseStr: string;
 begin
-  HttpClient := THTTPClient.Create;
+  HttpClient := CreateHttpEngine;
+  
+  BodyContent := 'grant_type=client_credentials' +
+    '&client_id=' + TNetEncoding.URL.Encode(FClientId) +
+    '&client_secret=' + TNetEncoding.URL.Encode(FClientSecret);
+  if FScope <> '' then
+    BodyContent := BodyContent + '&scope=' + TNetEncoding.URL.Encode(FScope);
+
+  Body := TStringStream.Create(BodyContent, TEncoding.UTF8);
   try
-    HttpClient.ContentType := 'application/x-www-form-urlencoded';
+    Response := HttpClient.Execute('POST', FTokenUrl, Body,
+      [TDextNetHeader.Create('Content-Type', 'application/x-www-form-urlencoded')]);
 
-    BodyContent := 'grant_type=client_credentials' +
-      '&client_id=' + TNetEncoding.URL.Encode(FClientId) +
-      '&client_secret=' + TNetEncoding.URL.Encode(FClientSecret);
-    if FScope <> '' then
-      BodyContent := BodyContent + '&scope=' + TNetEncoding.URL.Encode(FScope);
+    LStream := Response.GetContentStream;
+    LStream.Position := 0;
+    SetLength(LBytes, LStream.Size);
+    if LStream.Size > 0 then
+      LStream.ReadBuffer(LBytes[0], LStream.Size);
+    LResponseStr := TEncoding.UTF8.GetString(LBytes);
 
-    Body := TStringStream.Create(BodyContent, TEncoding.UTF8);
-    try
-      Response := HttpClient.Post(FTokenUrl, Body, nil,
-        [TNetHeader.Create('Content-Type', 'application/x-www-form-urlencoded')]) as IHTTPResponse;
+    if (Response.GetStatusCode < 200) or (Response.GetStatusCode >= 300) then
+      raise Exception.CreateFmt(
+        'OAuth2 token request failed (HTTP %d): %s',
+        [Response.GetStatusCode, LResponseStr]);
 
-      if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
-        raise Exception.CreateFmt(
-          'OAuth2 token request failed (HTTP %d): %s',
-          [Response.StatusCode, Response.ContentAsString]);
+    TokenResponse := TDextJson.Deserialize<TOAuth2TokenResponse>(
+      LResponseStr,
+      TJsonSettings.Default.CaseInsensitive
+    );
 
-      TokenResponse := TDextJson.Deserialize<TOAuth2TokenResponse>(
-        Response.ContentAsString,
-        TJsonSettings.Default.CaseInsensitive
-      );
+    FCachedToken := TokenResponse.access_token;
+    if FCachedToken = '' then
+      raise Exception.Create('OAuth2 response missing access_token');
 
-      FCachedToken := TokenResponse.access_token;
-      if FCachedToken = '' then
-        raise Exception.Create('OAuth2 response missing access_token');
-
-      // Set expiration with 30-second safety margin
-      if TokenResponse.expires_in = 0 then
-        TokenResponse.expires_in := 3600;
-      FExpiresAt := IncSecond(Now, TokenResponse.expires_in - 30);
-    finally
-      Body.Free;
-    end;
+    // Set expiration with 30-second safety margin
+    if TokenResponse.expires_in = 0 then
+      TokenResponse.expires_in := 3600;
+    FExpiresAt := IncSecond(Now, TokenResponse.expires_in - 30);
   finally
-    HttpClient.Free;
+    Body.Free;
   end;
 end;
 

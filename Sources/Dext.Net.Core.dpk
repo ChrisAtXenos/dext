@@ -36,6 +36,7 @@ requires
 
 contains
   Dext.Http.Executor in 'Net\Dext.Http.Executor.pas',
+  Dext.Net.Engine in 'Net\Dext.Net.Engine.pas',
   Dext.Net.Authentication in 'Net\Dext.Net.Authentication.pas',
   Dext.Net.ConnectionPool in 'Net\Dext.Net.ConnectionPool.pas',
   Dext.Net.RestClient in 'Net\Dext.Net.RestClient.pas',

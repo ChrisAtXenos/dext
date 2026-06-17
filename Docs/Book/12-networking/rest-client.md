@@ -331,10 +331,25 @@ Client.Auth(TBasicAuthProvider.Create('user', 'password'));
 Client.Auth(TApiKeyAuthProvider.Create('X-API-Key', '12345'));
 ```
 
-## Thread Safety
+## Legacy Delphi Compatibility and Indy Fallback
 
-The `TRestClient` design ensures thread safety:
+To ensure compatibility with older versions of Delphi (Delphi XE2 to XE7), which do not feature the native `System.Net.HttpClient` framework (introduced in XE8), `Dext.Net` includes an **Automatic Fallback Mechanism using Indy** (`TIdHTTP`).
 
-1.  **Immutable Configuration**: When you call `Execute`, the client creates a snapshot of the current configuration (headers, auth, timeout).
-2.  **Isolated Execution**: The actual HTTP request runs in a background task with its own `THttpClient` instance acquired from the pool.
-3.  **No Shared State**: Modifying the client *after* calling `Start` does not affect the already running request.
+### How It Works
+
+The framework detects the Delphi compiler version and the availability of `System.Net` at compile-time:
+- For **Delphi XE8 or higher**, the default HTTP engine is `TDextNetHttpEngine` (based on `System.Net.HttpClient`).
+- For **Delphi XE2 to XE7**, the engine automatically falls back to `TDextIndyHttpEngine` (based on Indy's `TIdHTTP`).
+
+You can also explicitly force Indy usage even on modern Delphi compilers by defining the global compiler directive `DEXT_FORCE_INDY`.
+
+### OpenSSL Dependency
+
+When utilizing Indy fallback (either on legacy IDE versions or when forced via directive), HTTPS requests (TLS/SSL) require the OpenSSL dynamic libraries to be present in the application's executable directory or system library path:
+
+- **Windows**: `ssleay32.dll` and `libeay32.dll`
+- **Linux/Android/macOS**: System-installed native OpenSSL libraries.
+
+> [!WARNING]
+> Without the correct OpenSSL binaries placed alongside the application, any HTTPS request executed using the Indy fallback will raise an SSL runtime exception. Make sure to ship these dependencies when targeting legacy IDEs.
+
