@@ -1,0 +1,50 @@
+﻿package Dext.AI.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Framework - IA'}
+{$LIBSUFFIX '250'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  Dext.Core,
+  Dext.Web.Core;
+
+contains
+  Dext.AI.MCP.Attributes in '..\..\Sources\AI\MCP\Dext.AI.MCP.Attributes.pas',
+  Dext.AI.MCP.Prompts in '..\..\Sources\AI\MCP\Dext.AI.MCP.Prompts.pas',
+  Dext.AI.MCP.Protocol in '..\..\Sources\AI\MCP\Dext.AI.MCP.Protocol.pas',
+  Dext.AI.MCP.Resources in '..\..\Sources\AI\MCP\Dext.AI.MCP.Resources.pas',
+  Dext.AI.MCP.Server in '..\..\Sources\AI\MCP\Dext.AI.MCP.Server.pas',
+  Dext.AI.MCP.Tools in '..\..\Sources\AI\MCP\Dext.AI.MCP.Tools.pas',
+  Dext.AI.MCP.Types in '..\..\Sources\AI\MCP\Dext.AI.MCP.Types.pas';
+
+end.

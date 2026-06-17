@@ -1,0 +1,110 @@
+﻿package Dext.Web.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Framework - Web & HTTP'}
+{$LIBSUFFIX '230'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  Dext.Core,
+  Dext.EF.Core,
+  RESTComponents,
+  inet;
+
+contains
+  Dext.Auth.Attributes in '..\..\Sources\Web\Dext.Auth.Attributes.pas',
+  Dext.Auth.BasicAuth in '..\..\Sources\Web\Dext.Auth.BasicAuth.pas',
+  Dext.Auth.Identity in '..\..\Sources\Web\Dext.Auth.Identity.pas',
+  Dext.Auth.JWT in '..\..\Sources\Web\Dext.Auth.JWT.pas',
+  Dext.Auth.Middleware in '..\..\Sources\Web\Dext.Auth.Middleware.pas',
+  Dext.Caching in '..\..\Sources\Web\Dext.Caching.pas',
+  Dext.DI.Middleware in '..\..\Sources\Web\Dext.DI.Middleware.pas',
+  Dext.Filters.BuiltIn in '..\..\Sources\Web\Dext.Filters.BuiltIn.pas',
+  Dext.Filters in '..\..\Sources\Web\Dext.Filters.pas',
+  Dext.HealthChecks in '..\..\Sources\Web\Dext.HealthChecks.pas',
+  Dext.OpenAPI.Attributes in '..\..\Sources\Web\Dext.OpenAPI.Attributes.pas',
+  Dext.OpenAPI.Extensions in '..\..\Sources\Web\Dext.OpenAPI.Extensions.pas',
+  Dext.OpenAPI.Fluent in '..\..\Sources\Web\Dext.OpenAPI.Fluent.pas',
+  Dext.OpenAPI.Generator in '..\..\Sources\Web\Dext.OpenAPI.Generator.pas',
+  Dext.OpenAPI.Types in '..\..\Sources\Web\Dext.OpenAPI.Types.pas',
+  Dext.RateLimiting.Core in '..\..\Sources\Web\Dext.RateLimiting.Core.pas',
+  Dext.RateLimiting.Limiters in '..\..\Sources\Web\Dext.RateLimiting.Limiters.pas',
+  Dext.RateLimiting in '..\..\Sources\Web\Dext.RateLimiting.pas',
+  Dext.RateLimiting.Policy in '..\..\Sources\Web\Dext.RateLimiting.Policy.pas',
+  Dext.Swagger.Middleware in '..\..\Sources\Web\Dext.Swagger.Middleware.pas',
+  Dext.Web.ApplicationBuilder.Extensions in '..\..\Sources\Web\Dext.Web.ApplicationBuilder.Extensions.pas',
+  Dext.Web.Builder in '..\..\Sources\Web\Dext.Web.Builder.pas',
+  Dext.Web.Controllers in '..\..\Sources\Web\Dext.Web.Controllers.pas',
+  Dext.Web.ControllerScanner in '..\..\Sources\Web\Dext.Web.ControllerScanner.pas',
+  Dext.Web.Cors in '..\..\Sources\Web\Dext.Web.Cors.pas',
+  Dext.Web.DataApi in '..\..\Sources\Web\Dext.Web.DataApi.pas',
+  Dext.Web.DataApi.Resolver in '..\..\Sources\Web\Dext.Web.DataApi.Resolver.pas',
+  Dext.Web.DataApi.Utils in '..\..\Sources\Web\Dext.Web.DataApi.Utils.pas',
+  Dext.Web.DCS in '..\..\Sources\Web\Dext.Web.DCS.pas',
+  Dext.Web.Extensions in '..\..\Sources\Web\Dext.Web.Extensions.pas',
+  Dext.Web.Formatters.Interfaces in '..\..\Sources\Web\Dext.Web.Formatters.Interfaces.pas',
+  Dext.Web.Formatters.Json in '..\..\Sources\Web\Dext.Web.Formatters.Json.pas',
+  Dext.Web.Formatters.Selector in '..\..\Sources\Web\Dext.Web.Formatters.Selector.pas',
+  Dext.Web.HandlerInvoker in '..\..\Sources\Web\Dext.Web.HandlerInvoker.pas',
+  Dext.Web.Indy in '..\..\Sources\Web\Dext.Web.Indy.pas',
+  Dext.Web.Indy.Server in '..\..\Sources\Web\Dext.Web.Indy.Server.pas',
+  Dext.Web.Indy.SSL.Interfaces in '..\..\Sources\Web\Dext.Web.Indy.SSL.Interfaces.pas',
+  Dext.Web.Indy.SSL.OpenSSL in '..\..\Sources\Web\Dext.Web.Indy.SSL.OpenSSL.pas',
+  Dext.Web.Indy.SSL.Taurus in '..\..\Sources\Web\Dext.Web.Indy.SSL.Taurus.pas',
+  Dext.Web.Indy.Types in '..\..\Sources\Web\Dext.Web.Indy.Types.pas',
+  Dext.Web.Injection in '..\..\Sources\Web\Dext.Web.Injection.pas',
+  Dext.Web.Interfaces in '..\..\Sources\Web\Dext.Web.Interfaces.pas',
+  Dext.Web.Middleware.Compression in '..\..\Sources\Web\Dext.Web.Middleware.Compression.pas',
+  Dext.Web.Middleware.Extensions in '..\..\Sources\Web\Dext.Web.Middleware.Extensions.pas',
+  Dext.Web.Middleware.Logging in '..\..\Sources\Web\Dext.Web.Middleware.Logging.pas',
+  Dext.Web.Middleware in '..\..\Sources\Web\Dext.Web.Middleware.pas',
+  Dext.Web.Middleware.StartupLock in '..\..\Sources\Web\Dext.Web.Middleware.StartupLock.pas',
+  Dext.Web.ModelBinding in '..\..\Sources\Web\Dext.Web.ModelBinding.pas',
+  Dext.Web.MultiTenancy in '..\..\Sources\Web\Dext.Web.MultiTenancy.pas',
+  Dext.Web in '..\..\Sources\Web\Dext.Web.pas',
+  Dext.Web.Pipeline in '..\..\Sources\Web\Dext.Web.Pipeline.pas',
+  Dext.Web.Results in '..\..\Sources\Web\Dext.Web.Results.pas',
+  Dext.Web.Routing.Attributes in '..\..\Sources\Web\Dext.Web.Routing.Attributes.pas',
+  Dext.Web.Routing in '..\..\Sources\Web\Dext.Web.Routing.pas',
+  Dext.Web.RoutingMiddleware in '..\..\Sources\Web\Dext.Web.RoutingMiddleware.pas',
+  Dext.Web.Sessions.Streamable in '..\..\Sources\Web\Dext.Web.Sessions.Streamable.pas',
+  Dext.Web.StaticFiles in '..\..\Sources\Web\Dext.Web.StaticFiles.pas',
+  Dext.Web.Versioning in '..\..\Sources\Web\Dext.Web.Versioning.pas',
+  Dext.Web.View.Native in '..\..\Sources\Web\Dext.Web.View.Native.pas',
+  Dext.Web.View in '..\..\Sources\Web\Dext.Web.View.pas',
+  Dext.Web.View.WebStencils in '..\..\Sources\Web\Dext.Web.View.WebStencils.pas',
+  Dext.Web.WebApplication in '..\..\Sources\Web\Dext.Web.WebApplication.pas',
+  Dext.Web.WebBroker in '..\..\Sources\Web\Dext.Web.WebBroker.pas',
+  Dext.WebHost in '..\..\Sources\Web\Dext.WebHost.pas';
+
+end.
+

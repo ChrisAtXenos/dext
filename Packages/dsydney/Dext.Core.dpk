@@ -1,0 +1,136 @@
+﻿package Dext.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Framework - Core & Infrastructure'}
+{$LIBSUFFIX AUTO}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl;
+
+contains
+  Dext.Core.Activator in '..\..\Sources\Core\Base\Dext.Core.Activator.pas',
+  Dext.Core.Memory in '..\..\Sources\Core\Base\Dext.Core.Memory.pas',
+  Dext.Threading.CancellationToken in '..\..\Sources\Core\Dext.Threading.CancellationToken.pas',
+  Dext.Core.ValueConverters in '..\..\Sources\Core\Base\Dext.Core.ValueConverters.pas',
+  Dext.Utils in '..\..\Sources\Core\Base\Dext.Utils.pas',
+  Dext.Types.Nullable in '..\..\Sources\Core\Base\Dext.Types.Nullable.pas',
+  Dext.Types.Lazy in '..\..\Sources\Core\Base\Dext.Types.Lazy.pas',
+  Dext.Json.Driver.DextJsonDataObjects in '..\..\Sources\Core\Json\Dext.Json.Driver.DextJsonDataObjects.pas',
+  Dext.Json.Driver.SystemJson in '..\..\Sources\Core\Json\Dext.Json.Driver.SystemJson.pas',
+  DextJsonDataObjects in '..\..\Sources\Core\Json\DextJsonDataObjects.pas',
+  Dext.Collections.Extensions in '..\..\Sources\Core\Dext.Collections.Extensions.pas',
+  Dext.Collections.Memory in '..\..\Sources\Core\Dext.Collections.Memory.pas',
+  Dext.Collections.Raw in '..\..\Sources\Core\Dext.Collections.Raw.pas',
+  Dext.Collections.Factory in '..\..\Sources\Core\Dext.Collections.Factory.pas',
+  Dext.Collections.RawDict in '..\..\Sources\Core\Dext.Collections.RawDict.pas',
+  Dext.Collections.Dict in '..\..\Sources\Core\Dext.Collections.Dict.pas',
+  Dext.Collections.Concurrent in '..\..\Sources\Core\Dext.Collections.Concurrent.pas',
+  Dext.Collections.Channels in '..\..\Sources\Core\Dext.Collections.Channels.pas',
+  Dext.Collections.Algorithms in '..\..\Sources\Core\Dext.Collections.Algorithms.pas',
+  Dext.Collections.Simd in '..\..\Sources\Core\Dext.Collections.Simd.pas',
+  Dext.Collections.Vector in '..\..\Sources\Core\Dext.Collections.Vector.pas',
+  Dext.Collections in '..\..\Sources\Core\Dext.Collections.pas',
+  Dext.Configuration.Binder in '..\..\Sources\Core\Dext.Configuration.Binder.pas',
+  Dext.Configuration.EnvironmentVariables in '..\..\Sources\Core\Dext.Configuration.EnvironmentVariables.pas',
+  Dext.Configuration.Interfaces in '..\..\Sources\Core\Dext.Configuration.Interfaces.pas',
+  Dext.Configuration.Json in '..\..\Sources\Core\Dext.Configuration.Json.pas',
+  Dext.DI.Comparers in '..\..\Sources\Core\Dext.DI.Comparers.pas',
+  Dext.DI.Core in '..\..\Sources\Core\Dext.DI.Core.pas',
+  Dext.DI.Interfaces in '..\..\Sources\Core\Dext.DI.Interfaces.pas',
+  Dext.Json in '..\..\Sources\Core\Dext.Json.pas',
+  Dext.Json.Types in '..\..\Sources\Core\Dext.Json.Types.pas',
+  Dext.Options.Extensions in '..\..\Sources\Core\Dext.Options.Extensions.pas',
+  Dext.Options in '..\..\Sources\Core\Dext.Options.pas',
+  Dext in '..\..\Sources\Core\Dext.pas',
+  Dext.Specifications.Base in '..\..\Sources\Core\Dext.Specifications.Base.pas',
+  Dext.Specifications.Evaluator in '..\..\Sources\Core\Dext.Specifications.Evaluator.pas',
+  Dext.Specifications.Fluent in '..\..\Sources\Core\Dext.Specifications.Fluent.pas',
+  Dext.Specifications.Interfaces in '..\..\Sources\Core\Dext.Specifications.Interfaces.pas',
+  Dext.Specifications.OrderBy in '..\..\Sources\Core\Dext.Specifications.OrderBy.pas',
+  Dext.Specifications.Types in '..\..\Sources\Core\Dext.Specifications.Types.pas',
+  Dext.Threading.Async in '..\..\Sources\Core\Dext.Threading.Async.pas',
+  Dext.Resilience in '..\..\Sources\Core\Dext.Resilience.pas',
+  Dext.Validation in '..\..\Sources\Core\Dext.Validation.pas',
+  Dext.Core.DateUtils in '..\..\Sources\Core\Base\Dext.Core.DateUtils.pas',
+  Dext.Types.UUID in '..\..\Sources\Core\Dext.Types.UUID.pas',
+  Dext.MultiTenancy in '..\..\Sources\Core\Dext.MultiTenancy.pas',
+  Dext.Hosting.AppState in '..\..\Sources\Core\Dext.Hosting.AppState.pas',
+  Dext.Hosting.BackgroundService in '..\..\Sources\Core\Dext.Hosting.BackgroundService.pas',
+  Dext.Hosting.Events in '..\..\Sources\Core\Dext.Hosting.Events.pas',
+  Dext.Hosting.ApplicationLifetime in '..\..\Sources\Core\Dext.Hosting.ApplicationLifetime.pas',
+  Dext.Core.Span in '..\..\Sources\Core\Base\Dext.Core.Span.pas',
+  Dext.Json.Utf8 in '..\..\Sources\Core\Json\Dext.Json.Utf8.pas',
+  Dext.Json.Utf8.Serializer in '..\..\Sources\Core\Json\Dext.Json.Utf8.Serializer.pas',
+  Dext.Mapper in '..\..\Sources\Core\Dext.Mapper.pas',
+  Dext.DI.Attributes in '..\..\Sources\Core\Dext.DI.Attributes.pas',
+  Dext.Core.SmartTypes in '..\..\Sources\Core\Dext.Core.SmartTypes.pas',
+  Dext.Core.Reflection in '..\..\Sources\Core\Dext.Core.Reflection.pas',
+  Dext.Configuration.Yaml in '..\..\Sources\Core\Dext.Configuration.Yaml.pas',
+  Dext.Yaml in '..\..\Sources\Core\Dext.Yaml.pas',
+  Dext.Core.Writers in '..\..\Sources\Core\Base\Dext.Core.Writers.pas',
+  Dext.Http.StatusCodes in '..\..\Sources\Core\Dext.Http.StatusCodes.pas',
+  Dext.Http.Request in '..\..\Sources\Core\Dext.Http.Request.pas',
+  Dext.Http.Parser in '..\..\Sources\Core\Dext.Http.Parser.pas',
+  Dext.Logging.Console in '..\..\Sources\Core\Dext.Logging.Console.pas',
+  Dext.Logging.Global in '..\..\Sources\Core\Dext.Logging.Global.pas',
+  Dext.Logging.Sinks.Sidecar in '..\..\Sources\Core\Dext.Logging.Sinks.Sidecar.pas',
+  Dext.Logging.Async in '..\..\Sources\Core\Dext.Logging.Async.pas',
+  Dext.Logging.Sinks in '..\..\Sources\Core\Dext.Logging.Sinks.pas',
+  Dext.Logging.RingBuffer in '..\..\Sources\Core\Dext.Logging.RingBuffer.pas',
+  Dext.Interception in '..\..\Sources\Core\Interception\Dext.Interception.pas',
+  Dext.Interception.Proxy in '..\..\Sources\Core\Interception\Dext.Interception.Proxy.pas',
+  Dext.Interception.ClassProxy in '..\..\Sources\Core\Interception\Dext.Interception.ClassProxy.pas',
+  Dext.Logging in '..\..\Sources\Core\Dext.Logging.pas',
+  Dext.Telemetry.Context in '..\..\Sources\Core\Dext.Telemetry.Context.pas',
+  Dext.Collections.Comparers in '..\..\Sources\Core\Dext.Collections.Comparers.pas',
+  Dext.Collections.Base in '..\..\Sources\Core\Dext.Collections.Base.pas',
+  Dext.Collections.Frozen in '..\..\Sources\Core\Dext.Collections.Frozen.pas',
+  Dext.Collections.HashSet in '..\..\Sources\Core\Dext.Collections.HashSet.pas',
+  Dext.Collections.Queue in '..\..\Sources\Core\Dext.Collections.Queue.pas',
+  Dext.Collections.Stack in '..\..\Sources\Core\Dext.Collections.Stack.pas',
+  Dext.Core.Enums in '..\..\Sources\Core\Dext.Core.Enums.pas',
+  Dext.Core.Debug in '..\..\Sources\Debug\Dext.Core.Debug.pas',
+  Dext.Templating in '..\..\Sources\Core\Base\Dext.Templating.pas',
+  Dext.Events.Interfaces in '..\..\Sources\Events\Dext.Events.Interfaces.pas',
+  Dext.Text.Escaping in '..\..\Sources\Core\Base\Dext.Text.Escaping.pas',
+  Dext.Logging.Extensions in '..\..\Sources\Core\Dext.Logging.Extensions.pas',
+  Dext.Logging.Telemetry in '..\..\Sources\Core\Base\Dext.Logging.Telemetry.pas',
+  Dext.Logging.Tracing in '..\..\Sources\Core\Base\Dext.Logging.Tracing.pas',
+  Dext.Threading.Sync in '..\..\Sources\Core\Dext.Threading.Sync.pas',
+  Dext.Telemetry.Metrics in '..\..\Sources\Core\Base\Dext.Telemetry.Metrics.pas',
+  Dext.BackgroundJobs.Intf in '..\..\Sources\Core\Dext.BackgroundJobs.Intf.pas',
+  Dext.BackgroundJobs.Storage.InMemory in '..\..\Sources\Core\Dext.BackgroundJobs.Storage.InMemory.pas',
+  Dext.BackgroundJobs.Config in '..\..\Sources\Core\Dext.BackgroundJobs.Config.pas',
+  Dext.BackgroundJobs.Server in '..\..\Sources\Core\Dext.BackgroundJobs.Server.pas',
+  Dext.Configuration.Core in '..\..\Sources\Core\Dext.Configuration.Core.pas';
+
+end.
+
+

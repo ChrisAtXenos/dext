@@ -1,0 +1,90 @@
+﻿package Dext.EF.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Framework - ORM & Data Access'}
+{$LIBSUFFIX '170'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  FireDAC,
+  FireDACCommon,
+  FireDACCommonDriver,
+  FireDACSqliteDriver,
+  Dext.AST.Core,
+  Dext.Core;
+
+contains
+  Dext.Entity.Context in '..\..\Sources\Data\Dext.Entity.Context.pas',
+  Dext.Entity.Setup in '..\..\Sources\Data\Dext.Entity.Setup.pas',
+  Dext.Entity.Mapping in '..\..\Sources\Data\Dext.Entity.Mapping.pas',
+  Dext.Entity.Attributes in '..\..\Sources\Data\Dext.Entity.Attributes.pas',
+  Dext.Entity.DbSet in '..\..\Sources\Data\Dext.Entity.DbSet.pas',
+  Dext.Entity.Core in '..\..\Sources\Data\Dext.Entity.Core.pas',
+  Dext.Entity.Drivers.FireDAC.Phys in '..\..\Sources\Data\Dext.Entity.Drivers.FireDAC.Phys.pas',
+  Dext.Entity.Drivers.FireDAC in '..\..\Sources\Data\Dext.Entity.Drivers.FireDAC.pas',
+  Dext.Entity.Dialects in '..\..\Sources\Data\Dext.Entity.Dialects.pas',
+  Dext.Entity.Drivers.Interfaces in '..\..\Sources\Data\Dext.Entity.Drivers.Interfaces.pas',
+  Dext.Specifications.SQL.Generator in '..\..\Sources\Data\Dext.Specifications.SQL.Generator.pas',
+  Dext.Entity.Tenancy in '..\..\Sources\Data\Dext.Entity.Tenancy.pas',
+  Dext.Entity.TypeConverters in '..\..\Sources\Data\Dext.Entity.TypeConverters.pas',
+  Dext.Entity.Drivers.FireDAC.Manager in '..\..\Sources\Data\Dext.Entity.Drivers.FireDAC.Manager.pas',
+  Dext.Entity in '..\..\Sources\Data\Dext.Entity.pas',
+  Dext.Entity.TypeSystem in '..\..\Sources\Data\Dext.Entity.TypeSystem.pas',
+  Dext.Entity.Migrations.Runner in '..\..\Sources\Data\Dext.Entity.Migrations.Runner.pas',
+  Dext.Entity.Query in '..\..\Sources\Data\Dext.Entity.Query.pas',
+  Dext.Entity.Migrations.Serializers.Json in '..\..\Sources\Data\Dext.Entity.Migrations.Serializers.Json.pas',
+  Dext.Entity.Naming in '..\..\Sources\Data\Dext.Entity.Naming.pas',
+  Dext.Entity.Migrations.Operations in '..\..\Sources\Data\Dext.Entity.Migrations.Operations.pas',
+  Dext.Entity.Migrations in '..\..\Sources\Data\Dext.Entity.Migrations.pas',
+  Dext.Entity.Migrations.Json in '..\..\Sources\Data\Dext.Entity.Migrations.Json.pas',
+  Dext.Entity.Migrations.Model in '..\..\Sources\Data\Dext.Entity.Migrations.Model.pas',
+  Dext.Entity.Migrations.Extractor in '..\..\Sources\Data\Dext.Entity.Migrations.Extractor.pas',
+  Dext.Entity.Migrations.Generator in '..\..\Sources\Data\Dext.Entity.Migrations.Generator.pas',
+  Dext.Entity.Migrations.Builder in '..\..\Sources\Data\Dext.Entity.Migrations.Builder.pas',
+  Dext.Entity.Migrations.Differ in '..\..\Sources\Data\Dext.Entity.Migrations.Differ.pas',
+  Dext.Entity.LazyLoading in '..\..\Sources\Data\Dext.Entity.LazyLoading.pas',
+  Dext.Entity.Grouping in '..\..\Sources\Data\Dext.Entity.Grouping.pas',
+  Dext.Entity.Joining in '..\..\Sources\Data\Dext.Entity.Joining.pas',
+  Dext.Entity.Prototype in '..\..\Sources\Data\Dext.Entity.Prototype.pas',
+  Dext.Entity.Cache in '..\..\Sources\Data\Dext.Entity.Cache.pas',
+  Dext.Entity.Drivers.FireDAC.Links in '..\..\Sources\Data\Dext.Entity.Drivers.FireDAC.Links.pas',
+  Dext.Entity.Validator in '..\..\Sources\Data\Dext.Entity.Validator.pas',
+  Dext.Entity.Collections in '..\..\Sources\Data\Dext.Entity.Collections.pas',
+  Dext.Entity.ProxyFactory in '..\..\Sources\Data\Dext.Entity.ProxyFactory.pas',
+  Dext.Entity.Scaffolding in '..\..\Sources\Data\Dext.Entity.Scaffolding.pas',
+  Dext.Specifications.Parser in '..\..\Sources\Data\Dext.Specifications.Parser.pas',
+  Dext.Entity.Metadata in '..\..\Sources\Data\Dext.Entity.Metadata.pas',
+  Dext.Entity.LazyLoader in '..\..\Sources\Data\Dext.Entity.LazyLoader.pas',
+  Dext.Entity.TemplatedScaffolding in '..\..\Sources\Data\Dext.Entity.TemplatedScaffolding.pas',
+  Dext.Scaffolding.Models in '..\..\Sources\Data\Dext.Scaffolding.Models.pas',
+  Dext.Entity.Scaffolding.Processor in '..\..\Sources\Data\Dext.Entity.Scaffolding.Processor.pas';
+
+end.
+

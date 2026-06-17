@@ -1,0 +1,50 @@
+﻿package Dext.AST.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Package for DelphiAST'}
+{$LIBSUFFIX '230'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl;
+
+contains
+  DelphiAST.Classes in '..\..\External\DelphiAST\Source\DelphiAST.Classes.pas',
+  DelphiAST.Consts in '..\..\External\DelphiAST\Source\DelphiAST.Consts.pas',
+  DelphiAST in '..\..\External\DelphiAST\Source\DelphiAST.pas',
+  DelphiAST.ProjectIndexer in '..\..\External\DelphiAST\Source\DelphiAST.ProjectIndexer.pas',
+  DelphiAST.Serialize.Binary in '..\..\External\DelphiAST\Source\DelphiAST.Serialize.Binary.pas',
+  DelphiAST.SimpleParserEx in '..\..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas',
+  DelphiAST.Writer in '..\..\External\DelphiAST\Source\DelphiAST.Writer.pas',
+  StringPool in '..\..\External\DelphiAST\Source\StringPool.pas',
+  SimpleParser.Lexer in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.pas',
+  SimpleParser.Lexer.Types in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.Types.pas',
+  SimpleParser in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.pas',
+  SimpleParser.Types in '..\..\External\DelphiAST\Source\SimpleParser\SimpleParser.Types.pas';
+
+end.

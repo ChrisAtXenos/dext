@@ -1,0 +1,46 @@
+﻿package Dext.Net.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Dext Framework - High Performance Networking'}
+{$LIBSUFFIX '160'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  Dext.Core;
+
+contains
+  Dext.Http.Executor in '..\..\Sources\Net\Dext.Http.Executor.pas',
+  Dext.Net.Engine in '..\..\Sources\Net\Dext.Net.Engine.pas',
+  Dext.Net.Authentication in '..\..\Sources\Net\Dext.Net.Authentication.pas',
+  Dext.Net.ConnectionPool in '..\..\Sources\Net\Dext.Net.ConnectionPool.pas',
+  Dext.Net.RestClient in '..\..\Sources\Net\Dext.Net.RestClient.pas',
+  Dext.Net.RestRequest in '..\..\Sources\Net\Dext.Net.RestRequest.pas',
+  Dext.Logging.Sinks.APM in '..\..\Sources\Net\Dext.Logging.Sinks.APM.pas';
+
+end.
