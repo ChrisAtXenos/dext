@@ -331,10 +331,25 @@ Client.Auth(TBasicAuthProvider.Create('user', 'password'));
 Client.Auth(TApiKeyAuthProvider.Create('X-API-Key', '12345'));
 ```
 
-## Thread Safety
+## Suporte a Versões Legadas do Delphi e Fallback Indy
 
-O design do `TRestClient` garante segurança em ambientes multithread:
+Para garantir compatibilidade com versões antigas do Delphi (Delphi XE2 a XE7), que não possuem o framework nativo `System.Net.HttpClient` (introduzido apenas no XE8), o `Dext.Net` oferece um mecanismo de **Fallback Automático usando Indy** (`TIdHTTP`).
 
-1.  **Configuração Imutável**: Quando você chama `Execute`, o cliente cria um snapshot da configuração atual (headers, auth, timeout).
-2.  **Execução Isolada**: A requisição HTTP real roda em uma task em segundo plano com sua própria instância de `THttpClient` adquirida do pool.
-3.  **Sem Estado Compartilhado**: Modificar o cliente *após* chamar `Start` não afeta a requisição que já está rodando.
+### Como Funciona
+
+O framework detecta em tempo de compilação a versão do Delphi e a presença da biblioteca nativa `System.Net`.
+- Em **Delphi XE8 ou superior**, o motor padrão de HTTP é o `TDextNetHttpEngine` (baseado em `System.Net.HttpClient`).
+- Em **Delphi XE2 até XE7**, o motor é configurado automaticamente para `TDextIndyHttpEngine` (baseado no componente Indy `TIdHTTP`).
+
+Você também pode forçar o uso do Indy mesmo em versões modernas do Delphi definindo a diretiva de compilação global `DEXT_FORCE_INDY`.
+
+### Dependência do OpenSSL
+
+Ao utilizar o fallback com Indy (seja em versões legadas ou ao forçar via diretiva), as requisições HTTPS (TLS/SSL) necessitam das bibliotecas dinâmicas do OpenSSL presentes no diretório do executável ou no path do sistema:
+
+- **Windows**: `ssleay32.dll` e `libeay32.dll`
+- **Linux/Android/macOS**: As bibliotecas nativas de OpenSSL instaladas no sistema.
+
+> [!WARNING]
+> Sem as DLLs corretas do OpenSSL em conjunto com o Indy, qualquer requisição HTTPS resultará em uma exceção de SSL no runtime. Certifique-se de implantar estas dependências junto ao seu executável ao direcionar IDEs legadas.
+

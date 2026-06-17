@@ -29,8 +29,6 @@ interface
 
 uses
   System.Classes,
-  System.Net.HttpClient,
-  System.Net.URLClient,
   System.Rtti,
   System.SyncObjs,
   System.SysUtils,
@@ -39,6 +37,7 @@ uses
   Dext.Http.Request,
   Dext.Net.Authentication,
   Dext.Net.ConnectionPool,
+  Dext.Net.Engine,
   Dext.Resilience,
   Dext.Threading.Async,
   Dext.Threading.CancellationToken;
@@ -65,8 +64,8 @@ uses
     /// <param name="AName">Header name (e.g. "Content-Type", "X-Request-Id").</param>
     /// <returns>The header value, or empty string if not found.</returns>
     function GetHeader(const AName: string): string;
-    /// <summary>Returns all response headers as a TNetHeaders array.</summary>
-    function GetHeaders: TNetHeaders;
+    /// <summary>Returns all response headers as a TDextNetHeaders array.</summary>
+    function GetHeaders: TDextNetHeaders;
     
     /// <summary>Returns true if the status code is in the 2xx range (200-299).</summary>
     function GetIsSuccess: Boolean;
@@ -94,18 +93,18 @@ uses
     FStatusCode: Integer;
     FStatusText: string;
     FContentStream: TMemoryStream;
-    FHeaders: TNetHeaders;
+    FHeaders: TDextNetHeaders;
   protected
     function GetStatusCode: Integer;
     function GetStatusText: string;
     function GetContentStream: TStream;
     function GetContentString: string;
     function GetHeader(const AName: string): string;
-    function GetHeaders: TNetHeaders;
+    function GetHeaders: TDextNetHeaders;
     function GetIsSuccess: Boolean;
   public
     constructor Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
-      const AHeaders: TNetHeaders = nil);
+      const AHeaders: TDextNetHeaders = nil);
     destructor Destroy; override;
   end;
 
@@ -116,7 +115,7 @@ uses
     function GetData: T;
   public
     constructor Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
-      AData: T; const AHeaders: TNetHeaders = nil);
+      AData: T; const AHeaders: TDextNetHeaders = nil);
     destructor Destroy; override;
   end;
 
@@ -363,7 +362,7 @@ end;
 { TRestResponse }
 
 constructor TRestResponse.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
-  const AHeaders: TNetHeaders);
+  const AHeaders: TDextNetHeaders);
 begin
   inherited Create;
   FStatusCode := AStatusCode;
@@ -411,7 +410,7 @@ begin
   Result := '';
 end;
 
-function TRestResponse.GetHeaders: TNetHeaders;
+function TRestResponse.GetHeaders: TDextNetHeaders;
 begin
   Result := FHeaders;
 end;
@@ -434,7 +433,7 @@ end;
 { TRestResponse<T> }
 
 constructor TRestResponse<T>.Create(AStatusCode: Integer; const AStatusText: string; AStream: TStream;
-  AData: T; const AHeaders: TNetHeaders);
+  AData: T; const AHeaders: TDextNetHeaders);
 begin
   inherited Create(AStatusCode, AStatusText, AStream, AHeaders);
   FData := AData;
@@ -593,10 +592,10 @@ function TRestClientImpl.ExecuteAsync(AMethod: TDextHttpMethod; const AEndpoint:
 var
   Url: string;
   Retries: Integer;
-  Headers: TNetHeaders;
+  Headers: TDextNetHeaders;
   Timeout: Integer;
   Auth: IAuthenticationProvider;
-  LHeadList: TList<TNetHeader>;
+  LHeadList: TList<TDextNetHeader>;
   LPair: TPair<string, string>;
   I: Integer;
   HasContentType: Boolean;
@@ -608,12 +607,12 @@ begin
   Auth := FAuthProvider;
   
   // Snapshot headers (Thread Safety)
-  LHeadList := TList<TNetHeader>.Create;
+  LHeadList := TList<TDextNetHeader>.Create;
   try
     FLock.Enter;
     try
       for LPair in FHeaders do
-        LHeadList.Add(TNetHeader.Create(LPair.Key, LPair.Value));
+        LHeadList.Add(TDextNetHeader.Create(LPair.Key, LPair.Value));
     finally
       FLock.Leave;
     end;
@@ -621,15 +620,15 @@ begin
     if Assigned(Auth) then
     begin
        if Auth is TApiKeyAuthProvider then
-         LHeadList.Add(TNetHeader.Create(TApiKeyAuthProvider(Auth).Key, Auth.GetHeaderValue))
+         LHeadList.Add(TDextNetHeader.Create(TApiKeyAuthProvider(Auth).Key, Auth.GetHeaderValue))
        else
-         LHeadList.Add(TNetHeader.Create('Authorization', Auth.GetHeaderValue));
+         LHeadList.Add(TDextNetHeader.Create('Authorization', Auth.GetHeaderValue));
     end;
-
+ 
     if Assigned(AHeaders) then
     begin
       for LPair in AHeaders do
-        LHeadList.Add(TNetHeader.Create(LPair.Key, LPair.Value));
+        LHeadList.Add(TDextNetHeader.Create(LPair.Key, LPair.Value));
     end;
 
     HasContentType := False;
@@ -654,7 +653,7 @@ begin
         else ContentTypeStr := '';
       end;
       if ContentTypeStr <> '' then
-        LHeadList.Add(TNetHeader.Create('Content-Type', ContentTypeStr));
+        LHeadList.Add(TDextNetHeader.Create('Content-Type', ContentTypeStr));
     end;
     
     Headers := LHeadList.ToArray;
@@ -699,19 +698,19 @@ begin
               TFunc<TValue>(
                 function: TValue
                 var
-                  HttpClient: THttpClient;
-                  Response: IHTTPResponse;
+                  HttpClient: IDextHttpEngine;
+                  Response: IDextHttpResponse;
                 begin
                   HttpClient := TConnectionPool(TRestClient.FSharedPool).Acquire;
                   try
-                    HttpClient.ConnectionTimeout := Timeout;
-                    HttpClient.SendTimeout := Timeout;
-                    HttpClient.ResponseTimeout := Timeout;
+                    HttpClient.SetConnectionTimeout(Timeout);
+                    HttpClient.SetSendTimeout(Timeout);
+                    HttpClient.SetResponseTimeout(Timeout);
 
-                    Response := HttpClient.Execute(MethodStr, Url, ABody, nil, Headers) as IHTTPResponse;
-                    Result := TValue.From<IRestResponse>(TRestResponse.Create(Response.StatusCode, Response.StatusText, Response.ContentStream, Response.GetHeaders));
+                    Response := HttpClient.Execute(MethodStr, Url, ABody, Headers);
+                    Result := TValue.From<IRestResponse>(TRestResponse.Create(Response.GetStatusCode, Response.GetStatusText, Response.GetContentStream, Response.GetHeaders));
                     
-                    LSpan.SetAttribute('http.status_code', Response.StatusCode);
+                    LSpan.SetAttribute('http.status_code', Response.GetStatusCode);
                     LSpan.SetStatus('Success');
                   finally
                     TConnectionPool(TRestClient.FSharedPool).Release(HttpClient);

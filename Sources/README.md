@@ -15,3 +15,5 @@ Para manter a compatibilidade com múltiplas versões do Delphi (incluindo vers�
 
 > [!NOTE]
 > Pacotes que utilizam recursos introduzidos a partir do Delphi XE7/XE8 (como o `Dext.Net.Core`, que faz uso do `TNetHTTPClient`) não são suportados em versões anteriores.
+
+Para saber como atualizar e regenerar os pacotes das versões legadas automaticamente, consulte o guia de [Sincronização de Pacotes Legados](file:///C:/dev/Dext/DextRepository/Docs/Packages_Synchronization.md).

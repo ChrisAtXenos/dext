@@ -108,7 +108,7 @@ end;
 constructor TStack<T>.Create;
 begin
   inherited Create;
-  FCore := TRawList.Create(SizeOf(T), TypeInfo(T));
+  FCore := TRawList.Create(SizeOf(T), TypeInfo(T), IsManagedType(TypeInfo(T)));
 end;
 
 destructor TStack<T>.Destroy;

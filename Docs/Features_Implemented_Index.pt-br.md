@@ -417,6 +417,7 @@ Uma das features mais poderosas do Dext: **geração automática de APIs REST co
 - **THttpRequestInfo** — Integração com parsers `.http` para execução de requisições ad-hoc.
 - **Campos de Formulário Multipart com Content-Type** — Suporte para definição de tipos MIME específicos (ex: `application/json`) para campos individuais de formulário em requisições multipart via `AddFormField` e `AddMultipartField` (Issue #125).
 - **Parâmetros de Consulta Condicionais** — Suporte para adição fluente de parâmetros de consulta condicionais (`QueryParamIfNotEmpty`, `QueryParamIf` e sobrecargas com valores padrão fallback) para simplificar a construção de requisições (Issue #123).
+- **Compatibilidade Legada e Fallback Indy** — Abstração completa do motor HTTP (`IDextHttpEngine`) com fallback automático via Indy (`TIdHTTP`) para IDEs antigas (Delphi XE2 a XE7), ativado em versões inferiores ao XE8 ou sob a diretiva `DEXT_FORCE_INDY`. Requisição de OpenSSL DLLs para chamadas HTTPS legadas.
 
 ### 5.2 Authentication Providers
 - **Bearer Token (JWT)** — Envio automático de `Authorization: Bearer <token>`.

@@ -38,6 +38,7 @@ ID | Title | Status | Goal
 **S34** | [Dynamic Query Filters](S34-Dynamic-Query-Filters.md) | ✅ Finalized | Bypassing global query filters (soft-delete, multi-tenancy) dynamically via `IgnoreQueryFilters`.
 **S35** | [APM Log Sinks & Unified Telemetry Pipeline (OTLP & Seq)](S35-APM-Log-Sinks.md) | ✅ Finalized | Asynchronous batch-oriented telemetry sinks targeting Seq and OpenTelemetry (OTLP) collectors.
 **S36** | [Native Delphi IDE Test Runner (VCL Premium)](S36-IDE-Test-Runner.md) | ✅ Finalized | Native IDE Test Runner expert with decoupled DUnitX, DUnit, DUnit2, and TestInsight integrations and rich reporting.
+**S37** | [HTTP Client Engine Abstraction & Indy Fallback](S37-Http-Engine-Indy-Fallback.md) | ✅ Completed | Abstraction of HTTP Engine and TIdHTTP fallback for older Delphi IDEs.
 ---
 
 ## 🔍 Project Status & Roadmap
