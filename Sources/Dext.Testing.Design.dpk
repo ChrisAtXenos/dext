@@ -35,7 +35,7 @@ requires
   designide,
   vcl,
   Dext.Core,
-  Dext.Net,
+  Dext.Net.Core,
   Dext.Testing.Core;
 
 contains

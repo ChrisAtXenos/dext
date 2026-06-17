@@ -37,7 +37,7 @@ requires
   FireDACCommon,
   FireDACCommonDriver,
   FireDACSqliteDriver,
-  Dext.AST,
+  Dext.AST.Core,
   Dext.Core;
 
 contains

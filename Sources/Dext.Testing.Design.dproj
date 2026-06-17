@@ -151,7 +151,7 @@
         <DCCReference Include="designide.dcp"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
-        <DCCReference Include="Dext.Net.dcp"/>
+        <DCCReference Include="Dext.Net.Core.dcp"/>
         <DCCReference Include="Dext.Testing.Core.dcp"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Registration.pas"/>
         <DCCReference Include="Testing\Design\Dext.Testing.Design.Expert.pas"/>

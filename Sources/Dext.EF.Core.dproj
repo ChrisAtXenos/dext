@@ -149,7 +149,7 @@
         <DCCReference Include="FireDACCommon.dcp"/>
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="FireDACSqliteDriver.dcp"/>
-        <DCCReference Include="Dext.AST.dcp"/>
+        <DCCReference Include="Dext.AST.Core.dcp"/>
         <DCCReference Include="Dext.Core.dcp"/>
         <DCCReference Include="Data\Dext.Entity.Context.pas"/>
         <DCCReference Include="Data\Dext.Entity.Setup.pas"/>
