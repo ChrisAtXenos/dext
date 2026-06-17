@@ -1,0 +1,47 @@
+package Dext.Events.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD OFF}
+{$RUNONLY}
+{$LIBSUFFIX '230'}
+
+requires
+  rtl,
+  IndySystem,
+  IndyCore,
+  Dext.Core;
+
+contains
+  Dext.Events.Bus in 'Events\Dext.Events.Bus.pas',
+  Dext.Events.Behaviors in 'Events\Dext.Events.Behaviors.pas',
+  Dext.Events.Extensions in 'Events\Dext.Events.Extensions.pas',
+  Dext.Events.Lifecycle in 'Events\Dext.Events.Lifecycle.pas',
+  Dext.Events in 'Events\Dext.Events.pas',
+  Dext.Events.Testing in 'Events\Dext.Events.Testing.pas',
+  Dext.Hosting.Events.Bridge in 'Events\Dext.Hosting.Events.Bridge.pas';
+
+end.

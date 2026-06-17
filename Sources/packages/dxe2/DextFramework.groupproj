@@ -1,0 +1,192 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<ProjectGuid>{6AA0A906-18D1-4DB7-B4E5-8CE0AB267630}</ProjectGuid>
+	</PropertyGroup>
+	<ItemGroup>
+		<Projects Include="Dext.dproj">
+			<Dependencies/>
+		</Projects>
+		<Projects Include="Dext.AST.dproj">
+			<Dependencies/>
+		</Projects>
+		<Projects Include="Dext.EF.dproj">
+			<Dependencies>Dext.AST.dproj;Dext.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.EF.dproj">
+			<Dependencies>Dext.dproj;Dext.EF.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Web.dproj">
+			<Dependencies>Dext.dproj;Dext.EF.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Net.dproj">
+			<Dependencies>Dext.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Testing.dproj">
+			<Dependencies>Dext.dproj;Dext.EF.dproj;Dext.Web.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.AI.dproj">
+			<Dependencies>Dext.dproj;Dext.Web.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Web.Hubs.dproj">
+			<Dependencies>Dext.dproj;Dext.Web.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Events.dproj">
+			<Dependencies>Dext.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Hosting.dproj">
+			<Dependencies>Dext.dproj;Dext.EF.dproj;Dext.Web.dproj;Dext.Web.Hubs.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.UI.dproj">
+			<Dependencies>Dext.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.EF.dproj">
+			<Dependencies>Dext.dproj;Dext.EF.dproj;Dext.EF.dproj</Dependencies>
+		</Projects>
+		<Projects Include="Dext.Testing.dproj">
+			<Dependencies>Dext.dproj;Dext.Net.dproj;Dext.Testing.dproj</Dependencies>
+		</Projects>
+	</ItemGroup>
+	<ProjectExtensions>
+		<Borland.Personality>Default.Personality.12</Borland.Personality>
+		<Borland.ProjectType/>
+		<BorlandProject>
+			<Default.Personality/>
+		</BorlandProject>
+	</ProjectExtensions>
+	<Target Name="Dext">
+		<MSBuild Projects="Dext.dproj"/>
+	</Target>
+	<Target Name="Dext:Clean">
+		<MSBuild Projects="Dext.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext:Make">
+		<MSBuild Projects="Dext.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.AST">
+		<MSBuild Projects="Dext.AST.dproj"/>
+	</Target>
+	<Target Name="Dext.AST:Clean">
+		<MSBuild Projects="Dext.AST.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.AST:Make">
+		<MSBuild Projects="Dext.AST.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.EF" DependsOnTargets="Dext.AST;Dext">
+		<MSBuild Projects="Dext.EF.dproj"/>
+	</Target>
+	<Target Name="Dext.EF:Clean" DependsOnTargets="Dext.AST:Clean;Dext:Clean">
+		<MSBuild Projects="Dext.EF.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.EF:Make" DependsOnTargets="Dext.AST:Make;Dext:Make">
+		<MSBuild Projects="Dext.EF.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.EF" DependsOnTargets="Dext;Dext.EF">
+		<MSBuild Projects="Dext.EF.dproj"/>
+	</Target>
+	<Target Name="Dext.EF:Clean" DependsOnTargets="Dext:Clean;Dext.EF:Clean">
+		<MSBuild Projects="Dext.EF.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.EF:Make" DependsOnTargets="Dext:Make;Dext.EF:Make">
+		<MSBuild Projects="Dext.EF.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Web" DependsOnTargets="Dext;Dext.EF">
+		<MSBuild Projects="Dext.Web.dproj"/>
+	</Target>
+	<Target Name="Dext.Web:Clean" DependsOnTargets="Dext:Clean;Dext.EF:Clean">
+		<MSBuild Projects="Dext.Web.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Web:Make" DependsOnTargets="Dext:Make;Dext.EF:Make">
+		<MSBuild Projects="Dext.Web.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Net" DependsOnTargets="Dext">
+		<MSBuild Projects="Dext.Net.dproj"/>
+	</Target>
+	<Target Name="Dext.Net:Clean" DependsOnTargets="Dext:Clean">
+		<MSBuild Projects="Dext.Net.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Net:Make" DependsOnTargets="Dext:Make">
+		<MSBuild Projects="Dext.Net.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Testing" DependsOnTargets="Dext;Dext.EF;Dext.Web">
+		<MSBuild Projects="Dext.Testing.dproj"/>
+	</Target>
+	<Target Name="Dext.Testing:Clean" DependsOnTargets="Dext:Clean;Dext.EF:Clean;Dext.Web:Clean">
+		<MSBuild Projects="Dext.Testing.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Testing:Make" DependsOnTargets="Dext:Make;Dext.EF:Make;Dext.Web:Make">
+		<MSBuild Projects="Dext.Testing.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.AI" DependsOnTargets="Dext;Dext.Web">
+		<MSBuild Projects="Dext.AI.dproj"/>
+	</Target>
+	<Target Name="Dext.AI:Clean" DependsOnTargets="Dext:Clean;Dext.Web:Clean">
+		<MSBuild Projects="Dext.AI.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.AI:Make" DependsOnTargets="Dext:Make;Dext.Web:Make">
+		<MSBuild Projects="Dext.AI.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Web.Hubs" DependsOnTargets="Dext;Dext.Web">
+		<MSBuild Projects="Dext.Web.Hubs.dproj"/>
+	</Target>
+	<Target Name="Dext.Web.Hubs:Clean" DependsOnTargets="Dext:Clean;Dext.Web:Clean">
+		<MSBuild Projects="Dext.Web.Hubs.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Web.Hubs:Make" DependsOnTargets="Dext:Make;Dext.Web:Make">
+		<MSBuild Projects="Dext.Web.Hubs.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Events" DependsOnTargets="Dext">
+		<MSBuild Projects="Dext.Events.dproj"/>
+	</Target>
+	<Target Name="Dext.Events:Clean" DependsOnTargets="Dext:Clean">
+		<MSBuild Projects="Dext.Events.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Events:Make" DependsOnTargets="Dext:Make">
+		<MSBuild Projects="Dext.Events.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Hosting" DependsOnTargets="Dext;Dext.EF;Dext.Web;Dext.Web.Hubs">
+		<MSBuild Projects="Dext.Hosting.dproj"/>
+	</Target>
+	<Target Name="Dext.Hosting:Clean" DependsOnTargets="Dext:Clean;Dext.EF:Clean;Dext.Web:Clean;Dext.Web.Hubs:Clean">
+		<MSBuild Projects="Dext.Hosting.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Hosting:Make" DependsOnTargets="Dext:Make;Dext.EF:Make;Dext.Web:Make;Dext.Web.Hubs:Make">
+		<MSBuild Projects="Dext.Hosting.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.UI" DependsOnTargets="Dext">
+		<MSBuild Projects="Dext.UI.dproj"/>
+	</Target>
+	<Target Name="Dext.UI:Clean" DependsOnTargets="Dext:Clean">
+		<MSBuild Projects="Dext.UI.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.UI:Make" DependsOnTargets="Dext:Make">
+		<MSBuild Projects="Dext.UI.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.EF" DependsOnTargets="Dext;Dext.EF;Dext.EF">
+		<MSBuild Projects="Dext.EF.dproj"/>
+	</Target>
+	<Target Name="Dext.EF:Clean" DependsOnTargets="Dext:Clean;Dext.EF:Clean;Dext.EF:Clean">
+		<MSBuild Projects="Dext.EF.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.EF:Make" DependsOnTargets="Dext:Make;Dext.EF:Make;Dext.EF:Make">
+		<MSBuild Projects="Dext.EF.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Dext.Testing" DependsOnTargets="Dext;Dext.Net;Dext.Testing">
+		<MSBuild Projects="Dext.Testing.dproj"/>
+	</Target>
+	<Target Name="Dext.Testing:Clean" DependsOnTargets="Dext:Clean;Dext.Net:Clean;Dext.Testing:Clean">
+		<MSBuild Projects="Dext.Testing.dproj" Targets="Clean"/>
+	</Target>
+	<Target Name="Dext.Testing:Make" DependsOnTargets="Dext:Make;Dext.Net:Make;Dext.Testing:Make">
+		<MSBuild Projects="Dext.Testing.dproj" Targets="Make"/>
+	</Target>
+	<Target Name="Build">
+		<CallTarget Targets="Dext;Dext.AST;Dext.EF;Dext.EF;Dext.Web;Dext.Net;Dext.Testing;Dext.AI;Dext.Web.Hubs;Dext.Events;Dext.Hosting;Dext.UI;Dext.EF;Dext.Testing"/>
+	</Target>
+	<Target Name="Clean">
+		<CallTarget Targets="Dext:Clean;Dext.AST:Clean;Dext.EF:Clean;Dext.EF:Clean;Dext.Web:Clean;Dext.Net:Clean;Dext.Testing:Clean;Dext.AI:Clean;Dext.Web.Hubs:Clean;Dext.Events:Clean;Dext.Hosting:Clean;Dext.UI:Clean;Dext.EF:Clean;Dext.Testing:Clean"/>
+	</Target>
+	<Target Name="Make">
+		<CallTarget Targets="Dext:Make;Dext.AST:Make;Dext.EF:Make;Dext.EF:Make;Dext.Web:Make;Dext.Net:Make;Dext.Testing:Make;Dext.AI:Make;Dext.Web.Hubs:Make;Dext.Events:Make;Dext.Hosting:Make;Dext.UI:Make;Dext.EF:Make;Dext.Testing:Make"/>
+	</Target>
+	<Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
+</Project>

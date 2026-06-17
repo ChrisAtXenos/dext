@@ -1,0 +1,51 @@
+package Dext.UI.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD OFF}
+{$DESCRIPTION 'Dext UI Framework - MVU Architecture for Desktop/Mobile'}
+{$RUNONLY}
+{$LIBSUFFIX '260'}
+
+requires
+  rtl,
+  vcl,
+  Dext.Core;
+
+contains
+  Dext.UI.Attributes in 'UI\Dext.UI.Attributes.pas',
+  Dext.UI.Binder in 'UI\Dext.UI.Binder.pas',
+  Dext.UI.Message in 'UI\Dext.UI.Message.pas',
+  Dext.UI.Module in 'UI\Dext.UI.Module.pas',
+  Dext.UI.Navigator.Adapters in 'UI\Dext.UI.Navigator.Adapters.pas',
+  Dext.UI.Navigator.Interfaces in 'UI\Dext.UI.Navigator.Interfaces.pas',
+  Dext.UI.Navigator.Middlewares in 'UI\Dext.UI.Navigator.Middlewares.pas',
+  Dext.UI.Navigator in 'UI\Dext.UI.Navigator.pas',
+  Dext.UI.Navigator.Types in 'UI\Dext.UI.Navigator.Types.pas',
+  Dext.UI in 'UI\Dext.UI.pas',
+  Dext.UI.State in 'UI\Dext.UI.State.pas';
+
+end.
