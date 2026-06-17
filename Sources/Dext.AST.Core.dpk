@@ -1,4 +1,4 @@
-package Dext.AST;
+package Dext.AST.Core;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}

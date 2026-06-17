@@ -35,8 +35,8 @@ requires
   designide,
   vcl,
   Dext.Core,
-  Dext.Net,
-  Dext.Testing;
+  Dext.Net.Core,
+  Dext.Testing.Core;
 
 contains
   Dext.Testing.Design.Registration in 'Testing\Design\Dext.Testing.Design.Registration.pas',

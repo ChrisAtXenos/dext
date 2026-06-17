@@ -5,7 +5,7 @@ interface
 uses
   Dext.Web,
   Dext.Web.Interfaces,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   System.SysUtils,
   System.StrUtils,
   System.IOUtils,

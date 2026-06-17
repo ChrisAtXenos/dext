@@ -112,7 +112,7 @@ uses
   Dext.DI.Core,
   Dext.Logging.Global,
   Dext.Hosting.BackgroundService,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Indy.Server,
   Dext.Web.Indy.SSL.Interfaces,
   Dext.Web.Indy.SSL.OpenSSL,

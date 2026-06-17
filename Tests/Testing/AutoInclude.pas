@@ -136,7 +136,7 @@ uses
   Dext.RateLimiting,
   Dext.RateLimiting.Policy,
   Dext.Swagger.Middleware,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Cors,
   Dext.Web.DataApi,
   Dext.Web.Extensions,

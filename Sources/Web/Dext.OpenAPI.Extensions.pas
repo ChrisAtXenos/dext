@@ -94,7 +94,7 @@ implementation
 
 uses
   Dext.Utils,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Routing;
 
 { TEndpointMetadataExtensions }

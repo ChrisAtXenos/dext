@@ -30,7 +30,7 @@ interface
 uses
   System.SysUtils,
   System.Rtti,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces;
 
 type
@@ -274,7 +274,7 @@ begin
   FEnableDebugLog := False;
 end;
 
-// ? Construtor com parâmetros
+// ? Construtor com parmetros
 constructor TCorsMiddleware.Create(const AOptions: TCorsOptions);
 begin
   inherited Create;
@@ -337,7 +337,7 @@ begin
   else
     Origin := '';
 
-  // Verificar se origin é permitida
+  // Verificar se origin  permitida
   if IsOriginAllowed(Origin) then
   begin
     AContext.Response.AddHeader('Access-Control-Allow-Origin', Origin);

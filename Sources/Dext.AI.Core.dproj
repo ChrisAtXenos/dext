@@ -1,15 +1,15 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{25AF115F-A561-444F-9FCF-71B1D24BC6F5}</ProjectGuid>
-        <MainSource>Dext.AST.dpk</MainSource>
+        <ProjectGuid>{7FFBEF48-2D93-4F5D-BAA9-60D085BF3645}</ProjectGuid>
+        <MainSource>Dext.AI.Core.dpk</MainSource>
         <ProjectVersion>20.4</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
-        <TargetedPlatforms>32899</TargetedPlatforms>
+        <TargetedPlatforms>131</TargetedPlatforms>
         <AppType>Package</AppType>
-        <ProjectName Condition="'$(ProjectName)'==''">Dext.AST</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">Dext.AI.Core</ProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -75,11 +75,12 @@
         <GenDll>true</GenDll>
         <GenPackage>true</GenPackage>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <SanitizedProjectName>Dext_AST</SanitizedProjectName>
+        <DCC_CBuilderOutput>All</DCC_CBuilderOutput>
+        <SanitizedProjectName>Dext_AI_Core</SanitizedProjectName>
+        <DCC_UnitSearchPath>Common;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>1046</VerInfo_Locale>
-        <DCC_UnitSearchPath>Common;..\External\DelphiAST\Source\SimpleParser;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
-        <DCC_Description>Dext Package for DelphiAST</DCC_Description>
+        <DCC_Description>Dext Framework - IA</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
     </PropertyGroup>
@@ -111,6 +112,7 @@
         <BT_BuildType>Debug</BT_BuildType>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
+        <BCC_EnableBatchCompilation>true</BCC_EnableBatchCompilation>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -143,18 +145,18 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.Classes.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.Consts.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.ProjectIndexer.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.Serialize.Binary.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.SimpleParserEx.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\DelphiAST.Writer.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\StringPool.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Lexer.Types.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.pas"/>
-        <DCCReference Include="..\External\DelphiAST\Source\SimpleParser\SimpleParser.Types.pas"/>
+        <DCCReference Include="IndySystem.dcp"/>
+        <DCCReference Include="IndyProtocols.dcp"/>
+        <DCCReference Include="IndyCore.dcp"/>
+        <DCCReference Include="Dext.Core.dcp"/>
+        <DCCReference Include="Dext.Web.Core.dcp"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Attributes.pas"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Prompts.pas"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Protocol.pas"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Resources.pas"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Server.pas"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Tools.pas"/>
+        <DCCReference Include="AI\MCP\Dext.AI.MCP.Types.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -173,7 +175,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">Dext.AST.dpk</Source>
+                    <Source Name="MainSource">Dext.AI.Core.dpk</Source>
                 </Source>
                 <Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k370.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
@@ -196,12 +198,13 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext.AST.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\Output\37.0\Win32\Release\Dext.AI.Core370.bpl" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>Dext.AST.bpl</RemoteName>
+                        <RemoteName>Dext.AI.Core.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\37.0\Bpl\Dext_AI_Core.bpl" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="OSX32">
                         <Operation>1</Operation>
@@ -1057,6 +1060,7 @@
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="iOSSimARM64" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Linux64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="OSX64" Name="$(PROJECTNAME)"/>
@@ -1068,7 +1072,7 @@
             </Deployment>
             <Platforms>
                 <Platform value="Android">False</Platform>
-                <Platform value="Android64">True</Platform>
+                <Platform value="Android64">False</Platform>
                 <Platform value="Linux64">True</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>

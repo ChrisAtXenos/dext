@@ -1,4 +1,4 @@
-package Dext.Hosting;
+package Dext.Hosting.Core;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -44,7 +44,7 @@ requires
   Dext.Core,
   Dext.EF.Core,
   Dext.Web.Core,
-  Dext.Web.Hubs;
+  Dext.Web.Hubs.Core;
 
 contains
   Dext.Hosting.CLI.Logger in 'Hosting\CLI\Logger\Dext.Hosting.CLI.Logger.pas',

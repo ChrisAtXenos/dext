@@ -41,19 +41,19 @@ supported frameworks:
 
 # List of packages in the library. Each package must have a unique name, and must be listed only once.
 packages:
-  - Dext.AST: [runtime, rtl]
+  - Dext.AST.Core: [runtime, rtl]
   - Dext.Core: [runtime, rtl]
-  - Dext.UI: [runtime, vcl]
-  - Dext.Events: [runtime, rtl]
+  - Dext.UI.Core: [runtime, vcl]
+  - Dext.Events.Core: [runtime, rtl]
   - Dext.EF.Core: [runtime, rtl]
-  - Dext.Net: [runtime, rtl1]
+  - Dext.Net.Core: [runtime, rtl1]
   - Dext.Web.Core: [runtime, rtl]
-  - Dext.Web.Hubs: [runtime, rtl]
+  - Dext.Web.Hubs.Core: [runtime, rtl]
   - Dext.EF.Components: [runtime, rtl]
-  - Dext.AI: [runtime, rtl1]
-  - Dext.Hosting: [runtime, rtl]
+  - Dext.AI.Core: [runtime, rtl1]
+  - Dext.Hosting.Core: [runtime, rtl]
   - Dext.EF.Design: [design, vcl]
-  - Dext.Testing: [runtime, vcl1]
+  - Dext.Testing.Core: [runtime, vcl1]
   - Dext.Testing.Design: [design, vcl]
 
 # The settings in the this section are only needed if the packages don't follow smartsetup conventions.

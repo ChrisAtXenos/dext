@@ -28,7 +28,7 @@ unit Dext.DI.Middleware;
 interface
 
 uses
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.DI.Interfaces;
 

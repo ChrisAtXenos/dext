@@ -18,7 +18,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Rtti,
   Dext.Web.Interfaces, Dext.DI.Interfaces, Dext.Web.Middleware,
-  Dext.Web.Core, Dext.MultiTenancy;
+  Dext.Web.Builder, Dext.MultiTenancy;
 
 type
   /// <summary>

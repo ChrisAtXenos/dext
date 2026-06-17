@@ -8,7 +8,7 @@ uses
   Dext.DI.Interfaces,
   Dext.DI.Core,
   Dext.Web.Interfaces,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Middleware,
   Dext.Logging,
   Dext.Logging.Console,

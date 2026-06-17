@@ -33,7 +33,7 @@ uses
   System.Diagnostics,
   System.SysUtils,
   Dext.Collections.Dict,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.Web.Interfaces,
   Dext.Logging,
   Dext.Utils;

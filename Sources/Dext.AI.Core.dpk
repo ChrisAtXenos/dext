@@ -1,4 +1,4 @@
-package Dext.Net;
+package Dext.AI.Core;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -25,21 +25,26 @@ package Dext.Net;
 {$IMAGEBASE $400000}
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'Dext Framework - High Performance Networking'}
+{$DESCRIPTION 'Dext Framework - IA'}
 {$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
-  Dext.Core;
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  Dext.Core,
+  Dext.Web.Core;
 
 contains
-  Dext.Http.Executor in 'Net\Dext.Http.Executor.pas',
-  Dext.Net.Authentication in 'Net\Dext.Net.Authentication.pas',
-  Dext.Net.ConnectionPool in 'Net\Dext.Net.ConnectionPool.pas',
-  Dext.Net.RestClient in 'Net\Dext.Net.RestClient.pas',
-  Dext.Net.RestRequest in 'Net\Dext.Net.RestRequest.pas',
-  Dext.Logging.Sinks.APM in 'Net\Dext.Logging.Sinks.APM.pas';
+  Dext.AI.MCP.Attributes in 'AI\MCP\Dext.AI.MCP.Attributes.pas',
+  Dext.AI.MCP.Prompts in 'AI\MCP\Dext.AI.MCP.Prompts.pas',
+  Dext.AI.MCP.Protocol in 'AI\MCP\Dext.AI.MCP.Protocol.pas',
+  Dext.AI.MCP.Resources in 'AI\MCP\Dext.AI.MCP.Resources.pas',
+  Dext.AI.MCP.Server in 'AI\MCP\Dext.AI.MCP.Server.pas',
+  Dext.AI.MCP.Tools in 'AI\MCP\Dext.AI.MCP.Tools.pas',
+  Dext.AI.MCP.Types in 'AI\MCP\Dext.AI.MCP.Types.pas';
 
 end.

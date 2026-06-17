@@ -30,7 +30,7 @@ interface
 uses
   System.SysUtils,
   Dext.Web.Interfaces,
-  Dext.Web.Core,
+  Dext.Web.Builder,
   Dext.OpenAPI.Generator,
   Dext.OpenAPI.Types;
 
