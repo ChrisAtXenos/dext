@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{740F4258-92A6-4FA6-BCED-B4333D2D7583}</ProjectGuid>
         <ProjectVersion>20.4</ProjectVersion>
@@ -206,6 +206,10 @@
         <DCCReference Include="Dext.Logging.Sinks.APM.Tests.pas"/>
         <DCCReference Include="Dext.WebSocket.Tests.pas"/>
         <DCCReference Include="..\Common\Dext.Web.Mocks.pas"/>
+        <DCCReference Include="Test_Dext.Http2.Connection.pas"/>
+        <DCCReference Include="Test_Dext.Http2.Framing.pas"/>
+        <DCCReference Include="Test_Dext.Http2.Hpack.pas"/>
+        <DCCReference Include="Test_Dext.Http2.Stream.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

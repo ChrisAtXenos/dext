@@ -768,9 +768,8 @@ var
   RunAllItem1, RunAllItem2, RunAllItem3: TMenuItem;
   PopupMenu: TPopupMenu;
   MenuItem: TMenuItem;
-  I: Integer;
-  LblDisabledMsg: TLabel;
-  BtnEnable: TButton;
+  DisabledMsgLabel: TLabel;
+  EnableButton: TButton;
   LayoutMode: Integer;
   GroupingMode: Integer;
   IniFile: string;
@@ -978,22 +977,22 @@ begin
   FDisabledContainer.BevelOuter := bvNone;
   FDisabledContainer.ParentBackground := True;
 
-  LblDisabledMsg := TLabel.Create(Self);
-  LblDisabledMsg.Parent := FDisabledContainer;
-  LblDisabledMsg.Align := alTop;
-  LblDisabledMsg.Alignment := taCenter;
-  LblDisabledMsg.Caption := 'Dext Test Explorer is currently disabled.' + #13#10 + 'Enable it to load projects and run tests.';
-  LblDisabledMsg.Font.Size := 10;
-  LblDisabledMsg.Height := 40;
+  DisabledMsgLabel := TLabel.Create(Self);
+  DisabledMsgLabel.Parent := FDisabledContainer;
+  DisabledMsgLabel.Align := alTop;
+  DisabledMsgLabel.Alignment := taCenter;
+  DisabledMsgLabel.Caption := 'Dext Test Explorer is currently disabled.' + #13#10 + 'Enable it to load projects and run tests.';
+  DisabledMsgLabel.Font.Size := 10;
+  DisabledMsgLabel.Height := 40;
 
-  BtnEnable := TButton.Create(Self);
-  BtnEnable.Parent := FDisabledContainer;
-  BtnEnable.Left := (FDisabledContainer.Width - 120) div 2;
-  BtnEnable.Top := 50;
-  BtnEnable.Width := 120;
-  BtnEnable.Height := 30;
-  BtnEnable.Caption := 'Enable';
-  BtnEnable.OnClick := EnableBtnClick;
+  EnableButton := TButton.Create(Self);
+  EnableButton.Parent := FDisabledContainer;
+  EnableButton.Left := (FDisabledContainer.Width - 120) div 2;
+  EnableButton.Top := 50;
+  EnableButton.Width := 120;
+  EnableButton.Height := 30;
+  EnableButton.Caption := 'Enable';
+  EnableButton.OnClick := EnableBtnClick;
   EnableDisableTestExplorerMenuItem.OnClick := ToggleEnabledClick;
   EnableDisableTestExplorerMenuItem.Visible := True;
 
