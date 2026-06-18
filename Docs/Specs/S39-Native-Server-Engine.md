@@ -58,14 +58,7 @@ These abstractions are sufficient for V1 but **lack**:
 - Backpressure signaling
 - Engine-specific configuration (thread count, buffer sizes)
 
-### 2.3 Reference Implementations
 
-| Library | Key Classes | Lines of Code | Studied |
-|---------|-------------|---------------|---------|
-| **mORMot2** | `THttpApiServer` (http.sys), `THttpAsyncServer` (IOCP/epoll) | ~4000 (server), ~2500 (async) | ✅ |
-| **Delphi-Cross-Socket** | `TIocpCrossSocket`, `TEpollCrossSocket` | ~800 (IOCP), ~950 (epoll) | ✅ |
-
----
 
 ## 3. Architecture
 
