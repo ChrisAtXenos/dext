@@ -271,8 +271,11 @@ type
     Reserved1: ULONG;
     pBuffer: Pointer;
     BufferLength: ULONG;
-    Reserved2: ULONG;
-    Reserved3: ULONG;
+    {$IFDEF CPUX64}
+    Reserved2: array[0..2] of ULONG;
+    {$ELSE}
+    Reserved2: array[0..3] of ULONG;
+    {$ENDIF}
   end;
   PHTTP_DATA_CHUNK_INMEMORY = ^HTTP_DATA_CHUNK_INMEMORY;
 

@@ -467,12 +467,10 @@ begin
 
   if ACount <= 0 then Exit;
 
+  FillChar(Chunk, SizeOf(Chunk), 0);
   Chunk.DataChunkType := hctFromMemory;
-  Chunk.Reserved1 := 0;
   Chunk.pBuffer := @ABuffer[AOffset];
   Chunk.BufferLength := ACount;
-  Chunk.Reserved2 := 0;
-  Chunk.Reserved3 := 0;
 
   Ret := HttpSendResponseEntityBody(
     FReqQueue,
