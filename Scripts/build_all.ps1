@@ -34,11 +34,23 @@ Write-Host "Building Dext Framework ($Platform $Config)" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
 # 2. Build via groupproj (Preferred for dependency order)
-$GroupProj = Join-Path $env:DEXT "Sources\DextFramework.groupproj"
+if ($env:PRODUCT_VERSION) {
+    $MajorVer = [int]($env:PRODUCT_VERSION.Split('.')[0])
+    $FolderNum = $MajorVer - 24
+    $TargetFolder = "d$FolderNum"
+    $GroupProj = Join-Path $env:DEXT "Packages\$TargetFolder\DextFramework.groupproj"
+} else {
+    $GroupProj = ""
+}
 
-if (-not (Test-Path $GroupProj)) {
-    Write-Error "DextFramework.groupproj not found in Sources directory."
-    exit 1
+if (-not $GroupProj -or -not (Test-Path $GroupProj)) {
+    $found = Get-ChildItem -Path (Join-Path $env:DEXT "Packages") -Recurse -Filter "DextFramework.groupproj" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) {
+        $GroupProj = $found.FullName
+    } else {
+        Write-Error "DextFramework.groupproj not found in Packages directory."
+        exit 1
+    }
 }
 
 if ($Clean) {

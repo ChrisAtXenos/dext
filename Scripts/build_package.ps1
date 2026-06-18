@@ -152,6 +152,20 @@ function Resolve-PackagePath {
     $found = Get-ChildItem -Path $TestsDir -Recurse -Filter "$Name.dproj" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($found) { return $found.FullName }
 
+    # Try Packages subdirectories (d13, d12, etc.) matching active version
+    if ($env:PRODUCT_VERSION) {
+        $MajorVer = [int]($env:PRODUCT_VERSION.Split('.')[0])
+        $FolderNum = $MajorVer - 24
+        $TargetFolder = "d$FolderNum"
+        $DprojFile = Join-Path $DextRoot "Packages\$TargetFolder\$Name.dproj"
+        if (Test-Path $DprojFile) { return $DprojFile }
+    }
+
+    # Fallback search in all Packages directories
+    $PkgsDir = Join-Path $DextRoot "Packages"
+    $found = Get-ChildItem -Path $PkgsDir -Recurse -Filter "$Name.dproj" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) { return $found.FullName }
+
     return $null
 }
 

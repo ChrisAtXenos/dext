@@ -80,6 +80,7 @@ type
     FStatusCode: USHORT;
     FReason: string;
     FHeaders: TStringList;
+    FBodyBuffer: TMemoryStream;
     procedure SendHeadersInternal(AMoreData: Boolean);
   public
     /// <summary>Initializes a new http.sys response wrapper.</summary>
@@ -283,6 +284,15 @@ const
     'Proxy-Authorization', 'Referer', 'Range', 'TE', 'Translate', 'User-Agent'
   );
 
+  HTTP_KNOWN_RESPONSE_HEADERS: array[0..29] of string = (
+    'Cache-Control', 'Connection', 'Date', 'Keep-Alive', 'Pragma', 'Trailer',
+    'Transfer-Encoding', 'Upgrade', 'Via', 'Warning', 'Allow', 'Content-Length',
+    'Content-Type', 'Content-Encoding', 'Content-Language', 'Content-Location',
+    'Content-MD5', 'Content-Range', 'Expires', 'Last-Modified', 'Accept-Ranges',
+    'Age', 'ETag', 'Location', 'Proxy-Authenticate', 'Retry-After', 'Server',
+    'Set-Cookie', 'Vary', 'Www-Authenticate'
+  );
+
 function TDextHttpSysRequest.GetHeader(const AName: string): string;
 var
   I: Integer;
@@ -383,37 +393,114 @@ begin
   FStatusCode := 200;
   FReason := 'OK';
   FHeaders := TStringList.Create;
+  FBodyBuffer := TMemoryStream.Create;
 end;
 
 destructor TDextHttpSysResponse.Destroy;
 begin
   FHeaders.Free;
+  FBodyBuffer.Free;
   inherited;
 end;
 
 procedure TDextHttpSysResponse.Close;
 var
-  Ret: ULONG;
+  Response: HTTP_RESPONSE;
+  Chunk: HTTP_DATA_CHUNK_INMEMORY;
   BytesSent: ULONG;
+  Ret: ULONG;
+  I: Integer;
+  HeaderVal: string;
+  AnsiHeaderValues: array[0..29] of AnsiString;
 begin
   if not FHeadersSent then
   begin
-    SendHeadersInternal(False);
-  end
-  else
-  begin
-    Ret := HttpSendResponseEntityBody(
+    FillChar(Response, SizeOf(Response), 0);
+    Response.StatusCode := FStatusCode;
+    Response.ReasonLength := Length(FReason);
+    Response.pReason := PAnsiChar(AnsiString(FReason));
+    Response.Version.MajorVersion := 1;
+    Response.Version.MinorVersion := 1;
+
+    if FHeaders.Values['Content-Length'] = '' then
+      FHeaders.Values['Content-Length'] := IntToStr(FBodyBuffer.Size);
+
+    for I := 0 to 29 do
+    begin
+      HeaderVal := FHeaders.Values[HTTP_KNOWN_RESPONSE_HEADERS[I]];
+      if HeaderVal <> '' then
+      begin
+        AnsiHeaderValues[I] := AnsiString(HeaderVal);
+        Response.Headers.KnownHeaders[I].pRawValue := PAnsiChar(AnsiHeaderValues[I]);
+        Response.Headers.KnownHeaders[I].RawValueLength := Length(AnsiHeaderValues[I]);
+      end;
+    end;
+
+    if FBodyBuffer.Size > 0 then
+    begin
+      FillChar(Chunk, SizeOf(Chunk), 0);
+      Chunk.DataChunkType := hctFromMemory;
+      Chunk.pBuffer := FBodyBuffer.Memory;
+      Chunk.BufferLength := FBodyBuffer.Size;
+
+      Response.EntityChunkCount := 1;
+      Response.pEntityChunks := @Chunk;
+    end;
+
+    Ret := HttpSendHttpResponse(
       FReqQueue,
       FRequestId,
       0,
-      0,
+      @Response,
       nil,
       BytesSent,
       nil,
-      nil,
+      0,
       nil,
       nil
     );
+    if Ret <> ERROR_SUCCESS then
+      raise EOSError.Create('HttpSendHttpResponse failed with error code: ' + IntToStr(Ret));
+
+    FHeadersSent := True;
+  end
+  else
+  begin
+    if FBodyBuffer.Size > 0 then
+    begin
+      FillChar(Chunk, SizeOf(Chunk), 0);
+      Chunk.DataChunkType := hctFromMemory;
+      Chunk.pBuffer := FBodyBuffer.Memory;
+      Chunk.BufferLength := FBodyBuffer.Size;
+
+      Ret := HttpSendResponseEntityBody(
+        FReqQueue,
+        FRequestId,
+        0,
+        1,
+        @Chunk,
+        BytesSent,
+        nil,
+        nil,
+        nil,
+        nil
+      );
+    end
+    else
+    begin
+      Ret := HttpSendResponseEntityBody(
+        FReqQueue,
+        FRequestId,
+        0,
+        0,
+        nil,
+        BytesSent,
+        nil,
+        nil,
+        nil,
+        nil
+      );
+    end;
     if Ret <> ERROR_SUCCESS then
       raise EOSError.Create('HttpSendResponseEntityBody (Finalize) failed with error code: ' + IntToStr(Ret));
   end;
@@ -436,6 +523,9 @@ var
   BytesSent: ULONG;
   Ret: ULONG;
   Flags: ULONG;
+  I: Integer;
+  HeaderVal: string;
+  AnsiHeaderValues: array[0..29] of AnsiString;
 begin
   if FHeadersSent then Exit;
 
@@ -445,6 +535,17 @@ begin
   Response.pReason := PAnsiChar(AnsiString(FReason));
   Response.Version.MajorVersion := 1;
   Response.Version.MinorVersion := 1;
+
+  for I := 0 to 29 do
+  begin
+    HeaderVal := FHeaders.Values[HTTP_KNOWN_RESPONSE_HEADERS[I]];
+    if HeaderVal <> '' then
+    begin
+      AnsiHeaderValues[I] := AnsiString(HeaderVal);
+      Response.Headers.KnownHeaders[I].pRawValue := PAnsiChar(AnsiHeaderValues[I]);
+      Response.Headers.KnownHeaders[I].RawValueLength := Length(AnsiHeaderValues[I]);
+    end;
+  end;
 
   if AMoreData then
     Flags := HTTP_SEND_RESPONSE_FLAG_MORE_DATA
@@ -494,31 +595,34 @@ var
   BytesSent: ULONG;
   Ret: ULONG;
 begin
-  if not FHeadersSent then
-    SendHeadersInternal(True);
-
   if ACount <= 0 then Exit;
 
-  FillChar(Chunk, SizeOf(Chunk), 0);
-  Chunk.DataChunkType := hctFromMemory;
-  Chunk.pBuffer := @ABuffer[AOffset];
-  Chunk.BufferLength := ACount;
+  if FHeadersSent then
+  begin
+    FillChar(Chunk, SizeOf(Chunk), 0);
+    Chunk.DataChunkType := hctFromMemory;
+    Chunk.pBuffer := @ABuffer[AOffset];
+    Chunk.BufferLength := ACount;
 
-  Ret := HttpSendResponseEntityBody(
-    FReqQueue,
-    FRequestId,
-    HTTP_SEND_RESPONSE_FLAG_MORE_DATA,
-    1,
-    @Chunk,
-    BytesSent,
-    nil,
-    nil,
-    nil,
-    nil
-  );
-
-  if Ret <> ERROR_SUCCESS then
-    raise EOSError.Create('HttpSendResponseEntityBody failed with error code: ' + IntToStr(Ret));
+    Ret := HttpSendResponseEntityBody(
+      FReqQueue,
+      FRequestId,
+      HTTP_SEND_RESPONSE_FLAG_MORE_DATA,
+      1,
+      @Chunk,
+      BytesSent,
+      nil,
+      nil,
+      nil,
+      nil
+    );
+    if Ret <> ERROR_SUCCESS then
+      raise EOSError.Create('HttpSendResponseEntityBody failed with error code: ' + IntToStr(Ret));
+  end
+  else
+  begin
+    FBodyBuffer.WriteBuffer(ABuffer[AOffset], ACount);
+  end;
 end;
 
 { TDextHttpSysConnection }
