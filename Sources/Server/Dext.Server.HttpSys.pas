@@ -80,6 +80,7 @@ type
     FStatusCode: USHORT;
     FReason: string;
     FHeaders: TStringList;
+    procedure SendHeadersInternal(AMoreData: Boolean);
   public
     /// <summary>Initializes a new http.sys response wrapper.</summary>
     /// <param name="AReqQueue">Handle to the request queue.</param>
@@ -391,21 +392,50 @@ begin
 end;
 
 procedure TDextHttpSysResponse.Close;
+var
+  Ret: ULONG;
+  BytesSent: ULONG;
 begin
-  Flush;
+  if not FHeadersSent then
+  begin
+    SendHeadersInternal(False);
+  end
+  else
+  begin
+    Ret := HttpSendResponseEntityBody(
+      FReqQueue,
+      FRequestId,
+      0,
+      0,
+      nil,
+      BytesSent,
+      nil,
+      nil,
+      nil,
+      nil
+    );
+    if Ret <> ERROR_SUCCESS then
+      raise EOSError.Create('HttpSendResponseEntityBody (Finalize) failed with error code: ' + IntToStr(Ret));
+  end;
 end;
 
 procedure TDextHttpSysResponse.Flush;
 begin
   if not FHeadersSent then
-    SendHeaders;
+    SendHeadersInternal(False);
 end;
 
 procedure TDextHttpSysResponse.SendHeaders;
+begin
+  SendHeadersInternal(False);
+end;
+
+procedure TDextHttpSysResponse.SendHeadersInternal(AMoreData: Boolean);
 var
   Response: HTTP_RESPONSE;
   BytesSent: ULONG;
   Ret: ULONG;
+  Flags: ULONG;
 begin
   if FHeadersSent then Exit;
 
@@ -416,13 +446,15 @@ begin
   Response.Version.MajorVersion := 1;
   Response.Version.MinorVersion := 1;
 
-  // Map our headers to Response.Headers if needed
-  // In Phase 2 we send basic headers
-  
+  if AMoreData then
+    Flags := HTTP_SEND_RESPONSE_FLAG_MORE_DATA
+  else
+    Flags := 0;
+
   Ret := HttpSendHttpResponse(
     FReqQueue,
     FRequestId,
-    0,
+    Flags,
     @Response,
     nil,
     BytesSent,
@@ -463,7 +495,7 @@ var
   Ret: ULONG;
 begin
   if not FHeadersSent then
-    SendHeaders;
+    SendHeadersInternal(True);
 
   if ACount <= 0 then Exit;
 
