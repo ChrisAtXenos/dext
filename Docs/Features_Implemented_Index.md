@@ -713,6 +713,14 @@ The framework embeds a premium, high-performance, asynchronous observability sui
 - **IStreamableSessionManager** — SSE channel manager with automatic garbage collection (runs every 60s, evicting idle sessions after 30 minutes).
 - **HTMX Fragment Swap** — Endpoints serving dynamic HTML fragments (e.g. `/sidecar/fragments/metrics`), allowing live DOM updates via HTMX without writing any client-side JavaScript.
 
+## 🌐 20. HTTP/2 Framing & HPACK Transport (S41) (`Sources\Server`)
+
+- **THpackDecoder & THpackEncoder** — HPACK header compressor (RFC 7541). Includes support for the 61-entry static table, dynamic table ring-buffer with FIFO size-bound eviction, and client Huffman decoding via FSM.
+- **TDextHttp2FrameCodec** — Complete parser and serializer for all 10 HTTP/2 frame types. Zero-allocation parsing via `TByteSpan` and direct buffer writers.
+- **TDextHttp2StreamMap** — Sorted active streams map using binary search for $O(\log n)$ lookup performance. Handles stream-level state machine transitions and flow-control.
+- **TDextHttp2Connection** — HTTP/2 connection state machine coordinating preface validation, SETTINGS exchange, and frame demultiplexing.
+- **gRPC Compatibility Layer** — Length-prefixed message unpacking/packing and trailers support to serve as the transport layer for gRPC (S02).
+
 ---
 
-*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: May 28, 2026).*
+*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: June 18, 2026).*

@@ -1,4 +1,4 @@
-﻿{***************************************************************************}
+{***************************************************************************}
 {                                                                           }
 {           Dext Framework                                                  }
 {                                                                           }
@@ -47,11 +47,13 @@ uses
   System.SysUtils,
   System.Classes,
   System.DateUtils,
+  System.StrUtils,
   Dext.Utils,
   Dext.Http2.Hpack,
   Dext.Http2.Framing,
   Dext.Http2.Stream,
-  Dext.Http2.Connection;
+  Dext.Http2.Connection,
+  GrpcUnaryExample in 'GrpcUnaryExample.pas';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Simple single-connection HTTP/2 echo server built directly on top of
@@ -143,6 +145,12 @@ begin
 
   WriteLn(Format('  [stream %d] %s %s  body=%d bytes',
     [AStreamId, method, path, Length(ABody)]));
+
+  if StartsText('/grpc', path) then
+  begin
+    TGrpcUnaryHelper.HandleGrpcCall(FConn, AStreamId, AHeaders, ABody);
+    Exit;
+  end;
 
   // Routing
   if SameText(path, '/') then

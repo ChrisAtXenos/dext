@@ -3,7 +3,7 @@
         <ProjectGuid>{E9B39002-C716-4357-9C1C-7F479C937EFE}</ProjectGuid>
         <MainSource>DextSidecar.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
