@@ -55,7 +55,7 @@ Status | Task | Spec | Description
 🟡 | **SOA via Interfaces** | [S14](Specs/S14-SOA-Interfaces.md) | Transparent Code-First gRPC mapping for Delphi Interfaces.
 ✅ | **APM & Telemetry Sinks** | [S35](Specs/S35-APM-Log-Sinks.md) | Asynchronous batch-oriented telemetry sinks targeting Seq and OpenTelemetry (OTLP) collectors.
 ✅ | **Indy HTTP Fallback** | [S37](Specs/S37-Http-Engine-Indy-Fallback.md) | Abstract HTTP Client layer to support Indy fallback on older Delphi versions.
-⏳ | **Delphi Hub Client** | [S42](Specs/S42-Delphi-Hub-Client.md) | Native Delphi client connection library for Dext Hubs (WebSocket/SSE).
+✅ | **Delphi Hub Client** | [S42](Specs/S42-Delphi-Hub-Client.md) | Native Delphi client connection library for Dext Hubs (WebSocket/SSE).
 
 ## 🔮 Future / Post-V1
 - [ ] **OData Support**: Full OData query support.
@@ -112,7 +112,7 @@ Status | Tarefa | Spec | Descrição
 🟡 | **SOA via Interfaces** | [S14](Specs/S14-SOA-Interfaces.md) | SOA e RPC via gRPC Code-First transparente para interfaces Delphi.
 ✅ | **APM & Telemetry Sinks** | [S35](Specs/S35-APM-Log-Sinks.md) | Envio assíncrono em lotes de telemetria e logs para Seq e coletores OpenTelemetry (OTLP).
 ✅ | **Indy HTTP Fallback** | [S37](Specs/S37-Http-Engine-Indy-Fallback.md) | Abstração do cliente HTTP para suporte a fallback com Indy em versões antigas.
-⏳ | **Cliente Hub Delphi** | [S42](Specs/S42-Delphi-Hub-Client.md) | Biblioteca cliente nativa em Delphi para conexão com Dext Hubs (WebSocket/SSE).
+✅ | **Cliente Hub Delphi** | [S42](Specs/S42-Delphi-Hub-Client.md) | Biblioteca cliente nativa em Delphi para conexão com Dext Hubs (WebSocket/SSE).
 
 ## 🔮 Futuro / Pós-V1
 - [ ] **Suporte a OData**: Suporte completo a queries OData.

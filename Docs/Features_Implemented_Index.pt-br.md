@@ -252,6 +252,7 @@ O Dext foi desenhado para alavancar recursos modernos da linguagem Object Pascal
 ### 3.7 Real-time & Caching
 - **SSE (Server-Sent Events)** — Streaming unidirecional de eventos como fallback.
 - **WebSockets e Hubs SignalR** — Suporte completo ao transporte nativo WebSocket RFC 6455 com mascaramento cliente-servidor, tratamento de handshake e integração total com `Dext.Web.Hubs` para mensagens bidirecionais em tempo real, despacho para grupos e keepalives via ping/pong. Realiza o upgrade nativo de conexões HTTP via modo opaco (`HTTP_SEND_RESPONSE_FLAG_OPAQUE`) no HTTP.sys.
+- **Cliente Hub Delphi (SignalR-compatible)** — Biblioteca cliente nativa em Delphi (`Dext.Web.Hubs.Client`) de alta performance, com suporte a transportes WebSocket e SSE, protocolos de negociação/handshake automáticos, heartbeat via ping e dispatches thread-safe com marshaling opcional para a thread principal (UI).
 - **Caching** — In-Memory. (Cliente Redis nativo de alta performance planejado e em desenvolvimento ativo, atualmente ~80% completo). **Health Checks** detalhados (com plano de expansão no roadmap).
 
 ### 3.8 API Documentation & Scaffolding

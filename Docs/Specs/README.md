@@ -42,7 +42,7 @@ ID | Title | Status | Goal
 **S39** | [Native High-Performance Server Engine](S39-Native-Server-Engine.md) | ✅ Finalized | Zero-dependency native server engines: `http.sys` (Windows), IOCP sockets (Windows), `epoll` (Linux).
 **S40** | [WebSocket Transport & SignalR Hub Integration](S40-WebSocket-SignalR.md) | ✅ Finalized | RFC 6455 WebSocket protocol and full-duplex transport for `Dext.Web.Hubs`.
 **S41** | [HTTP/2 Framing & gRPC Transport](S41-Http2-Framing.md) | 📝 Draft | HPACK compression, HTTP/2 stream multiplexing — foundation for gRPC (S02).
-**S42** | [Delphi Hub Client (SignalR-compatible)](S42-Delphi-Hub-Client.md) | 📝 Draft | Native Delphi client connection library for Dext Hubs.
+**S42** | [Delphi Hub Client (SignalR-compatible)](S42-Delphi-Hub-Client.md) | ✅ Finalized | Native Delphi client connection library for Dext Hubs.
 ---
 
 ## 🔍 Project Status & Roadmap
