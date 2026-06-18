@@ -216,6 +216,8 @@ type
 
     /// <summary>Sets the route parameters dictionary for the request.</summary>
     procedure SetRouteParams(const AParams: TRouteValueDictionary);
+    /// <summary>Returns the HTTP connection interface.</summary>
+    function GetConnection: IDextServerConnection;
     /// <summary>Returns the HTTP request interface.</summary>
     function GetRequest: IHttpRequest;
     /// <summary>Returns the HTTP response interface.</summary>
@@ -714,6 +716,7 @@ begin
   inherited;
 end;
 
+function TDextNativeHttpContext.GetConnection: IDextServerConnection; begin Result := FConnection; end;
 function TDextNativeHttpContext.GetItems: IDictionary<string, TValue>; begin Result := FItems; end;
 function TDextNativeHttpContext.GetRequest: IHttpRequest; begin Result := FRequest; end;
 function TDextNativeHttpContext.GetResponse: IHttpResponse; begin Result := FResponse; end;

@@ -159,6 +159,8 @@
         <DCCReference Include="..\..\Sources\Server\Dext.Server.Iocp.pas"/>
         <DCCReference Include="..\..\Sources\Server\Dext.Server.Epoll.pas"/>
         <DCCReference Include="..\..\Sources\Server\Dext.Server.Native.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.WebSocket.Protocol.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.WebSocket.Handshake.pas"/>
         <DCCReference Include="..\..\Sources\Web\Dext.Auth.Attributes.pas"/>
         <DCCReference Include="..\..\Sources\Web\Dext.Auth.BasicAuth.pas"/>
         <DCCReference Include="..\..\Sources\Web\Dext.Auth.Identity.pas"/>

@@ -21,6 +21,7 @@ uses
   Dext.Web.Hosting.Tests in 'Dext.Web.Hosting.Tests.pas',
   Dext.Web.Htmx.Tests in 'Dext.Web.Htmx.Tests.pas',
   Dext.Logging.Sinks.APM.Tests in 'Dext.Logging.Sinks.APM.Tests.pas',
+  Dext.WebSocket.Tests in 'Dext.WebSocket.Tests.pas',
   Dext.Web.Mocks in '..\Common\Dext.Web.Mocks.pas';
 
 begin
@@ -44,7 +45,8 @@ begin
         TDataApiConventionTests,
         TDataApiSerializationTests,
         THtmxResponseTests,
-        TAPMSinksTests
+        TAPMSinksTests,
+        TWebSocketTests
       ]));
   except
     on E: Exception do

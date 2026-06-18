@@ -39,7 +39,8 @@ uses
   Dext.Auth.Identity,
   Dext.Web.Results,
   Dext, // Para TDextServices
-  Dext.Json;
+  Dext.Json,
+  Dext.Server.Engine.Interfaces;
 
 type
   // -------------------------------------------------------------------------
@@ -160,6 +161,7 @@ type
       const AServices: IServiceProvider);
     destructor Destroy; override;
 
+    function GetConnection: IDextServerConnection;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
     procedure SetResponse(const AValue: IHttpResponse);
@@ -169,6 +171,7 @@ type
     procedure SetUser(const AValue: IClaimsPrincipal);
     function GetItems: IDictionary<string, TValue>;
     function GetSession: IStreamableSession;
+    property Connection: IDextServerConnection read GetConnection;
     property Request: IHttpRequest read GetRequest;
     property Response: IHttpResponse read GetResponse write SetResponse;
     property Services: IServiceProvider read GetServices write SetServices;
@@ -648,6 +651,11 @@ begin
   FServices := nil;
   FScope := nil; // Disposes scoped services for this request
   inherited;
+end;
+
+function TDextWebBrokerContext.GetConnection: IDextServerConnection;
+begin
+  Result := nil;
 end;
 
 function TDextWebBrokerContext.GetRequest: IHttpRequest;

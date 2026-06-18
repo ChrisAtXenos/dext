@@ -41,6 +41,16 @@ requires
   inet;
 
 contains
+  Dext.Server.Engine.Types in '..\..\Sources\Server\Dext.Server.Engine.Types.pas',
+  Dext.Server.Engine.Interfaces in '..\..\Sources\Server\Dext.Server.Engine.Interfaces.pas',
+  Dext.Server.HttpSys.Api in '..\..\Sources\Server\Dext.Server.HttpSys.Api.pas',
+  Dext.Server.HttpSys in '..\..\Sources\Server\Dext.Server.HttpSys.pas',
+  Dext.Server.Iocp.HttpParser in '..\..\Sources\Server\Dext.Server.Iocp.HttpParser.pas',
+  Dext.Server.Iocp in '..\..\Sources\Server\Dext.Server.Iocp.pas',
+  Dext.Server.Epoll in '..\..\Sources\Server\Dext.Server.Epoll.pas',
+  Dext.Server.Native in '..\..\Sources\Server\Dext.Server.Native.pas',
+  Dext.WebSocket.Protocol in '..\..\Sources\Server\Dext.WebSocket.Protocol.pas',
+  Dext.WebSocket.Handshake in '..\..\Sources\Server\Dext.WebSocket.Handshake.pas',
   Dext.Auth.Attributes in '..\..\Sources\Web\Dext.Auth.Attributes.pas',
   Dext.Auth.BasicAuth in '..\..\Sources\Web\Dext.Auth.BasicAuth.pas',
   Dext.Auth.Identity in '..\..\Sources\Web\Dext.Auth.Identity.pas',

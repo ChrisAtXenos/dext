@@ -204,6 +204,7 @@
         <DCCReference Include="Dext.Web.Hosting.Tests.pas"/>
         <DCCReference Include="Dext.Web.Htmx.Tests.pas"/>
         <DCCReference Include="Dext.Logging.Sinks.APM.Tests.pas"/>
+        <DCCReference Include="Dext.WebSocket.Tests.pas"/>
         <DCCReference Include="..\Common\Dext.Web.Mocks.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

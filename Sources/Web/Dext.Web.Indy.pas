@@ -56,7 +56,8 @@ uses
   Dext.Auth.Identity,
   Dext.Web.Indy.Types,
   Dext.Web.Results,
-  Dext.Json;
+  Dext.Json,
+  Dext.Server.Engine.Interfaces;
 
 type
   TIndyStreamMode = (ismNormal, ismBuffering, ismChunking);
@@ -166,6 +167,7 @@ type
       AResponseInfo: TIdHTTPResponseInfo; const AServices: IServiceProvider);
     destructor Destroy; override;
     procedure SetRouteParams(const AParams: TRouteValueDictionary);
+    function GetConnection: IDextServerConnection;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
     procedure SetResponse(const AValue: IHttpResponse);
@@ -982,6 +984,11 @@ end;
 procedure TDextIndyHttpContext.SetUser(const AValue: IClaimsPrincipal);
 begin
   FUser := AValue;
+end;
+
+function TDextIndyHttpContext.GetConnection: IDextServerConnection;
+begin
+  Result := nil;
 end;
 
 function TDextIndyHttpContext.GetItems: IDictionary<string, TValue>;

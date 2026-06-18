@@ -151,6 +151,16 @@
         <DCCReference Include="Dext.EF.Core.dcp"/>
         <DCCReference Include="RESTComponents.dcp"/>
         <DCCReference Include="inet.dcp"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.Engine.Types.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.Engine.Interfaces.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.HttpSys.Api.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.HttpSys.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.Iocp.HttpParser.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.Iocp.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.Epoll.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.Server.Native.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.WebSocket.Protocol.pas"/>
+        <DCCReference Include="..\..\Sources\Server\Dext.WebSocket.Handshake.pas"/>
         <DCCReference Include="..\..\Sources\Web\Dext.Auth.Attributes.pas"/>
         <DCCReference Include="..\..\Sources\Web\Dext.Auth.BasicAuth.pas"/>
         <DCCReference Include="..\..\Sources\Web\Dext.Auth.Identity.pas"/>

@@ -113,7 +113,7 @@ $TestsDCU = Join-Path $env:DEXT "Tests\Output\$($env:PRODUCT_VERSION)\$($env:PLA
 # We include External\DelphiAST sources because several internal tools and tests reference the units directly.
 $ExtAST = Join-Path $env:DEXT "External\DelphiAST\Source"
 $ExtParser = Join-Path $ExtAST "SimpleParser"
-$env:SEARCH_PATH = "$($env:OUTPUT_PATH);$FrameDCU;$FrameBin;$ExamplesDCU;$TestsDCU;$($env:DEXT)\Sources;$($env:DEXT)\Sources\Common;$($env:DEXT)\Sources\Web;$($env:DEXT)\Apps\CLI\Commands;$ExtAST;$ExtParser"
+$env:SEARCH_PATH = "$($env:OUTPUT_PATH);$FrameDCU;$FrameBin;$ExamplesDCU;$TestsDCU;$($env:DEXT)\Sources;$($env:DEXT)\Sources\Common;$($env:DEXT)\Sources\Web;$($env:DEXT)\Sources\Server;$($env:DEXT)\Apps\CLI\Commands;$ExtAST;$ExtParser"
 
 # 8. Create common directories
 @($env:COMMON_BPL_OUTPUT, $env:COMMON_DCP_OUTPUT, $env:OUTPUT_PATH) | ForEach-Object {

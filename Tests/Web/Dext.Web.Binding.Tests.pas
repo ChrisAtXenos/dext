@@ -21,7 +21,8 @@ uses
   Dext.Entity.Attributes,
   Dext.Testing,
   Dext.Web.Interfaces,
-  Dext.Web.ModelBinding;
+  Dext.Web.ModelBinding,
+  Dext.Server.Engine.Interfaces;
 
 type
   { Mocks }
@@ -51,6 +52,7 @@ type
     FRequest: IHttpRequest;
   public
     constructor Create(ARequest: IHttpRequest);
+    function GetConnection: IDextServerConnection;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
     procedure SetResponse(const AValue: IHttpResponse);
@@ -139,6 +141,7 @@ begin
   FRequest := ARequest;
 end;
 
+function TMockHttpContext.GetConnection: IDextServerConnection; begin Result := nil; end;
 function TMockHttpContext.GetItems: IDictionary<string, TValue>; begin Result := nil; end;
 function TMockHttpContext.GetSession: IStreamableSession; begin Result := nil; end;
 function TMockHttpContext.GetRequest: IHttpRequest; begin Result := FRequest; end;

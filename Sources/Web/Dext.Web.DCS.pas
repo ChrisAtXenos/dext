@@ -57,7 +57,8 @@ uses
   Dext.Configuration.Interfaces,
   Dext.Auth.Identity,
   Dext.Web.Results,
-  Dext.Json;
+  Dext.Json,
+  Dext.Server.Engine.Interfaces;
 {$ENDIF DEXT_ENABLE_DCS}
 
 {$IFDEF DEXT_ENABLE_DCS}
@@ -210,6 +211,7 @@ type
       const AServices: IServiceProvider);
     destructor Destroy; override;
 
+    function GetConnection: IDextServerConnection;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
     procedure SetResponse(const AValue: IHttpResponse);
@@ -767,6 +769,11 @@ end;
 procedure TDextDCSContext.SetUser(const AValue: IClaimsPrincipal);
 begin
   FUser := AValue;
+end;
+
+function TDextDCSContext.GetConnection: IDextServerConnection;
+begin
+  Result := nil;
 end;
 
 function TDextDCSContext.GetItems: IDictionary<string, TValue>;

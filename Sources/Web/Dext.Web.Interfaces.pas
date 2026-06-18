@@ -38,7 +38,8 @@ uses
   Dext.Auth.Identity,
   Dext.Configuration.Interfaces,
   Dext.Threading.CancellationToken,
-  Dext.Server.Engine.Types;
+  Dext.Server.Engine.Types,
+  Dext.Server.Engine.Interfaces;
 
 {$M+}
 type
@@ -334,6 +335,7 @@ type
   /// </summary>
   IHttpContext = interface
     ['{E5F8D2C1-9A4E-4B7D-8C3B-6F5A1D2E8C9F}']
+     function GetConnection: IDextServerConnection;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
     procedure SetResponse(const AValue: IHttpResponse);
@@ -344,6 +346,8 @@ type
     function GetItems: IDictionary<string, TValue>;
     function GetSession: IStreamableSession;
     
+    /// <summary>Access to the underlying network connection.</summary>
+    property Connection: IDextServerConnection read GetConnection;
     /// <summary>Access to the incoming request data.</summary>
     property Request: IHttpRequest read GetRequest;
     /// <summary>Access to the outgoing response.</summary>

@@ -15,7 +15,8 @@ uses
   Dext.Mocks,
   Dext.Mocks.Matching,
   Dext.Web.Results,
-  Dext.Json;
+  Dext.Json,
+  Dext.Server.Engine.Interfaces;
 
 type
   TMockHttpRequest = class
@@ -98,6 +99,7 @@ type
   public
     constructor Create(ARequest: IHttpRequest; AResponse: IHttpResponse; AServices: IServiceProvider);
 
+    function GetConnection: IDextServerConnection;
     function GetItems: IDictionary<string, TValue>;
     function GetRequest: IHttpRequest;
     function GetResponse: IHttpResponse;
@@ -110,6 +112,7 @@ type
     procedure SetUser(const AValue: IClaimsPrincipal);
     property Items: IDictionary<string, TValue> read GetItems;
 
+    property Connection: IDextServerConnection read GetConnection;
     property Request: IHttpRequest read GetRequest;
     property Response: IHttpResponse read GetResponse write SetResponse;
     property Services: IServiceProvider read GetServices write SetServices;
@@ -339,6 +342,11 @@ begin
   FResponse := AResponse;
   FServices := AServices;
   FItems := TCollections.CreateDictionary<string, TValue>;
+end;
+
+function TStatefulMockHttpContext.GetConnection: IDextServerConnection;
+begin
+  Result := nil;
 end;
 
 function TStatefulMockHttpContext.GetRequest: IHttpRequest;
