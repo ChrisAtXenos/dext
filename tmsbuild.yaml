@@ -12,49 +12,39 @@ application:
   name: Dext Framework
   url: https://github.com/cesarliws/dext
 
-# Frameworks define which IDEs and platforms each group of packages supports.
+# Frameworks are just a group of supported IDEs and platforms. You can define as much as you want with any name you desire, and then combine them to specify what platforms and IDEs the packages support.
 supported frameworks:
-  # Packages that work from XE2 onwards
   rtl:
     ide since: delphixe2
     platforms:
       - win32intel
       - win64intel
       - linux64
-  # VCL-dependent packages (Win32/Win64 only)
+      - android64
   vcl:
     ide since: delphixe2
     platforms:
       - win32intel
       - win64intel
-  # Packages that require XE7+ (e.g. System.Net.HttpClient)
-  rtl1:
-    ide since: delphixe7
-    platforms:
-      - win32intel
-      - win64intel
-      - linux64
 
-# List of packages in the library.
+# List of packages in the library. Each package must have a unique name, and must be listed only once.
 packages:
-  - Dext.AST.Core:       [runtime, rtl]
-  - Dext.Core:           [runtime, rtl]
-  - Dext.UI.Core:        [runtime, vcl]
-  - Dext.Events.Core:    [runtime, rtl]
-  - Dext.EF.Core:        [runtime, rtl]
-  - Dext.Net.Core:       [runtime, rtl1]
-  - Dext.Web.Core:       [runtime, rtl]
-  - Dext.Web.Hubs.Core:  [runtime, rtl]
-  - Dext.EF.Components:  [runtime, rtl]
-  - Dext.AI.Core:        [runtime, rtl1]
-  - Dext.Hosting.Core:   [runtime, rtl]
-  - Dext.EF.Design:      [design,  vcl]
-  - Dext.Testing.Core:   [runtime, vcl]
-  - Dext.Testing.Design: [design,  vcl]
+  - Dext.AST.Core: [runtime, rtl]
+  - Dext.Core: [runtime, rtl]
+  - Dext.UI.Core: [runtime, vcl]
+  - Dext.Events.Core: [runtime, rtl]
+  - Dext.EF.Core: [runtime, rtl]
+  - Dext.Net.Core: [runtime, rtl]
+  - Dext.Web.Core: [runtime, rtl]
+  - Dext.Web.Hubs.Core: [runtime, rtl]
+  - Dext.EF.Components: [runtime, rtl]
+  - Dext.AI.Core: [runtime, rtl]
+  - Dext.Hosting.Core: [runtime, rtl]
+  - Dext.EF.Design: [design, vcl]
+  - Dext.Testing.Core: [runtime, vcl]
+  - Dext.Testing.Design: [design, vcl]
 
-# Package folder locations per IDE version.
-# LibSuffix is managed directly in .dpk/{$LIBSUFFIX} and .dproj/<DllSuffix>
-# by Scripts/sync-legacy-packages.ps1 - do NOT set "add libsuffix: true" here.
+# The settings in the this section are only needed if the packages don't follow smartsetup conventions.
 package options:
   package folders:
     delphixe2:     Packages\dxe2
@@ -73,8 +63,10 @@ package options:
     delphi12:      Packages\d12
     delphi13:      Packages\d13
 
+  add libsuffix: true
+
 paths:
-  extra library paths:
+  extra library paths: 
     - Sources\Common
-  extra browsing paths:
-    - Sources\Common
+  extra browsing paths: 
+    - Sources\Common        

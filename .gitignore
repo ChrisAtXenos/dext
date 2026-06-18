@@ -34,3 +34,7 @@ test-results.xml
 /Sources/*.dext
 /scratch/**
 history.json
+*.so
+*.o
+*.dcp
+*.hpp
