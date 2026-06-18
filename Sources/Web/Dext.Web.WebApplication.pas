@@ -34,7 +34,8 @@ uses
   Dext.Json,
   Dext.Logging,
   Dext.Web.ControllerScanner,
-  Dext.Web.Interfaces;
+  Dext.Web.Interfaces,
+  Dext.Server.Engine.Types;
 
 type
   /// <summary>
@@ -80,6 +81,9 @@ type
     function UseStartup(Startup: IStartup): IWebApplication; // ? Non-generic
     /// <summary>Allows swapping the server factory (e.g., Indy for CrossSockets).</summary>
     procedure UseServerFactory(const AFactory: TServerFactory);
+    /// <summary>Configures the web application to use the native server engine (auto-detected).</summary>
+    procedure UseNativeServer; overload;
+    procedure UseNativeServer(const AOptions: TServerEngineOptions); overload;
     /// <summary>Scans the project for Controllers and registers their routes automatically.</summary>
     function MapControllers: IWebApplication;
     
@@ -113,6 +117,8 @@ uses
   Dext.Logging.Global,
   Dext.Hosting.BackgroundService,
   Dext.Web.Builder,
+  Dext.Server.Engine.Interfaces,
+  Dext.Server.Native,
   Dext.Web.Indy.Server,
   Dext.Web.Indy.SSL.Interfaces,
   Dext.Web.Indy.SSL.OpenSSL,
@@ -637,6 +643,19 @@ end;
 procedure TWebApplication.UseServerFactory(const AFactory: TServerFactory);
 begin
   FServerFactory := AFactory;
+end;
+
+procedure TWebApplication.UseNativeServer;
+begin
+  UseNativeServer(TServerEngineOptions.Default);
+end;
+
+procedure TWebApplication.UseNativeServer(const AOptions: TServerEngineOptions);
+begin
+  FServerFactory := function(Port: Integer; Pipeline: TRequestDelegate; Services: IServiceProvider): IWebHost
+    begin
+      Result := TDextNativeWebServer.Create(Port, Pipeline, Services, AOptions);
+    end;
 end;
 
 end.

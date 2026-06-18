@@ -37,7 +37,8 @@ uses
   Dext.DI.Interfaces,
   Dext.Auth.Identity,
   Dext.Configuration.Interfaces,
-  Dext.Threading.CancellationToken;
+  Dext.Threading.CancellationToken,
+  Dext.Server.Engine.Types;
 
 {$M+}
 type
@@ -453,6 +454,8 @@ type
     function GetServiceProvider: IServiceProvider;
     function BuildServices: IServiceProvider; // ? Automation
     procedure UseServerFactory(const AFactory: TServerFactory);
+    procedure UseNativeServer; overload;
+    procedure UseNativeServer(const AOptions: TServerEngineOptions); overload;
     procedure Run; overload;
     procedure Run(Port: Integer); overload;
     procedure Start; overload;

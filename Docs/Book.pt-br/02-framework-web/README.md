@@ -10,6 +10,7 @@ O Dext oferece dois estilos para construir APIs web: **Minimal APIs** e **Contro
 4. [Rotas](rotas.md) - Padrões de URL & parâmetros
 5. [Middleware](middleware.md) - Pipeline de requisições
 6. [View Engines & SSR](view-engines.md) - Renderização de HTML no Servidor
+7. [Servidor Nativo](servidor-nativo.md) - Motores de alta performance http.sys & epoll
 
 ## Comparação Rápida
 

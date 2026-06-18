@@ -240,7 +240,8 @@ O Dext foi desenhado para alavancar recursos modernos da linguagem Object Pascal
 
 ### 3.5 Hosting
 - **IWebHost / IWebHostBuilder** — Abstrações de hospedagem. Suporte a **Portas Dinâmicas (Porta 0)** com atribuição automática pelo SO.
-- **Server Adapters** — Indy (padrão, OpenSSL/Taurus SSL), **WebBroker Adapter** (ISAPI/CGI para IIS/Apache), **DCS Adapter** (Delphi-Cross-Socket, non-blocking).
+- **Server Adapters** — Indy (padrão, OpenSSL/Taurus SSL), **WebBroker Adapter** (ISAPI/CGI para IIS/Apache), **DCS Adapter** (Delphi-Cross-Socket, non-blocking) e **Native Server Engine** (kernel-mode `http.sys` no Windows e sockets `epoll` não-bloqueantes no Linux).
+- **Parser HTTP Zero-Allocation** (`TDextIocpHttpParser`) — Parsing incremental dos cabeçalhos da requisição HTTP/1.1 diretamente dos buffers de rede sem alocações intermediárias na heap.
 - **IHostedService** — Tarefas de background com `StartAsync`/`StopAsync`. `TBackgroundService` com `Execute(ICancellationToken)`.
 - **IHostApplicationLifetime** — Tokens para `ApplicationStarted`, `ApplicationStopping`, `ApplicationStopped`.
 

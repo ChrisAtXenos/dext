@@ -346,3 +346,59 @@ The DCS server automatically manages optimal I/O threads based on your CPU count
 
 ---
 
+## Native Server Engine (http.sys / epoll)
+
+Units: `Dext.Server.HttpSys`, `Dext.Server.Epoll`, `Dext.Server.Native`
+
+The Native Server Engine is a zero-dependency high-performance HTTP server engine driver. Unlike DCS (which is a third-party library) or Indy (blocking), the Native Server Engine maps directly to OS-level kernel/system features:
+- **Windows**: Kernel-mode HTTP Server API (`http.sys`) with asynchronous completion ports.
+- **Linux**: Non-blocking raw TCP sockets driven by the Linux `epoll` system calls.
+
+### Architecture & Key Features
+- **Zero-Allocation HTTP Parsing**: Uses `TDextIocpHttpParser` for lightning-fast parsing of HTTP/1.1 headers without intermediate heap allocations.
+- **Kernel-level Caching (Windows)**: `http.sys` caches static resources and maps requests directly inside the Windows kernel, maximizing throughput.
+- **No Third-Party Dependency**: Clean implementation without external DLLs (no OpenSSL DLLs required on Windows for HTTPS, as `http.sys` utilizes SChannel).
+
+### Native Bootstrap
+
+To configure Dext to use the Native engine, cast the built host to `IWebApplication` and call `UseNativeServer`:
+
+```pascal
+uses
+  Dext.WebHost,
+  Dext.Web;
+
+var
+  Builder: IWebHostBuilder;
+  Host: IWebHost;
+begin
+  Builder := TDextWebHost.CreateDefaultBuilder;
+  Builder.Configure(
+    procedure(App: IApplicationBuilder)
+    begin
+      App.MapGet('/hello',
+        procedure(Context: IHttpContext)
+        begin
+          Context.Response.Write('Hello from Native OS Engine!');
+        end);
+    end);
+
+  Host := Builder.Build;
+
+  // Activate the high-performance native server engine
+  (Host as IWebApplication).UseNativeServer;
+
+  Host.Run;
+end.
+```
+
+### Windows http.sys Privilege Warnings
+When binding to `0.0.0.0` or empty interfaces under `http.sys`, Dext registers `http://+:port/` as a strong wildcard. 
+- Running this requires **Administrator privileges** or a pre-configured reservation.
+- If run without elevation, you will get: `❌ Error: HttpAddUrlToUrlGroup failed to register ... with error code: 5` (Access Denied).
+- To reserve the URL prefix for normal users:
+  ```cmd
+  netsh http add urlacl url=http://+:5000/ user=Everyone
+  ```
+
+
