@@ -158,6 +158,7 @@
         <DCCReference Include="..\..\Sources\Hubs\Dext.Web.Hubs.Protocol.Json.pas"/>
         <DCCReference Include="..\..\Sources\Hubs\Dext.Web.Hubs.Types.pas"/>
         <DCCReference Include="..\..\Sources\Hubs\Transports\Dext.Web.Hubs.Transport.SSE.pas"/>
+        <DCCReference Include="..\..\Sources\Hubs\Transports\Dext.Web.Hubs.Transport.WebSocket.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

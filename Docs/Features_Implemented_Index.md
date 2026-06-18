@@ -250,8 +250,8 @@ Dext was designed to leverage modern Object Pascal features while maintaining a 
 - **Rate Limiting** — Fixed Window, Sliding Window, Token Bucket, Concurrency Limiter.
 
 ### 3.7 Real-time & Caching
-- **SSE (Server-Sent Events)** — Unidirectional event streaming.
-- **SSE-based Messaging (SignalR roadmap)** — Basic SSE event broadcast. High-performance SignalR-equivalent bi-directional WebSockets/Hubs are planned.
+- **SSE (Server-Sent Events)** — Unidirectional event streaming fallback.
+- **WebSockets & SignalR Hubs** — Full RFC 6455 native WebSocket transport with client-to-server masking, handshake handling, and complete integration with `Dext.Web.Hubs` for real-time bi-directional messaging, group dispatching, and ping/pong keepalives. Natively upgrades HTTP connections using opaque mode (`HTTP_SEND_RESPONSE_FLAG_OPAQUE`) on HTTP.sys.
 - **Caching** — In-Memory. (A full high-performance native Redis client is planned and under active development, currently ~80% complete). Detailed **Health Checks** (expandable roadmap under development).
 
 ### 3.8 API Documentation & Scaffolding

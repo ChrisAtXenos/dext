@@ -40,8 +40,9 @@ ID | Title | Status | Goal
 **S36** | [Native Delphi IDE Test Runner (VCL Premium)](S36-IDE-Test-Runner.md) | ✅ Finalized | Native IDE Test Runner expert with decoupled DUnitX, DUnit, DUnit2, and TestInsight integrations and rich reporting.
 **S37** | [HTTP Client Engine Abstraction & Indy Fallback](S37-Http-Engine-Indy-Fallback.md) | ✅ Completed | Abstraction of HTTP Engine and TIdHTTP fallback for older Delphi IDEs.
 **S39** | [Native High-Performance Server Engine](S39-Native-Server-Engine.md) | ✅ Finalized | Zero-dependency native server engines: `http.sys` (Windows), IOCP sockets (Windows), `epoll` (Linux).
-**S40** | [WebSocket Transport & SignalR Hub Integration](S40-WebSocket-SignalR.md) | 📝 Draft | RFC 6455 WebSocket protocol and full-duplex transport for `Dext.Web.Hubs`.
+**S40** | [WebSocket Transport & SignalR Hub Integration](S40-WebSocket-SignalR.md) | ✅ Finalized | RFC 6455 WebSocket protocol and full-duplex transport for `Dext.Web.Hubs`.
 **S41** | [HTTP/2 Framing & gRPC Transport](S41-Http2-Framing.md) | 📝 Draft | HPACK compression, HTTP/2 stream multiplexing — foundation for gRPC (S02).
+**S42** | [Delphi Hub Client (SignalR-compatible)](S42-Delphi-Hub-Client.md) | 📝 Draft | Native Delphi client connection library for Dext Hubs.
 ---
 
 ## 🔍 Project Status & Roadmap

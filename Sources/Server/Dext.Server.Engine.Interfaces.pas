@@ -124,6 +124,9 @@ type
     /// <param name="AStatusCode">The WebSocket status code (default: 1000 - Normal Close).</param>
     /// <param name="AReason">Optional descriptive reason string.</param>
     procedure Close(AStatusCode: Word = 1000; const AReason: string = '');
+    /// <summary>Reads raw data from the WebSocket connection (blocking).</summary>
+    /// <returns>Number of bytes read, 0 on disconnect, or -1 on error/timeout.</returns>
+    function Receive(var ABuffer: TBytes; AOffset, ACount: Integer): Integer;
     
     property ConnectionId: UInt64 read GetConnectionId;
   end;

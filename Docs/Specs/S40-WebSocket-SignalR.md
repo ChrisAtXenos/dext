@@ -1,8 +1,9 @@
 # 📑 S40: WebSocket Transport & SignalR Hub Integration
 
-**Status:** 📝 Draft
+**Status:** ✅ Implemented
 **Owner:** Cesar Romero & Engineering Team
 **Created:** 2026-06-17
+**Completed:** 2026-06-18
 **Dependencies:** S39 (Native Server Engine — for `IDextWebSocketConnection` and `SupportsUpgrade`)
 **Enables:** S02 (gRPC streaming via WebSocket fallback), Real-time Dext.Hubs
 

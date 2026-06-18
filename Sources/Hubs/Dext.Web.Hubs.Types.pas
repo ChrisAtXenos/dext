@@ -155,8 +155,7 @@ begin
   Result.ConnectionId := AConnectionId;
   Result.ConnectionToken := AConnectionId; // For now, same as ConnectionId
   Result.NegotiateVersion := 1;
-  // Default: SSE and LongPolling available, WebSockets not yet
-  Result.AvailableTransports := [TTransportInfo.SSE, TTransportInfo.LongPolling];
+  Result.AvailableTransports := [TTransportInfo.WebSockets, TTransportInfo.SSE, TTransportInfo.LongPolling];
 end;
 
 function TNegotiateResponse.ToJson: string;
@@ -268,7 +267,7 @@ begin
   Result.ClientTimeoutInterval := 30;
   Result.KeepAliveInterval := 15;
   Result.MaximumReceiveMessageSize := 32 * 1024; // 32KB
-  Result.EnabledTransports := ['ServerSentEvents', 'LongPolling'];
+  Result.EnabledTransports := ['WebSockets', 'ServerSentEvents', 'LongPolling'];
 end;
 
 end.

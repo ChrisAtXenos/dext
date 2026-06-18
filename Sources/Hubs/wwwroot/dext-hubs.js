@@ -22,7 +22,7 @@ class DextHubConnection {
   constructor(hubUrl, options = {}) {
     this.hubUrl = hubUrl;
     this.options = {
-      transport: 'serverSentEvents', // or 'longPolling'
+      transport: typeof WebSocket !== 'undefined' ? 'webSockets' : 'serverSentEvents', // or 'serverSentEvents', 'longPolling'
       reconnect: true,
       reconnectDelay: 3000,
       ...options
@@ -30,6 +30,7 @@ class DextHubConnection {
     
     this.connectionId = null;
     this.eventSource = null;
+    this.socket = null;
     this.handlers = new Map();
     this.state = 'disconnected'; // disconnected, connecting, connected, reconnecting
     this.invocationId = 0;
@@ -84,7 +85,9 @@ class DextHubConnection {
       this.connectionId = negotiateResponse.connectionId;
       
       // Step 2: Connect transport
-      if (this.options.transport === 'serverSentEvents') {
+      if (this.options.transport === 'webSockets') {
+        await this._connectWebSocket();
+      } else if (this.options.transport === 'serverSentEvents') {
         await this._connectSSE();
       } else {
         await this._connectLongPolling();
@@ -104,6 +107,11 @@ class DextHubConnection {
    * @returns {Promise<void>}
    */
   async stop() {
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+    
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
@@ -133,6 +141,18 @@ class DextHubConnection {
       target: methodName,
       arguments: args
     };
+    
+    if (this.options.transport === 'webSockets' && this.socket) {
+      return new Promise((resolve, reject) => {
+        this.pendingInvocations.set(invocationId, { resolve, reject });
+        try {
+          this.socket.send(JSON.stringify(request) + '\x1e');
+        } catch (error) {
+          this.pendingInvocations.delete(invocationId);
+          reject(error);
+        }
+      });
+    }
     
     return new Promise(async (resolve, reject) => {
       this.pendingInvocations.set(invocationId, { resolve, reject });
@@ -178,13 +198,17 @@ class DextHubConnection {
       arguments: args
     };
     
-    await fetch(`${this.hubUrl}?id=${this.connectionId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(request)
-    });
+    if (this.options.transport === 'webSockets' && this.socket) {
+      this.socket.send(JSON.stringify(request) + '\x1e');
+    } else {
+      await fetch(`${this.hubUrl}?id=${this.connectionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(request)
+      });
+    }
   }
   
   /**
@@ -236,6 +260,60 @@ class DextHubConnection {
       // Handle default message event (Hub invocations)
       this.eventSource.onmessage = (event) => {
         this._handleMessage(event.data);
+      };
+    });
+  }
+  
+  /**
+   * Connect using WebSockets
+   * @private
+   */
+  async _connectWebSocket() {
+    return new Promise((resolve, reject) => {
+      let wsUrl;
+      if (this.hubUrl.startsWith('http://') || this.hubUrl.startsWith('https://')) {
+        wsUrl = this.hubUrl.replace(/^http/, 'ws');
+      } else {
+        const loc = window.location;
+        const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = loc.host;
+        const path = this.hubUrl.startsWith('/') ? this.hubUrl : '/' + this.hubUrl;
+        wsUrl = `${protocol}//${host}${path}`;
+      }
+      
+      wsUrl += `?id=${this.connectionId}`;
+      
+      this.socket = new WebSocket(wsUrl);
+      
+      this.socket.onopen = () => {
+        resolve();
+      };
+      
+      this.socket.onerror = (error) => {
+        if (this.state === 'connecting') {
+          reject(new Error('WebSocket connection failed'));
+        } else if (this.options.reconnect && this.state === 'connected') {
+          this._handleReconnect();
+        }
+      };
+      
+      this.socket.onclose = () => {
+        if (this.state === 'connected') {
+          if (this.options.reconnect) {
+            this._handleReconnect();
+          } else {
+            this.stop();
+          }
+        }
+      };
+      
+      this.socket.onmessage = (event) => {
+        const records = event.data.split('\x1e');
+        for (const record of records) {
+          if (record) {
+            this._handleMessage(record);
+          }
+        }
       };
     });
   }
@@ -323,6 +401,11 @@ class DextHubConnection {
     
     this.state = 'reconnecting';
     console.log('Attempting to reconnect...');
+    
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
     
     if (this.eventSource) {
       this.eventSource.close();

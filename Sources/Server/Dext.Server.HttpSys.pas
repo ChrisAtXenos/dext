@@ -167,6 +167,23 @@ type
     procedure Release(AResponse: TDextHttpSysResponse);
   end;
 
+  TDextHttpSysWebSocketConnection = class(TInterfacedObject, IDextWebSocketConnection)
+  private
+    FConnectionId: UInt64;
+    FReqQueue: THandle;
+    FRequestId: HTTP_REQUEST_ID;
+    FClosed: Boolean;
+  public
+    constructor Create(AConnectionId: UInt64; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID; const ASecWebSocketKey: string);
+    destructor Destroy; override;
+    
+    function GetConnectionId: UInt64;
+    procedure SendText(const AText: string);
+    procedure SendBinary(const AData: TBytes);
+    procedure Close(AStatusCode: Word = 1000; const AReason: string = '');
+    function Receive(var ABuffer: TBytes; AOffset, ACount: Integer): Integer;
+  end;
+
   /// <summary>
   ///   Raw connection implementation wrapper for Windows http.sys.
   /// </summary>
@@ -177,10 +194,13 @@ type
     FLocalPort: Word;
     FRemotePort: Word;
     FRemoteAddress: string;
+    FReqQueue: THandle;
+    FRequestId: HTTP_REQUEST_ID;
+    FSecWebSocketKey: string;
   public
     /// <summary>Initializes a new http.sys connection wrapper.</summary>
     /// <param name="ARequest">The native HTTP_REQUEST structure of the connection.</param>
-    constructor Create(const ARequest: HTTP_REQUEST);
+    constructor Create(const ARequest: HTTP_REQUEST; AReqQueue: THandle);
     
     /// <summary>Returns the unique connection identifier.</summary>
     function GetConnectionId: UInt64;
@@ -288,7 +308,9 @@ type
 implementation
 
 uses
-  System.SysConst;
+  System.SysConst,
+  Dext.WebSocket.Handshake,
+  Dext.WebSocket.Protocol;
 
 { TDextHttpSysBufferPool }
 
@@ -897,9 +919,214 @@ begin
   end;
 end;
 
+{ TDextHttpSysWebSocketConnection }
+
+constructor TDextHttpSysWebSocketConnection.Create(AConnectionId: UInt64; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID; const ASecWebSocketKey: string);
+var
+  Response: HTTP_RESPONSE;
+  AcceptKey: string;
+  AcceptKeyAnsi: AnsiString;
+  UpgradeAnsi: AnsiString;
+  ConnectionAnsi: AnsiString;
+  SecWebSocketAcceptNameAnsi: AnsiString;
+  UnknownHeader: HTTP_UNKNOWN_HEADER;
+  BytesSent: ULONG;
+  Ret: ULONG;
+  ReasonStrAnsi: AnsiString;
+begin
+  inherited Create;
+  FConnectionId := AConnectionId;
+  FReqQueue := AReqQueue;
+  FRequestId := ARequestId;
+  FClosed := False;
+
+  if ASecWebSocketKey <> '' then
+  begin
+    AcceptKey := TWebSocketHandshake.ComputeAcceptKey(ASecWebSocketKey);
+    AcceptKeyAnsi := AnsiString(AcceptKey);
+    UpgradeAnsi := 'websocket';
+    ConnectionAnsi := 'Upgrade';
+    SecWebSocketAcceptNameAnsi := 'Sec-WebSocket-Accept';
+    ReasonStrAnsi := 'Switching Protocols';
+
+    FillChar(Response, SizeOf(Response), 0);
+    Response.StatusCode := 101;
+    Response.ReasonLength := Length(ReasonStrAnsi);
+    Response.pReason := PAnsiChar(ReasonStrAnsi);
+    Response.Version.MajorVersion := 1;
+    Response.Version.MinorVersion := 1;
+
+    // Set known header 'Upgrade' (index 7)
+    Response.Headers.KnownHeaders[7].pRawValue := PAnsiChar(UpgradeAnsi);
+    Response.Headers.KnownHeaders[7].RawValueLength := Length(UpgradeAnsi);
+
+    // Set known header 'Connection' (index 1)
+    Response.Headers.KnownHeaders[1].pRawValue := PAnsiChar(ConnectionAnsi);
+    Response.Headers.KnownHeaders[1].RawValueLength := Length(ConnectionAnsi);
+
+    // Set unknown header 'Sec-WebSocket-Accept'
+    UnknownHeader.NameLength := Length(SecWebSocketAcceptNameAnsi);
+    UnknownHeader.RawValueLength := Length(AcceptKeyAnsi);
+    UnknownHeader.pName := PAnsiChar(SecWebSocketAcceptNameAnsi);
+    UnknownHeader.pRawValue := PAnsiChar(AcceptKeyAnsi);
+
+    Response.Headers.UnknownHeaderCount := 1;
+    Response.Headers.pUnknownHeaders := @UnknownHeader;
+
+    Ret := HttpSendHttpResponse(
+      FReqQueue,
+      FRequestId,
+      HTTP_SEND_RESPONSE_FLAG_OPAQUE,
+      @Response,
+      nil,
+      BytesSent,
+      nil,
+      0,
+      nil,
+      nil
+    );
+    if Ret <> ERROR_SUCCESS then
+      raise EOSError.Create('HttpSendHttpResponse (Opaque Upgrade) failed with error: ' + IntToStr(Ret));
+  end;
+end;
+
+destructor TDextHttpSysWebSocketConnection.Destroy;
+begin
+  Close(1000);
+  inherited;
+end;
+
+function TDextHttpSysWebSocketConnection.GetConnectionId: UInt64;
+begin
+  Result := FConnectionId;
+end;
+
+procedure TDextHttpSysWebSocketConnection.SendText(const AText: string);
+var
+  FrameBytes: TBytes;
+  Chunk: HTTP_DATA_CHUNK_INMEMORY;
+  BytesSent: ULONG;
+  Ret: ULONG;
+begin
+  if FClosed then Exit;
+  FrameBytes := TWebSocketFrameCodec.EncodeText(AText);
+  if Length(FrameBytes) = 0 then Exit;
+
+  FillChar(Chunk, SizeOf(Chunk), 0);
+  Chunk.DataChunkType := hctFromMemory;
+  Chunk.pBuffer := @FrameBytes[0];
+  Chunk.BufferLength := Length(FrameBytes);
+
+  Ret := HttpSendResponseEntityBody(
+    FReqQueue,
+    FRequestId,
+    HTTP_SEND_RESPONSE_FLAG_MORE_DATA,
+    1,
+    @Chunk,
+    BytesSent,
+    nil,
+    nil,
+    nil,
+    nil
+  );
+  if Ret <> ERROR_SUCCESS then
+    raise EOSError.Create('HttpSendResponseEntityBody failed with error: ' + IntToStr(Ret));
+end;
+
+procedure TDextHttpSysWebSocketConnection.SendBinary(const AData: TBytes);
+var
+  FrameBytes: TBytes;
+  Chunk: HTTP_DATA_CHUNK_INMEMORY;
+  BytesSent: ULONG;
+  Ret: ULONG;
+begin
+  if FClosed then Exit;
+  FrameBytes := TWebSocketFrameCodec.EncodeBinary(AData);
+  if Length(FrameBytes) = 0 then Exit;
+
+  FillChar(Chunk, SizeOf(Chunk), 0);
+  Chunk.DataChunkType := hctFromMemory;
+  Chunk.pBuffer := @FrameBytes[0];
+  Chunk.BufferLength := Length(FrameBytes);
+
+  Ret := HttpSendResponseEntityBody(
+    FReqQueue,
+    FRequestId,
+    HTTP_SEND_RESPONSE_FLAG_MORE_DATA,
+    1,
+    @Chunk,
+    BytesSent,
+    nil,
+    nil,
+    nil,
+    nil
+  );
+  if Ret <> ERROR_SUCCESS then
+    raise EOSError.Create('HttpSendResponseEntityBody failed with error: ' + IntToStr(Ret));
+end;
+
+procedure TDextHttpSysWebSocketConnection.Close(AStatusCode: Word; const AReason: string);
+var
+  FrameBytes: TBytes;
+  Chunk: HTTP_DATA_CHUNK_INMEMORY;
+  BytesSent: ULONG;
+begin
+  if FClosed then Exit;
+  FClosed := True;
+
+  FrameBytes := TWebSocketFrameCodec.EncodeClose(AStatusCode, AReason);
+  if Length(FrameBytes) > 0 then
+  begin
+    FillChar(Chunk, SizeOf(Chunk), 0);
+    Chunk.DataChunkType := hctFromMemory;
+    Chunk.pBuffer := @FrameBytes[0];
+    Chunk.BufferLength := Length(FrameBytes);
+
+    HttpSendResponseEntityBody(
+      FReqQueue,
+      FRequestId,
+      HTTP_SEND_RESPONSE_FLAG_DISCONNECT,
+      1,
+      @Chunk,
+      BytesSent,
+      nil,
+      nil,
+      nil,
+      nil
+    );
+  end;
+end;
+
+function TDextHttpSysWebSocketConnection.Receive(var ABuffer: TBytes; AOffset, ACount: Integer): Integer;
+var
+  BytesReceived: ULONG;
+  Ret: ULONG;
+begin
+  if FClosed then Exit(0);
+  
+  BytesReceived := 0;
+  Ret := HttpReceiveRequestEntityBody(
+    FReqQueue,
+    FRequestId,
+    0,
+    @ABuffer[AOffset],
+    ACount,
+    BytesReceived,
+    nil
+  );
+  if Ret = ERROR_SUCCESS then
+    Result := BytesReceived
+  else if Ret = ERROR_HANDLE_EOF then
+    Result := 0
+  else
+    Result := -1;
+end;
+
 { TDextHttpSysConnection }
 
-constructor TDextHttpSysConnection.Create(const ARequest: HTTP_REQUEST);
+constructor TDextHttpSysConnection.Create(const ARequest: HTTP_REQUEST; AReqQueue: THandle);
+var
+  I: Integer;
 begin
   inherited Create;
   FConnectionId := ARequest.ConnectionId;
@@ -907,6 +1134,21 @@ begin
   FLocalPort := 80;
   FRemotePort := 0;
   FRemoteAddress := '';
+  FReqQueue := AReqQueue;
+  FRequestId := ARequest.RequestId;
+
+  FSecWebSocketKey := '';
+  if (ARequest.Headers.UnknownHeaderCount > 0) and (ARequest.Headers.pUnknownHeaders <> nil) then
+  begin
+    for I := 0 to ARequest.Headers.UnknownHeaderCount - 1 do
+    begin
+      if SameText(string(AnsiString(PHTTP_UNKNOWN_HEADER_ARRAY(ARequest.Headers.pUnknownHeaders)^[I].pName)), 'Sec-WebSocket-Key') then
+      begin
+        FSecWebSocketKey := string(AnsiString(PHTTP_UNKNOWN_HEADER_ARRAY(ARequest.Headers.pUnknownHeaders)^[I].pRawValue));
+        Break;
+      end;
+    end;
+  end;
 end;
 
 procedure TDextHttpSysConnection.Close;
@@ -941,12 +1183,12 @@ end;
 
 function TDextHttpSysConnection.SupportsUpgrade: Boolean;
 begin
-  Result := False; // Phase 1 doesn't implement upgrade yet
+  Result := FSecWebSocketKey <> '';
 end;
 
 function TDextHttpSysConnection.UpgradeToWebSocket: IDextWebSocketConnection;
 begin
-  Result := nil;
+  Result := TDextHttpSysWebSocketConnection.Create(FConnectionId, FReqQueue, FRequestId, FSecWebSocketKey);
 end;
 
 { TDextHttpSysRequestPool }
@@ -1146,7 +1388,7 @@ begin
       TInterlocked.Increment(FEngine.FActiveConnections);
 
       // Create Request/Response abstractions using pools
-      Connection := TDextHttpSysConnection.Create(Request^);
+      Connection := TDextHttpSysConnection.Create(Request^, FReqQueue);
       RawRequest := FEngine.FRequestPool.Acquire(FEngine, Request);
       RawResponse := FEngine.FResponsePool.Acquire(FEngine, FReqQueue, Request.RequestId);
 

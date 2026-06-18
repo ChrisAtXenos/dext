@@ -85,21 +85,28 @@ App.Builder
 
 ## JavaScript Client (Browser)
 
+Dext includes a lightweight native JS client (`dext-hubs.js`) supporting WebSockets (`webSockets`) and Server-Sent Events (`serverSentEvents`):
+
 ```javascript
-const connection = new signalR.HubConnectionBuilder()
-  .withUrl("/hubs/notifications")
-  .build();
+import { DextHubConnection } from './dext-hubs.js';
+
+const connection = new DextHubConnection('/hubs/notifications', {
+  transport: 'webSockets' // 'webSockets' (default) or 'serverSentEvents'
+});
 
 // Listen for server push
-connection.on("ReceiveNotification", (msg) => {
-  console.log("Notification:", msg);
+connection.on('ReceiveNotification', (msg) => {
+  console.log('Notification:', msg);
 });
 
-// Start and invoke server method
-connection.start().then(() => {
-  connection.invoke("SendGlobal", "Hello!");
-});
+// Start connection
+await connection.start();
+
+// Invoke server method
+await connection.invoke('SendGlobal', 'Hello!');
 ```
+
+You can also use the standard ASP.NET Core SignalR client library if needed.
 
 ## Push from Outside a Hub (Background Service)
 

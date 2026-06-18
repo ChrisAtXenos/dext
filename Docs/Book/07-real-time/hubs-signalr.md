@@ -69,6 +69,29 @@ App.Configure(procedure(App: IApplicationBuilder)
   end);
 ```
 
+## Transports & WebSockets
+
+Dext Hubs support two primary transport protocols:
+1. **WebSockets (`ttWebSockets`)** - High-performance, native full-duplex communication upgraded using opaque mode in the web server engine.
+2. **Server-Sent Events (`ttServerSentEvents`)** - Unidirectional server-to-client fallback.
+
+The JavaScript client attempts to negotiate and connect via `webSockets` by default if available.
+
+### JavaScript Client Example
+
+```javascript
+const connection = new DextHubConnection('/hubs/notifications', {
+  transport: 'webSockets' // Default is 'webSockets', falls back to 'serverSentEvents'
+});
+
+connection.on('ReceiveNotification', (msg) => {
+  console.log('Received:', msg);
+});
+
+await connection.start();
+await connection.invoke('SendGlobal', 'Hello from WebSockets!');
+```
+
 ---
 
 [← Real-Time](README.md) | [Next: Testing →](../08-testing/README.md)

@@ -47,6 +47,7 @@ uses
   Dext.Web.Hubs.Interfaces,
   Dext.Web.Hubs.Protocol.Json,
   Dext.Web.Hubs.Transport.SSE,
+  Dext.Web.Hubs.Transport.WebSocket,
   Dext.Web.Hubs.Types,
   Dext.Web.Interfaces,
   Dext.Core.Reflection;
@@ -106,11 +107,14 @@ type
     FConnectionManager: TConnectionManager;
     FGroupManager: TGroupManager;
     FSSETransport: TSSETransport;
+    FWebSocketTransport: TWebSocketHubTransport;
+    FConnectionDispatchers: IDictionary<string, THubDispatcher>;
     
     procedure HandleNegotiate(const HubPath: string; Ctx: IHttpContext);
     procedure HandleSSEStream(const HubPath: string; Ctx: IHttpContext; Dispatcher: THubDispatcher);
     procedure HandleInvoke(const HubPath: string; Ctx: IHttpContext; Dispatcher: THubDispatcher);
     procedure HandlePoll(const HubPath: string; Ctx: IHttpContext; Dispatcher: THubDispatcher);
+    procedure HandleWebSocket(const HubPath: string; Ctx: IHttpContext; Dispatcher: THubDispatcher);
     
     function FindDispatcher(const Path: string; out HubPath: string): THubDispatcher;
   public
@@ -255,17 +259,93 @@ begin
   FConnectionManager := TConnectionManager.Create;
   FConnectionManager.SetGroupManager(FGroupManager);
   FSSETransport := TSSETransport.Create;
+  FWebSocketTransport := TWebSocketHubTransport.Create;
+  FConnectionDispatchers := TCollections.CreateDictionary<string, THubDispatcher>;
+  
+  FWebSocketTransport.SetOnConnected(
+    procedure(const ConnectionId: string)
+    var
+      Conn: TWebSocketHubConnection;
+      Dispatcher: THubDispatcher;
+    begin
+      Conn := FWebSocketTransport.GetConnection(ConnectionId);
+      if Conn <> nil then
+        FConnectionManager.Add(Conn);
+        
+      if FConnectionDispatchers.TryGetValue(ConnectionId, Dispatcher) then
+      begin
+        try
+          Dispatcher.OnConnected(ConnectionId);
+        except
+          // Log but don't fail
+        end;
+      end;
+    end
+  );
+  
+  FWebSocketTransport.SetOnDisconnected(
+    procedure(const ConnectionId: string)
+    var
+      Dispatcher: THubDispatcher;
+    begin
+      FConnectionManager.Remove(ConnectionId);
+      if FConnectionDispatchers.TryGetValue(ConnectionId, Dispatcher) then
+      begin
+        try
+          Dispatcher.OnDisconnected(ConnectionId, nil);
+        except
+          // Log but don't fail
+        end;
+        FConnectionDispatchers.Remove(ConnectionId);
+      end;
+    end
+  );
+  
+  FWebSocketTransport.SetOnMessageReceived(
+    procedure(const ConnectionId, Data: string)
+    var
+      Dispatcher: THubDispatcher;
+      Msg: THubMessage;
+      Protocol: TJsonHubProtocol;
+      ResultValue: TValue;
+      ResponseMsg: THubMessage;
+      ResponseStr: string;
+    begin
+      if FConnectionDispatchers.TryGetValue(ConnectionId, Dispatcher) then
+      begin
+        Protocol := TJsonHubProtocol.Create;
+        try
+          Msg := Protocol.Deserialize(Data);
+          if Msg.MessageType = hmtInvocation then
+          begin
+            try
+              ResultValue := Dispatcher.InvokeMethod(ConnectionId, Msg.Target, Msg.Arguments);
+              ResponseMsg := THubMessage.Completion(Msg.InvocationId, ResultValue);
+            except
+              on E: Exception do
+                ResponseMsg := THubMessage.CompletionError(Msg.InvocationId, E.Message);
+            end;
+            ResponseStr := Protocol.Serialize(ResponseMsg);
+            FWebSocketTransport.SendAsync(ConnectionId, ResponseStr);
+          end;
+        finally
+          Protocol.Free;
+        end;
+      end;
+    end
+  );
 end;
 
 destructor THubMiddleware.Destroy;
 var
   Dispatcher: THubDispatcher;
 begin
-  Shutdown; // Close all SSE connections first
+  Shutdown; // Close all connections first
   for Dispatcher in FHubs.Values do
     Dispatcher.Free;
   // FHubs is ARC
   FSSETransport.Free;
+  FWebSocketTransport.Free;
   // Note: TConnectionManager and TGroupManager are interfaced, will be freed automatically
   inherited;
 end;
@@ -274,6 +354,8 @@ procedure THubMiddleware.Shutdown;
 begin
   if FSSETransport <> nil then
     FSSETransport.CloseAllConnections;
+  if FWebSocketTransport <> nil then
+    FWebSocketTransport.CloseAllConnections;
 end;
 
 procedure THubMiddleware.MapHub(const Path: string; HubClass: THubClass);
@@ -327,6 +409,15 @@ begin
   if Dispatcher = nil then
   begin
     Next(Ctx);
+    Exit;
+  end;
+  
+  // Check for WebSocket upgrade request
+  if SameText(Ctx.Request.Method, 'GET') and 
+     SameText(Ctx.Request.GetHeader('Upgrade'), 'websocket') and
+     Ctx.Connection.SupportsUpgrade then
+  begin
+    HandleWebSocket(HubPath, Ctx, Dispatcher);
     Exit;
   end;
   
@@ -548,6 +639,24 @@ begin
       Ctx.Response.StatusCode := 500;
       Ctx.Response.SetContentType('application/json');
       Ctx.Response.Write(InvResult.ToJson);
+    end;
+  end;
+end;
+
+procedure THubMiddleware.HandleWebSocket(const HubPath: string; Ctx: IHttpContext;
+  Dispatcher: THubDispatcher);
+var
+  ConnectionId: string;
+begin
+  ConnectionId := TGUID.NewGuid.ToString.Replace('{', '').Replace('}', '').Replace('-', '');
+  FConnectionDispatchers.Add(ConnectionId, Dispatcher);
+  try
+    FWebSocketTransport.ProcessConnection(Ctx, ConnectionId);
+  except
+    on E: Exception do
+    begin
+      FConnectionDispatchers.Remove(ConnectionId);
+      raise;
     end;
   end;
 end;

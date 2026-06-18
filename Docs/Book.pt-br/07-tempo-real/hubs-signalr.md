@@ -69,6 +69,29 @@ App.Configure(procedure(App: IApplicationBuilder)
   end);
 ```
 
+## Transportes e WebSockets
+
+Os Dext Hubs suportam dois protocolos principais de transporte:
+1. **WebSockets (`ttWebSockets`)** - Comunicação bidirecional nativa e de alta performance, atualizada via modo opaco diretamente no motor do servidor web (ex: HTTP.sys).
+2. **Server-Sent Events (`ttServerSentEvents`)** - Unidirecional (servidor para o cliente) como fallback.
+
+O cliente JavaScript tenta negociar e conectar via `webSockets` por padrão se disponível.
+
+### Exemplo do Cliente JavaScript
+
+```javascript
+const connection = new DextHubConnection('/hubs/notificacoes', {
+  transport: 'webSockets' // O padrão é 'webSockets', retrocede para 'serverSentEvents' se indisponível
+});
+
+connection.on('ReceberNotificacao', (msg) => {
+  console.log('Recebido:', msg);
+});
+
+await connection.start();
+await connection.invoke('EnviarGlobal', 'Olá do WebSockets!');
+```
+
 ---
 
 [← Tempo Real](README.md) | [Próximo: Testes →](../08-testes/README.md)
