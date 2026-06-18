@@ -33,8 +33,12 @@ Estratégia para performance "estado da arte" usando o motor do ASP.NET Core via
 
 Implementações 100% Pascal para cenários onde dependências externas não são desejadas.
 
-- [ ] **Windows**: Integração direta com `http.sys` (Kernel Mode).
+> 📑 **Specs**: [S39 — Native Server Engine](../Specs/S39-Native-Server-Engine.md) | [S40 — WebSocket & SignalR](../Specs/S40-WebSocket-SignalR.md) | [S41 — HTTP/2 Framing](../Specs/S41-Http2-Framing.md)
+
+- [ ] **Windows**: Integração direta com `http.sys` (Kernel Mode) + IOCP Sockets para protocolos customizados.
 - [ ] **Linux**: Event Loop baseado em `epoll` integrado ao Scheduler do Dext.Async.
+- [ ] **WebSocket**: Transporte nativo RFC 6455 integrado ao `Dext.Web.Hubs` (SignalR).
+- [ ] **HTTP/2**: HPACK + Stream Multiplexing para suporte a gRPC (S02).
 
 Reescrita do núcleo HTTP para eliminar gargalos de arquiteturas legadas (Indy/WebBroker) e explorar recursos nativos do SO.
 
