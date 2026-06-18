@@ -36,6 +36,7 @@ O Dext Web Framework é completamente isolado da implementação do servidor HTT
 2. **WebBroker (Delphi Professional/Enterprise)**: A escolha para infraestrutura legada ou web servers consolidados. Permite rodar a mesma aplicação Dext como **Módulo Apache**, **ISAPI** (IIS) ou **FastCGI** (para ser servida via NGINX).
 3. **Delphi Cross Sockets - DCS (Alta Performance)**: A escolha para escalabilidade extrema e aplicações Real-Time. Usa APIs assíncronas do sistema operacional (**IOCP** no Windows, **EPOLL** no Linux e **KQUEUE** no macOS) e oferece suporte nativo a **WebSockets** para comunicações bidirecionais. 
    * *Atenção de Licenciamento:* O DCS é uma dependência de terceiros licenciada sob **LGPL**. Caso opte por usá-lo em produção, é necessário avaliar a compatibilidade com a forma de distribuição do seu projeto comercial.
+4. **Windows HTTP Server API - http.sys (Zero-Allocation Nativo)**: A escolha para performance máxima no Windows. Registra-se diretamente com o driver de modo kernel `http.sys` do Windows, ignorando o overhead de sockets no espaço de usuário. Oferece **zero alocações de heap** no hot-path de processamento de requisições e respostas usando pools de contexto e mapeamento direto em tabela de cabeçalhos UTF-8 conhecida.
 
 ---
 

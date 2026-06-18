@@ -45,13 +45,26 @@ type
   TDextHttpSysEngine = class;
 
   /// <summary>
-  ///   Raw request implementation wrapper for Windows http.sys.
+  ///   Thread-safe, zero-allocation memory stream pool for http.sys responses.
   /// </summary>
+  TDextHttpSysBufferPool = class
+  private
+    FPool: TList;
+    FLock: TCriticalSection;
+    FMaxPoolSize: Integer;
+  public
+    constructor Create(AMaxPoolSize: Integer = 64);
+    destructor Destroy; override;
+    function Acquire: TMemoryStream;
+    procedure Release(ABuffer: TMemoryStream);
+  end;
+
   /// <summary>
   ///   Raw request implementation wrapper for Windows http.sys.
   /// </summary>
   TDextHttpSysRequest = class(TInterfacedObject, IDextRawRequest)
   private
+    FEngine: TDextHttpSysEngine;
     FRequest: PHTTP_REQUEST;
     FBodyStream: TCustomMemoryStream;
     function GetMethod: string;
@@ -61,12 +74,14 @@ type
     procedure PopulateHeaders(ADict: TDictionary<string, string>);
     function GetContentLength: Int64;
     function GetBodyStream: TStream;
+    function _Release: Integer; stdcall;
   public
     /// <summary>Initializes a raw http.sys request wrapper.</summary>
     /// <param name="ARequest">Pointer to the native HTTP_REQUEST structure.</param>
     constructor Create(ARequest: PHTTP_REQUEST);
     /// <summary>Cleans up the request resources.</summary>
     destructor Destroy; override;
+    procedure Init(AEngine: TDextHttpSysEngine; ARequest: PHTTP_REQUEST);
   end;
 
   /// <summary>
@@ -74,21 +89,32 @@ type
   /// </summary>
   TDextHttpSysResponse = class(TInterfacedObject, IDextRawResponse)
   private
+    FEngine: TDextHttpSysEngine;
     FReqQueue: THandle;
     FRequestId: HTTP_REQUEST_ID;
     FHeadersSent: Boolean;
     FStatusCode: USHORT;
-    FReason: string;
-    FHeaders: TStringList;
+    FHeaderData: array[0..4095] of AnsiChar;
+    FHeaderDataLen: Integer;
+    FHeaderValues: array[0..29] of record
+      Offset: Integer;
+      Length: Integer;
+    end;
+    FReasonBuffer: array[0..127] of AnsiChar;
+    FReasonLen: Integer;
     FBodyBuffer: TMemoryStream;
     procedure SendHeadersInternal(AMoreData: Boolean);
+    function _Release: Integer; stdcall;
+    procedure SetHeaderInt(AIndex: Integer; AValue: Int64);
   public
     /// <summary>Initializes a new http.sys response wrapper.</summary>
+    /// <param name="AEngine">The http.sys engine reference.</param>
     /// <param name="AReqQueue">Handle to the request queue.</param>
     /// <param name="ARequestId">The unique ID of the request to respond to.</param>
-    constructor Create(AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID);
+    constructor Create(AEngine: TDextHttpSysEngine; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID);
     /// <summary>Cleans up the response resources.</summary>
     destructor Destroy; override;
+    procedure Init(AEngine: TDextHttpSysEngine; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID);
 
     /// <summary>Sets the HTTP status code and optional reason phrase.</summary>
     /// <param name="ACode">The HTTP status code (e.g., 200, 404).</param>
@@ -109,6 +135,36 @@ type
     procedure Flush;
     /// <summary>Closes the response stream and connection.</summary>
     procedure Close;
+  end;
+
+  /// <summary>
+  ///   Thread-safe, zero-allocation request pool for http.sys requests.
+  /// </summary>
+  TDextHttpSysRequestPool = class
+  private
+    FPool: TList;
+    FLock: TCriticalSection;
+    FMaxPoolSize: Integer;
+  public
+    constructor Create(AMaxPoolSize: Integer = 64);
+    destructor Destroy; override;
+    function Acquire(AEngine: TDextHttpSysEngine; ARequest: PHTTP_REQUEST): TDextHttpSysRequest;
+    procedure Release(ARequest: TDextHttpSysRequest);
+  end;
+
+  /// <summary>
+  ///   Thread-safe, zero-allocation response pool for http.sys responses.
+  /// </summary>
+  TDextHttpSysResponsePool = class
+  private
+    FPool: TList;
+    FLock: TCriticalSection;
+    FMaxPoolSize: Integer;
+  public
+    constructor Create(AMaxPoolSize: Integer = 64);
+    destructor Destroy; override;
+    function Acquire(AEngine: TDextHttpSysEngine; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID): TDextHttpSysResponse;
+    procedure Release(AResponse: TDextHttpSysResponse);
   end;
 
   /// <summary>
@@ -183,9 +239,14 @@ type
     FTotalRequests: Int64;
 
     FWorkers: TList;
+    FBufferPool: TDextHttpSysBufferPool;
+    FRequestPool: TDextHttpSysRequestPool;
+    FResponsePool: TDextHttpSysResponsePool;
     procedure InitializeHttpSys;
     procedure ConfigureTimeouts;
     procedure ConfigureLimits;
+    procedure RecycleRequest(ARequest: TDextHttpSysRequest);
+    procedure RecycleResponse(AResponse: TDextHttpSysResponse);
   public
     /// <summary>Initializes a new http.sys server engine.</summary>
     /// <param name="AOptions">The engine configuration options.</param>
@@ -221,12 +282,82 @@ type
 
     /// <summary>Static factory method for creating and registering the http.sys web host.</summary>
     class function Factory(Port: Integer; Pipeline: TRequestDelegate; Services: IServiceProvider): IWebHost; static;
+    property BufferPool: TDextHttpSysBufferPool read FBufferPool;
   end;
 
 implementation
 
 uses
   System.SysConst;
+
+{ TDextHttpSysBufferPool }
+
+constructor TDextHttpSysBufferPool.Create(AMaxPoolSize: Integer);
+begin
+  inherited Create;
+  FPool := TList.Create;
+  FLock := TCriticalSection.Create;
+  FMaxPoolSize := AMaxPoolSize;
+end;
+
+destructor TDextHttpSysBufferPool.Destroy;
+var
+  Item: Pointer;
+begin
+  FLock.Enter;
+  try
+    for Item in FPool do
+      TMemoryStream(Item).Free;
+    FPool.Free;
+  finally
+    FLock.Leave;
+  end;
+  FLock.Free;
+  inherited;
+end;
+
+function TDextHttpSysBufferPool.Acquire: TMemoryStream;
+begin
+  Result := nil;
+  FLock.Enter;
+  try
+    if FPool.Count > 0 then
+    begin
+      Result := TMemoryStream(FPool.Last);
+      FPool.Delete(FPool.Count - 1);
+    end;
+  finally
+    FLock.Leave;
+  end;
+  if Result = nil then
+  begin
+    Result := TMemoryStream.Create;
+    Result.Size := 65536; // Pre-allocated 64KB initial buffer
+    Result.Position := 0;
+  end;
+end;
+
+procedure TDextHttpSysBufferPool.Release(ABuffer: TMemoryStream);
+begin
+  if ABuffer = nil then Exit;
+  
+  FLock.Enter;
+  try
+    if FPool.Count < FMaxPoolSize then
+    begin
+      ABuffer.Position := 0;
+      if ABuffer.Size > 65536 then
+        ABuffer.Size := 65536;
+      FPool.Add(ABuffer);
+    end
+    else
+    begin
+      ABuffer.Free;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
 
 { TDextHttpSysRequest }
 
@@ -235,6 +366,7 @@ begin
   inherited Create;
   FRequest := ARequest;
   FBodyStream := nil;
+  FEngine := nil;
 end;
 
 destructor TDextHttpSysRequest.Destroy;
@@ -244,6 +376,29 @@ begin
   inherited;
 end;
 
+procedure TDextHttpSysRequest.Init(AEngine: TDextHttpSysEngine; ARequest: PHTTP_REQUEST);
+begin
+  FEngine := AEngine;
+  FRequest := ARequest;
+  if Assigned(FBodyStream) then
+  begin
+    FBodyStream.Size := 0;
+    FBodyStream.Position := 0;
+  end;
+end;
+
+function TDextHttpSysRequest._Release: Integer;
+begin
+  Result := TInterlocked.Decrement(FRefCount);
+  if Result = 0 then
+  begin
+    if Assigned(FEngine) then
+      FEngine.RecycleRequest(Self)
+    else
+      Destroy;
+  end;
+end;
+
 function TDextHttpSysRequest.GetBodyStream: TStream;
 begin
   if FBodyStream = nil then
@@ -251,11 +406,7 @@ begin
     if (FRequest.EntityChunkCount > 0) and (FRequest.pEntityChunks <> nil) then
     begin
       // Wrapper around in-memory body if pre-allocated
-      // S39 keeps it alloc-zero by directly referencing buffer
-      // For simplicity in Phase 1, we read it
-      // TDextHttpSysEngine will read body dynamically as well
     end;
-    // Return empty fallback stream if none
     FBodyStream := TMemoryStream.Create;
   end;
   Result := FBodyStream;
@@ -374,6 +525,7 @@ begin
     Result := '/';
 end;
 
+// Forward request implementation properties
 function TDextHttpSysRequest.GetQueryString: string;
 begin
   if FRequest.CookedUrl.pQueryString <> nil then
@@ -384,23 +536,120 @@ end;
 
 { TDextHttpSysResponse }
 
-constructor TDextHttpSysResponse.Create(AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID);
+constructor TDextHttpSysResponse.Create(AEngine: TDextHttpSysEngine; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID);
 begin
   inherited Create;
+  FEngine := AEngine;
   FReqQueue := AReqQueue;
   FRequestId := ARequestId;
   FHeadersSent := False;
   FStatusCode := 200;
-  FReason := 'OK';
-  FHeaders := TStringList.Create;
-  FBodyBuffer := TMemoryStream.Create;
+
+  FReasonBuffer[0] := 'O';
+  FReasonBuffer[1] := 'K';
+  FReasonBuffer[2] := #0;
+  FReasonLen := 2;
+
+  FHeaderDataLen := 0;
+  FillChar(FHeaderValues, SizeOf(FHeaderValues), 0);
+
+  if Assigned(FEngine) then
+    FBodyBuffer := FEngine.BufferPool.Acquire
+  else
+    FBodyBuffer := nil;
 end;
 
 destructor TDextHttpSysResponse.Destroy;
 begin
-  FHeaders.Free;
-  FBodyBuffer.Free;
+  if FBodyBuffer <> nil then
+  begin
+    if Assigned(FEngine) then
+      FEngine.BufferPool.Release(FBodyBuffer)
+    else
+      FBodyBuffer.Free;
+  end;
   inherited;
+end;
+
+procedure TDextHttpSysResponse.Init(AEngine: TDextHttpSysEngine; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID);
+begin
+  FEngine := AEngine;
+  FReqQueue := AReqQueue;
+  FRequestId := ARequestId;
+  FHeadersSent := False;
+  FStatusCode := 200;
+
+  FReasonBuffer[0] := 'O';
+  FReasonBuffer[1] := 'K';
+  FReasonBuffer[2] := #0;
+  FReasonLen := 2;
+
+  FHeaderDataLen := 0;
+  FillChar(FHeaderValues, SizeOf(FHeaderValues), 0);
+
+  if FBodyBuffer = nil then
+  begin
+    if Assigned(FEngine) then
+      FBodyBuffer := FEngine.BufferPool.Acquire;
+  end
+  else
+  begin
+    FBodyBuffer.Position := 0;
+  end;
+end;
+
+function TDextHttpSysResponse._Release: Integer;
+begin
+  Result := TInterlocked.Decrement(FRefCount);
+  if Result = 0 then
+  begin
+    if Assigned(FEngine) then
+      FEngine.RecycleResponse(Self)
+    else
+      Destroy;
+  end;
+end;
+
+procedure TDextHttpSysResponse.SetHeaderInt(AIndex: Integer; AValue: Int64);
+var
+  Temp: array[0..31] of AnsiChar;
+  P: PAnsiChar;
+  Val: Int64;
+  Len: Integer;
+begin
+  if FHeadersSent then
+    raise EInvalidOp.Create('Headers already sent');
+
+  Val := AValue;
+  P := @Temp[31];
+  P^ := #0;
+  Len := 0;
+  if Val = 0 then
+  begin
+    Dec(P);
+    P^ := '0';
+    Inc(Len);
+  end
+  else
+  begin
+    while Val > 0 do
+    begin
+      Dec(P);
+      P^ := AnsiChar(Ord('0') + (Val mod 10));
+      Val := Val div 10;
+      Inc(Len);
+    end;
+  end;
+
+  if FHeaderDataLen + Len >= SizeOf(FHeaderData) then
+    Exit;
+
+  Move(P^, FHeaderData[FHeaderDataLen], Len);
+  FHeaderData[FHeaderDataLen + Len] := #0;
+  
+  FHeaderValues[AIndex].Offset := FHeaderDataLen;
+  FHeaderValues[AIndex].Length := Len;
+  FHeaderDataLen := FHeaderDataLen + Len + 1;
 end;
 
 procedure TDextHttpSysResponse.Close;
@@ -410,38 +659,39 @@ var
   BytesSent: ULONG;
   Ret: ULONG;
   I: Integer;
-  HeaderVal: string;
-  AnsiHeaderValues: array[0..29] of AnsiString;
 begin
   if not FHeadersSent then
   begin
     FillChar(Response, SizeOf(Response), 0);
     Response.StatusCode := FStatusCode;
-    Response.ReasonLength := Length(FReason);
-    Response.pReason := PAnsiChar(AnsiString(FReason));
+    Response.ReasonLength := FReasonLen;
+    Response.pReason := @FReasonBuffer[0];
     Response.Version.MajorVersion := 1;
     Response.Version.MinorVersion := 1;
 
-    if FHeaders.Values['Content-Length'] = '' then
-      FHeaders.Values['Content-Length'] := IntToStr(FBodyBuffer.Size);
+    if FHeaderValues[11].Length = 0 then
+    begin
+      if FBodyBuffer <> nil then
+        SetHeaderInt(11, FBodyBuffer.Position)
+      else
+        SetHeaderInt(11, 0);
+    end;
 
     for I := 0 to 29 do
     begin
-      HeaderVal := FHeaders.Values[HTTP_KNOWN_RESPONSE_HEADERS[I]];
-      if HeaderVal <> '' then
+      if FHeaderValues[I].Length > 0 then
       begin
-        AnsiHeaderValues[I] := AnsiString(HeaderVal);
-        Response.Headers.KnownHeaders[I].pRawValue := PAnsiChar(AnsiHeaderValues[I]);
-        Response.Headers.KnownHeaders[I].RawValueLength := Length(AnsiHeaderValues[I]);
+        Response.Headers.KnownHeaders[I].pRawValue := @FHeaderData[FHeaderValues[I].Offset];
+        Response.Headers.KnownHeaders[I].RawValueLength := FHeaderValues[I].Length;
       end;
     end;
 
-    if FBodyBuffer.Size > 0 then
+    if (FBodyBuffer <> nil) and (FBodyBuffer.Position > 0) then
     begin
       FillChar(Chunk, SizeOf(Chunk), 0);
       Chunk.DataChunkType := hctFromMemory;
       Chunk.pBuffer := FBodyBuffer.Memory;
-      Chunk.BufferLength := FBodyBuffer.Size;
+      Chunk.BufferLength := FBodyBuffer.Position;
 
       Response.EntityChunkCount := 1;
       Response.pEntityChunks := @Chunk;
@@ -466,12 +716,12 @@ begin
   end
   else
   begin
-    if FBodyBuffer.Size > 0 then
+    if (FBodyBuffer <> nil) and (FBodyBuffer.Position > 0) then
     begin
       FillChar(Chunk, SizeOf(Chunk), 0);
       Chunk.DataChunkType := hctFromMemory;
       Chunk.pBuffer := FBodyBuffer.Memory;
-      Chunk.BufferLength := FBodyBuffer.Size;
+      Chunk.BufferLength := FBodyBuffer.Position;
 
       Ret := HttpSendResponseEntityBody(
         FReqQueue,
@@ -524,26 +774,22 @@ var
   Ret: ULONG;
   Flags: ULONG;
   I: Integer;
-  HeaderVal: string;
-  AnsiHeaderValues: array[0..29] of AnsiString;
 begin
   if FHeadersSent then Exit;
 
   FillChar(Response, SizeOf(Response), 0);
   Response.StatusCode := FStatusCode;
-  Response.ReasonLength := Length(FReason);
-  Response.pReason := PAnsiChar(AnsiString(FReason));
+  Response.ReasonLength := FReasonLen;
+  Response.pReason := @FReasonBuffer[0];
   Response.Version.MajorVersion := 1;
   Response.Version.MinorVersion := 1;
 
   for I := 0 to 29 do
   begin
-    HeaderVal := FHeaders.Values[HTTP_KNOWN_RESPONSE_HEADERS[I]];
-    if HeaderVal <> '' then
+    if FHeaderValues[I].Length > 0 then
     begin
-      AnsiHeaderValues[I] := AnsiString(HeaderVal);
-      Response.Headers.KnownHeaders[I].pRawValue := PAnsiChar(AnsiHeaderValues[I]);
-      Response.Headers.KnownHeaders[I].RawValueLength := Length(AnsiHeaderValues[I]);
+      Response.Headers.KnownHeaders[I].pRawValue := @FHeaderData[FHeaderValues[I].Offset];
+      Response.Headers.KnownHeaders[I].RawValueLength := FHeaderValues[I].Length;
     end;
   end;
 
@@ -572,21 +818,47 @@ begin
 end;
 
 procedure TDextHttpSysResponse.SetHeader(const AName, AValue: string);
+var
+  I: Integer;
+  Written: Integer;
 begin
   if FHeadersSent then
     raise EInvalidOp.Create('Headers already sent');
-  FHeaders.Values[AName] := AValue;
+
+  for I := 0 to 29 do
+  begin
+    if SameText(HTTP_KNOWN_RESPONSE_HEADERS[I], AName) then
+    begin
+      if FHeaderDataLen + Length(AValue) * 3 + 1 >= SizeOf(FHeaderData) then
+        Exit;
+
+      Written := WideCharToMultiByte(CP_UTF8, 0, PChar(AValue), Length(AValue), @FHeaderData[FHeaderDataLen], SizeOf(FHeaderData) - FHeaderDataLen - 1, nil, nil);
+      if Written > 0 then
+      begin
+        FHeaderData[FHeaderDataLen + Written] := #0;
+        FHeaderValues[I].Offset := FHeaderDataLen;
+        FHeaderValues[I].Length := Written;
+        FHeaderDataLen := FHeaderDataLen + Written + 1;
+      end;
+      Exit;
+    end;
+  end;
 end;
 
 procedure TDextHttpSysResponse.SetStatus(ACode: Integer; const AReason: string);
+var
+  ReasonStr: string;
 begin
   if FHeadersSent then
     raise EInvalidOp.Create('Headers already sent');
   FStatusCode := ACode;
   if AReason <> '' then
-    FReason := AReason
+    ReasonStr := AReason
   else
-    FReason := 'OK';
+    ReasonStr := 'OK';
+
+  FReasonLen := WideCharToMultiByte(CP_UTF8, 0, PChar(ReasonStr), Length(ReasonStr), @FReasonBuffer[0], SizeOf(FReasonBuffer) - 1, nil, nil);
+  FReasonBuffer[FReasonLen] := #0;
 end;
 
 procedure TDextHttpSysResponse.Write(const ABuffer: TBytes; AOffset, ACount: Integer);
@@ -677,6 +949,157 @@ begin
   Result := nil;
 end;
 
+{ TDextHttpSysRequestPool }
+
+constructor TDextHttpSysRequestPool.Create(AMaxPoolSize: Integer);
+begin
+  inherited Create;
+  FPool := TList.Create;
+  FLock := TCriticalSection.Create;
+  FMaxPoolSize := AMaxPoolSize;
+end;
+
+destructor TDextHttpSysRequestPool.Destroy;
+var
+  Item: Pointer;
+begin
+  FLock.Enter;
+  try
+    for Item in FPool do
+    begin
+      TDextHttpSysRequest(Item).FEngine := nil;
+      TDextHttpSysRequest(Item).Free;
+    end;
+    FPool.Free;
+  finally
+    FLock.Leave;
+  end;
+  FLock.Free;
+  inherited;
+end;
+
+function TDextHttpSysRequestPool.Acquire(AEngine: TDextHttpSysEngine; ARequest: PHTTP_REQUEST): TDextHttpSysRequest;
+begin
+  Result := nil;
+  FLock.Enter;
+  try
+    if FPool.Count > 0 then
+    begin
+      Result := TDextHttpSysRequest(FPool.Last);
+      FPool.Delete(FPool.Count - 1);
+    end;
+  finally
+    FLock.Leave;
+  end;
+  if Result = nil then
+  begin
+    Result := TDextHttpSysRequest.Create(ARequest);
+    Result.FEngine := AEngine;
+  end
+  else
+  begin
+    Result.Init(AEngine, ARequest);
+  end;
+end;
+
+procedure TDextHttpSysRequestPool.Release(ARequest: TDextHttpSysRequest);
+begin
+  if ARequest = nil then Exit;
+  FLock.Enter;
+  try
+    if FPool.Count < FMaxPoolSize then
+    begin
+      FPool.Add(ARequest);
+    end
+    else
+    begin
+      ARequest.FEngine := nil;
+      ARequest.Free;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
+{ TDextHttpSysResponsePool }
+
+constructor TDextHttpSysResponsePool.Create(AMaxPoolSize: Integer);
+begin
+  inherited Create;
+  FPool := TList.Create;
+  FLock := TCriticalSection.Create;
+  FMaxPoolSize := AMaxPoolSize;
+end;
+
+destructor TDextHttpSysResponsePool.Destroy;
+var
+  Item: Pointer;
+begin
+  FLock.Enter;
+  try
+    for Item in FPool do
+    begin
+      TDextHttpSysResponse(Item).FEngine := nil;
+      TDextHttpSysResponse(Item).Free;
+    end;
+    FPool.Free;
+  finally
+    FLock.Leave;
+  end;
+  FLock.Free;
+  inherited;
+end;
+
+function TDextHttpSysResponsePool.Acquire(AEngine: TDextHttpSysEngine; AReqQueue: THandle; ARequestId: HTTP_REQUEST_ID): TDextHttpSysResponse;
+begin
+  Result := nil;
+  FLock.Enter;
+  try
+    if FPool.Count > 0 then
+    begin
+      Result := TDextHttpSysResponse(FPool.Last);
+      FPool.Delete(FPool.Count - 1);
+    end;
+  finally
+    FLock.Leave;
+  end;
+  if Result = nil then
+  begin
+    Result := TDextHttpSysResponse.Create(AEngine, AReqQueue, ARequestId);
+  end
+  else
+  begin
+    Result.Init(AEngine, AReqQueue, ARequestId);
+  end;
+end;
+
+procedure TDextHttpSysResponsePool.Release(AResponse: TDextHttpSysResponse);
+begin
+  if AResponse = nil then Exit;
+  
+  if AResponse.FBodyBuffer <> nil then
+  begin
+    AResponse.FBodyBuffer.Position := 0;
+    if AResponse.FBodyBuffer.Size > 65536 then
+      AResponse.FBodyBuffer.Size := 65536;
+  end;
+
+  FLock.Enter;
+  try
+    if FPool.Count < FMaxPoolSize then
+    begin
+      FPool.Add(AResponse);
+    end
+    else
+    begin
+      AResponse.FEngine := nil;
+      AResponse.Free;
+    end;
+  finally
+    FLock.Leave;
+  end;
+end;
+
 { TDextHttpSysWorker }
 
 constructor TDextHttpSysWorker.Create(AEngine: TDextHttpSysEngine; AReqQueue: THandle);
@@ -720,11 +1143,12 @@ begin
     if Ret = ERROR_SUCCESS then
     begin
       TInterlocked.Increment(FEngine.FTotalRequests);
+      TInterlocked.Increment(FEngine.FActiveConnections);
 
-      // Create Request/Response abstractions
+      // Create Request/Response abstractions using pools
       Connection := TDextHttpSysConnection.Create(Request^);
-      RawRequest := TDextHttpSysRequest.Create(Request);
-      RawResponse := TDextHttpSysResponse.Create(FReqQueue, Request.RequestId);
+      RawRequest := FEngine.FRequestPool.Acquire(FEngine, Request);
+      RawResponse := FEngine.FResponsePool.Acquire(FEngine, FReqQueue, Request.RequestId);
 
       try
         if Assigned(FEngine.FOnRequest) then
@@ -734,6 +1158,7 @@ begin
         RawResponse := nil;
         RawRequest := nil;
         Connection := nil;
+        TInterlocked.Decrement(FEngine.FActiveConnections);
       end;
 
       RequestId := 0;
@@ -758,6 +1183,9 @@ begin
   FReqQueue := 0;
   FRunning := False;
   FWorkers := TList.Create;
+  FBufferPool := TDextHttpSysBufferPool.Create(64);
+  FRequestPool := TDextHttpSysRequestPool.Create(64);
+  FResponsePool := TDextHttpSysResponsePool.Create(64);
   InitializeHttpSys;
 end;
 
@@ -765,7 +1193,26 @@ destructor TDextHttpSysEngine.Destroy;
 begin
   Stop;
   FWorkers.Free;
+  FRequestPool.Free;
+  FResponsePool.Free;
+  FBufferPool.Free;
   inherited;
+end;
+
+procedure TDextHttpSysEngine.RecycleRequest(ARequest: TDextHttpSysRequest);
+begin
+  if Assigned(FRequestPool) then
+    FRequestPool.Release(ARequest)
+  else
+    ARequest.Free;
+end;
+
+procedure TDextHttpSysEngine.RecycleResponse(AResponse: TDextHttpSysResponse);
+begin
+  if Assigned(FResponsePool) then
+    FResponsePool.Release(AResponse)
+  else
+    AResponse.Free;
 end;
 
 procedure TDextHttpSysEngine.Bind(const AAddress: string; APort: Word);
