@@ -3,7 +3,7 @@
         <ProjectGuid>{9736A181-3D26-4EC1-A966-DAACF43D73C4}</ProjectGuid>
         <MainSource>Dext.Entity.UnitTests.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">Dext.Entity.UnitTests</ProjectName>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Console</AppType>

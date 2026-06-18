@@ -1,4 +1,4 @@
-program Dext.Web.UnitTests;
+﻿program Dext.Web.UnitTests;
 
 {$APPTYPE CONSOLE}
 

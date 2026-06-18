@@ -3,7 +3,7 @@
         <ProjectGuid>{3A9B9465-655B-4BC9-B413-43D138AD8CC8}</ProjectGuid>
         <MainSource>Web.Http2FramingExample.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <ProjectName Condition="'$(ProjectName)'==''">Web.Http2FramingExample</ProjectName>
         <TargetedPlatforms>32897</TargetedPlatforms>
         <AppType>Console</AppType>

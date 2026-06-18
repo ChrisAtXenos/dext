@@ -3,7 +3,7 @@
         <ProjectGuid>{257BA51B-4993-4F54-A190-67E6B947E5DF}</ProjectGuid>
         <MainSource>Dext.Web.Core.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>131</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>None</FrameworkType>

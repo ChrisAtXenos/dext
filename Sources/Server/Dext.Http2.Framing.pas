@@ -510,16 +510,19 @@ begin
   if not AAck then
   begin
     GrowIfNeeded(AOutput, APos, Integer(payloadLen));
-    p := @AOutput[APos];
-    for i := 0 to High(ASettings) do
+    if payloadLen > 0 then
     begin
-      p[0] := Byte(ASettings[i].Id shr 8);
-      p[1] := Byte(ASettings[i].Id);
-      p[2] := Byte(ASettings[i].Value shr 24);
-      p[3] := Byte(ASettings[i].Value shr 16);
-      p[4] := Byte(ASettings[i].Value shr 8);
-      p[5] := Byte(ASettings[i].Value);
-      Inc(p, 6);
+      p := @AOutput[APos];
+      for i := 0 to High(ASettings) do
+      begin
+        p[0] := Byte(ASettings[i].Id shr 8);
+        p[1] := Byte(ASettings[i].Id);
+        p[2] := Byte(ASettings[i].Value shr 24);
+        p[3] := Byte(ASettings[i].Value shr 16);
+        p[4] := Byte(ASettings[i].Value shr 8);
+        p[5] := Byte(ASettings[i].Value);
+        Inc(p, 6);
+      end;
     end;
     Inc(APos, Integer(payloadLen));
   end;
