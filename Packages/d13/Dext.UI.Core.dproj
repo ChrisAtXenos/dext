@@ -3,7 +3,7 @@
         <ProjectGuid>{5062ABDC-E080-4285-A30E-21404BE24F8A}</ProjectGuid>
         <MainSource>Dext.UI.Core.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>VCL</FrameworkType>
