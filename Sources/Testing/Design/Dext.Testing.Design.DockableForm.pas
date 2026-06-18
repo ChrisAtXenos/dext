@@ -4917,12 +4917,24 @@ end;
 
 class procedure TTelemetryTracker.AnalyzeHistory(const AProjectFile: string; AMemo: TMemo);
 var
+  AvgDuration: Double;
   Directory, FileName: string;
   DurationMs: Integer;
   DurList: TList<Integer>;
+  HasHeader: Boolean;
   i: Integer;
+  IntPair: TPair<string, TList<Integer>>;
+  IsFlaky: Boolean;
+  IsRegression: Boolean;
   JsonArray: TJSONArray;
   JsonObj: TJSONObject;
+  LastDuration: Integer;
+  LastStatus: string;
+  NameKey: string;
+  Pair: TPair<string, TList<string>>;
+  StatList: TList<string>;
+  StatusesList: TList<string>;
+  Sum: Integer;
   TestDurations: TDictionary<string, TList<Integer>>;
   TestName, LStatus: string;
   TestStatuses: TDictionary<string, TList<string>>;
@@ -4963,71 +4975,71 @@ begin
               end;
               DurList.Add(DurationMs);
 
-              var LStatList: TList<string> := nil;
-              if not TestStatuses.TryGetValue(TestName, LStatList) then
+              StatList := nil;
+              if not TestStatuses.TryGetValue(TestName, StatList) then
               begin
-                LStatList := TList<string>.Create;
-                TestStatuses.Add(TestName, LStatList);
+                StatList := TList<string>.Create;
+                TestStatuses.Add(TestName, StatList);
               end;
-              LStatList.Add(LStatus);
+              StatList.Add(LStatus);
             end;
           end;
         end;
 
         // 2. Perform regression and flakiness analysis
-        var LHasHeader := False;
-        for var LPair in TestStatuses do
+        HasHeader := False;
+        for Pair in TestStatuses do
         begin
-          var LNameKey := LPair.Key;
-          var LStatusesList := LPair.Value;
-          DurList := TestDurations[LNameKey];
+          NameKey := Pair.Key;
+          StatusesList := Pair.Value;
+          DurList := TestDurations[NameKey];
 
-          var LIsFlaky := False;
-          if LStatusesList.Count >= 2 then
+          IsFlaky := False;
+          if StatusesList.Count >= 2 then
           begin
-            var LLastStatus := LStatusesList[0];
-            for i := 1 to LStatusesList.Count - 1 do
+            LastStatus := StatusesList[0];
+            for i := 1 to StatusesList.Count - 1 do
             begin
-              if LStatusesList[i] <> LLastStatus then
+              if StatusesList[i] <> LastStatus then
               begin
-                LIsFlaky := True;
+                IsFlaky := True;
                 Break;
               end;
             end;
           end;
 
-          var LIsRegression := False;
-          var LAvgDuration := 0.0;
-          var LLastDuration := 0;
+          IsRegression := False;
+          AvgDuration := 0.0;
+          LastDuration := 0;
           if DurList.Count >= 3 then
           begin
-            LLastDuration := DurList[DurList.Count - 1];
-            var LSum := 0;
+            LastDuration := DurList[DurList.Count - 1];
+            Sum := 0;
             for i := 0 to DurList.Count - 2 do
-              Inc(LSum, DurList[i]);
-            LAvgDuration := LSum / (DurList.Count - 1);
+              Inc(Sum, DurList[i]);
+            AvgDuration := Sum / (DurList.Count - 1);
 
-            if (LAvgDuration > 10) and (LLastDuration > LAvgDuration * 1.5) then
-              LIsRegression := True;
+            if (AvgDuration > 10) and (LastDuration > AvgDuration * 1.5) then
+              IsRegression := True;
           end;
 
-          if LIsFlaky or LIsRegression then
+          if IsFlaky or IsRegression then
           begin
-            if not LHasHeader then
+            if not HasHeader then
             begin
               AMemo.Lines.Add('');
               AMemo.Lines.Add('[ANALYTICS] --- TEST ANALYTICS ENGINE REPORT ---');
-              LHasHeader := True;
+              HasHeader := True;
             end;
 
-            if LIsFlaky then
-              AMemo.Lines.Add('   [FLAKY] TEST DETECTED: ' + LNameKey + ' (status changes between Pass and Fail)');
-            if LIsRegression then
-              AMemo.Lines.Add(Format('   [PERF REGRESSION] %s (Last: %dms, Avg: %.1fms)', [LNameKey, LLastDuration, LAvgDuration]));
+            if IsFlaky then
+              AMemo.Lines.Add('   [FLAKY] TEST DETECTED: ' + NameKey + ' (status changes between Pass and Fail)');
+            if IsRegression then
+              AMemo.Lines.Add(Format('   [PERF REGRESSION] %s (Last: %dms, Avg: %.1fms)', [NameKey, LastDuration, AvgDuration]));
           end;
         end;
 
-        if LHasHeader then
+        if HasHeader then
           AMemo.Lines.Add('========================================');
       finally
         JsonArray.Free;
@@ -5036,9 +5048,9 @@ begin
       // ignore errors during analysis
     end;
   finally
-    for var LPair in TestDurations do LPair.Value.Free;
+    for IntPair in TestDurations do Pair.Value.Free;
     TestDurations.Free;
-    for var LPair in TestStatuses do LPair.Value.Free;
+    for Pair in TestStatuses do Pair.Value.Free;
     TestStatuses.Free;
   end;
 end;
