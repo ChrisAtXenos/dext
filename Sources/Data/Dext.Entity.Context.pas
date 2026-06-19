@@ -1023,12 +1023,13 @@ var
   Entity: TObject;
   DbSet: IDbSet;
   AddedGroups: IDictionary<PTypeInfo, IList<TObject>>;
+  ModifiedGroups: IDictionary<PTypeInfo, IList<TObject>>;
+  DeletedGroups: IDictionary<PTypeInfo, IList<TObject>>;
   TenantAware: ITenantAware;
   Map: TEntityMap;
   APair: TPair<PTypeInfo, IList<TObject>>;
   List: IList<TObject>;
   Item: TObject;
-  Deletes: IList<TObject>;
   Span: TSpan;
   Meta: TTypeMetadata;
   ValidatorIntf: IInterface;
@@ -1105,10 +1106,15 @@ begin
          List := APair.Value;
          DbSet := DataSet(APair.Key);
          
-         // Force loop to ensure IDs are retrieved for all entities.
-         // Bulk Insert (PersistAddRange) does not currently support ID retrieval.
-         for Item in List do
-           DbSet.PersistAdd(Item);
+         if DbSet.IsBulkInsertSafe and (List.Count > 1) then
+         begin
+           DbSet.PersistAddRange(List.ToArray);
+         end
+         else
+         begin
+           for Item in List do
+             DbSet.PersistAdd(Item);
+         end;
            
          Inc(Result, List.Count);
        end;
@@ -1117,72 +1123,107 @@ begin
       end;
      
      // 2. Process Updates
-     for Pair in FChangeTracker.GetTrackedEntities do
-     begin
-       if Pair.Value = esModified then
+     ModifiedGroups := TCollections.CreateDictionary<PTypeInfo, IList<TObject>>;
+     try
+       for Pair in FChangeTracker.GetTrackedEntities do
        begin
-         Entity := Pair.Key;
-         
-          // Validate Entity
-          Map := nil;
-          if FModelBuilder <> nil then
-            Map := FModelBuilder.GetMap(Entity.ClassInfo);
-            
-          Meta := TReflection.GetMetadata(Entity.ClassInfo);
-          ValidatorIntf := nil;
-          if Meta.ValidatorInterfaceType <> nil then
-          begin
-            DIProvider := TDextServices.DefaultProvider;
-            if DIProvider <> nil then
-            begin
-              try
-                ValidatorIntf := DIProvider.GetServiceAsInterface(TServiceType.FromInterface(Meta.ValidatorInterfaceType));
-              except
-              end;
-            end;
-          end;
-          
-          Validator := nil;
-          if (ValidatorIntf <> nil) and Supports(ValidatorIntf, IValidator, Validator) then
-          begin
-            ValRes := Validator.ValidateInstance(TValue.From<TObject>(Entity));
-            try
-              if not ValRes.IsValid then
-                raise EValidationException.Create('Validation failed: ' + ValRes.Errors[0].ErrorMessage);
-            finally
-              ValRes.Free;
-            end;
-          end
-          else
-            TEntityValidator.Validate(Entity, Map);
- 
-         DbSet := DataSet(Entity.ClassInfo);
-         DbSet.PersistUpdate(Entity);
-         Inc(Result);
+         if Pair.Value = esModified then
+         begin
+           Entity := Pair.Key;
+           
+           // Validate Entity
+           Map := nil;
+           if FModelBuilder <> nil then
+             Map := FModelBuilder.GetMap(Entity.ClassInfo);
+              
+           Meta := TReflection.GetMetadata(Entity.ClassInfo);
+           ValidatorIntf := nil;
+           if Meta.ValidatorInterfaceType <> nil then
+           begin
+             DIProvider := TDextServices.DefaultProvider;
+             if DIProvider <> nil then
+             begin
+               try
+                 ValidatorIntf := DIProvider.GetServiceAsInterface(TServiceType.FromInterface(Meta.ValidatorInterfaceType));
+               except
+               end;
+             end;
+           end;
+           
+           Validator := nil;
+           if (ValidatorIntf <> nil) and Supports(ValidatorIntf, IValidator, Validator) then
+           begin
+             ValRes := Validator.ValidateInstance(TValue.From<TObject>(Entity));
+             try
+               if not ValRes.IsValid then
+                 raise EValidationException.Create('Validation failed: ' + ValRes.Errors[0].ErrorMessage);
+             finally
+               ValRes.Free;
+             end;
+           end
+           else
+             TEntityValidator.Validate(Entity, Map);
+
+           if not ModifiedGroups.ContainsKey(Entity.ClassInfo) then
+             ModifiedGroups.Add(Entity.ClassInfo, TCollections.CreateList<TObject>);
+           ModifiedGroups[Entity.ClassInfo].Add(Entity);
+         end;
        end;
+
+       for APair in ModifiedGroups do
+       begin
+         List := APair.Value;
+         DbSet := DataSet(APair.Key);
+         if DbSet.IsBulkUpdateSafe and (List.Count > 1) then
+         begin
+           DbSet.PersistUpdateRange(List.ToArray);
+         end
+         else
+         begin
+           for Item in List do
+             DbSet.PersistUpdate(Item);
+         end;
+         Inc(Result, List.Count);
+       end;
+     finally
+       ModifiedGroups := nil;
      end;
      
      // 3. Process Deletes
-     // Note: We need a snapshot for deletes because PersistRemove calls Remove from tracker
-     Deletes := TCollections.CreateList<TObject>;
+     DeletedGroups := TCollections.CreateDictionary<PTypeInfo, IList<TObject>>;
      try
        for Pair in FChangeTracker.GetTrackedEntities do
-         if Pair.Value = esDeleted then
-           Deletes.Add(Pair.Key);
-           
-       for Entity in Deletes do
        begin
-         DbSet := DataSet(Entity.ClassInfo);
+         if Pair.Value = esDeleted then
+         begin
+           Entity := Pair.Key;
+           if not DeletedGroups.ContainsKey(Entity.ClassInfo) then
+             DeletedGroups.Add(Entity.ClassInfo, TCollections.CreateList<TObject>);
+           DeletedGroups[Entity.ClassInfo].Add(Entity);
+         end;
+       end;
+
+       for APair in DeletedGroups do
+       begin
+         List := APair.Value;
+         DbSet := DataSet(APair.Key);
          
-         // Remove from tracker BEFORE freeing the entity (via PersistRemove -> IdentityMap)
-         // This prevents dangling pointers in the tracker.
-         FChangeTracker.Remove(Entity);
-         
-         DbSet.PersistRemove(Entity);
-         Inc(Result);
+         for Item in List do
+           FChangeTracker.Remove(Item);
+
+         if DbSet.IsBulkDeleteSafe and (List.Count > 1) then
+         begin
+           DbSet.PersistRemoveRange(List.ToArray);
+         end
+         else
+         begin
+           for Item in List do
+             DbSet.PersistRemove(Item);
+         end;
+         Inc(Result, List.Count);
        end;
      finally
-       Deletes := nil;
+       DeletedGroups := nil;
      end;
      
      Commit;

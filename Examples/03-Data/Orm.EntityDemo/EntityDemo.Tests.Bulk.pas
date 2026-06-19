@@ -36,6 +36,25 @@ begin
   Log('📦 Running Bulk Operation Tests...');
   Log('================================');
 
+  // Verify Bulk Safety Guards
+  Log('   Verifying Bulk Safety Guards...');
+  AssertTrue(not FContext.Entities<TUser>.IsBulkInsertSafe, 'TUser Insert should not be bulk safe (AutoInc)', 'TUser Insert bulk safe mismatch');
+  AssertTrue(FContext.Entities<TUser>.IsBulkUpdateSafe, 'TUser Update should be bulk safe', 'TUser Update bulk safe mismatch');
+  AssertTrue(FContext.Entities<TUser>.IsBulkDeleteSafe, 'TUser Delete should be bulk safe', 'TUser Delete bulk safe mismatch');
+
+  AssertTrue(not FContext.Entities<TProduct>.IsBulkInsertSafe, 'TProduct Insert should not be bulk safe (AutoInc)', 'TProduct Insert bulk safe mismatch');
+  AssertTrue(not FContext.Entities<TProduct>.IsBulkUpdateSafe, 'TProduct Update should not be bulk safe (Version)', 'TProduct Update bulk safe mismatch');
+  AssertTrue(FContext.Entities<TProduct>.IsBulkDeleteSafe, 'TProduct Delete should be bulk safe', 'TProduct Delete bulk safe mismatch');
+
+  AssertTrue(not FContext.Entities<TTask>.IsBulkInsertSafe, 'TTask Insert should not be bulk safe (AutoInc)', 'TTask Insert bulk safe mismatch');
+  AssertTrue(FContext.Entities<TTask>.IsBulkUpdateSafe, 'TTask Update should be bulk safe', 'TTask Update bulk safe mismatch');
+  AssertTrue(not FContext.Entities<TTask>.IsBulkDeleteSafe, 'TTask Delete should not be bulk safe (SoftDelete)', 'TTask Delete bulk safe mismatch');
+
+  AssertTrue(FContext.Entities<TOrderItem>.IsBulkInsertSafe, 'TOrderItem Insert should be bulk safe', 'TOrderItem Insert bulk safe mismatch');
+  AssertTrue(FContext.Entities<TOrderItem>.IsBulkUpdateSafe, 'TOrderItem Update should be bulk safe', 'TOrderItem Update bulk safe mismatch');
+  AssertTrue(FContext.Entities<TOrderItem>.IsBulkDeleteSafe, 'TOrderItem Delete should be bulk safe', 'TOrderItem Delete bulk safe mismatch');
+  LogSuccess('Bulk Safety Guards verified successfully.');
+
   BulkUsers := TCollections.CreateList<TUser>(False);
   try
     // 1. Bulk Insert
