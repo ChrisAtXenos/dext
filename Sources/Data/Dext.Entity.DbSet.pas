@@ -1560,6 +1560,7 @@ begin
       if FMap.Properties.TryGetValue(Handler.GetName(), PropMap) then
       begin
         if PropMap.IsAutoInc then IsAutoInc := True;
+        if PropMap.IsSequenced then IsAutoInc := False;
       end;
     end;
     if IsAutoInc then

@@ -43,6 +43,7 @@ uses
   Dext.Entity.Drivers.Interfaces,
   Dext.Entity.Dialects,
   Dext.Entity.Setup,
+  Dext.Entity.Sequences,
   Dext.Entity.Tenancy,
   Dext.MultiTenancy,
   Dext.Entity.Attributes,
@@ -1036,6 +1037,9 @@ var
   DIProvider: IServiceProvider;
   Validator: IValidator;
   ValRes: TValidationResult;
+  PropMap: TPropertyMap;
+  SeqId: Int64;
+  ValToSet: TValue;
 begin
   Span := TTracer.BeginSpan('DbContext.SaveChanges', 'SQL');
   ApplyTenantConfig(False);
@@ -1069,6 +1073,23 @@ begin
             Map := nil;
             if FModelBuilder <> nil then
               Map := FModelBuilder.GetMap(Entity.ClassInfo);
+
+            // Auto-populate Sequence keys if applicable (S46)
+            if Map <> nil then
+            begin
+              for PropMap in Map.OrderedProperties do
+              begin
+                if PropMap.IsSequenced then
+                begin
+                  SeqId := TSequenceManager.Instance.GenerateId(PropMap.SequenceName, PropMap.SequenceAllocationSize, FConnection, FDialect);
+                  if PropMap.PropertyType = TypeInfo(Integer) then
+                    ValToSet := TValue.From<Integer>(Integer(SeqId))
+                  else
+                    ValToSet := TValue.From<Int64>(SeqId);
+                  TReflection.SetValue(Pointer(Entity), PropMap.Prop, ValToSet);
+                end;
+              end;
+            end;
               
             Meta := TReflection.GetMetadata(Entity.ClassInfo);
             ValidatorIntf := nil;
