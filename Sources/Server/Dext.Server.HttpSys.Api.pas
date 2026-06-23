@@ -27,6 +27,8 @@
 {***************************************************************************}
 unit Dext.Server.HttpSys.Api;
 
+{$ALIGN 8}
+
 interface
 
 {$IFDEF MSWINDOWS}
