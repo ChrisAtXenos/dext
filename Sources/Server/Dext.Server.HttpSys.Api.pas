@@ -28,6 +28,7 @@
 unit Dext.Server.HttpSys.Api;
 
 {$ALIGN 8}
+{$MINENUMSIZE 4}
 
 interface
 
