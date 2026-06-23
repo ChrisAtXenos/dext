@@ -5,6 +5,10 @@ program Dext.Benchmarks;
 {$R *.res}
 
 uses
+  {$IFDEF WIN64}
+  RDPMM64 in '..\..\Libs\Delphi64RTL\RDPMM64.pas',
+  RDPSimd64 in '..\..\Libs\Delphi64RTL\RDPSimd64.pas',
+  {$ENDIF}
   System.SysUtils,
   Spring.Benchmark in '..\External\Spring4D\Spring.Benchmark.pas',
   BM.Http in 'Sources\BM.Http.pas',
