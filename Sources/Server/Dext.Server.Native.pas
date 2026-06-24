@@ -255,6 +255,7 @@ type
     FEngine: IDextServerEngine;
     FPipeline: TRequestDelegate;
     FServices: IServiceProvider;
+    FOptions: TServerEngineOptions;
     FRunning: Boolean;
   public
     /// <summary>Initializes a new native web server instance.</summary>
@@ -765,6 +766,7 @@ begin
   FPort := APort;
   FPipeline := APipeline;
   FServices := AServices;
+  FOptions := AOptions;
   FRunning := False;
   
   // Decide best engine based on platform/options
@@ -803,11 +805,7 @@ procedure TDextNativeWebServer.Start;
 begin
   if FRunning then Exit;
 
-  {$IFDEF MSWINDOWS}
-  FEngine.Bind('127.0.0.1', FPort);
-  {$ELSE}
-  FEngine.Bind('0.0.0.0', FPort);
-  {$ENDIF}
+  FEngine.Bind(FOptions.BindAddress, FPort);
   FEngine.SetOnRequest(
     procedure(const AConnection: IDextServerConnection; const ARequest: IDextRawRequest; const AResponse: IDextRawResponse)
     var

@@ -4,12 +4,12 @@
         <MainSource>Dext.Benchmarks.dpr</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
-        <ProjectName Condition="'$(ProjectName)'==''">Dext.Benchmarks</ProjectName>
         <TargetedPlatforms>32899</TargetedPlatforms>
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>
         <ProjectVersion>20.4</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <ProjectName Condition="'$(ProjectName)'==''">Dext.Benchmarks</ProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -140,6 +140,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="RDPMM64.pas"/>
         <DCCReference Include="..\External\Spring4D\Spring.Benchmark.pas"/>
         <DCCReference Include="Sources\BM.Http.pas"/>
         <DCCReference Include="Sources\BM.Orm.pas"/>

@@ -68,6 +68,7 @@ type
     FEngine: TDextHttpSysEngine;
     FRequest: PHTTP_REQUEST;
     FBodyStream: TCustomMemoryStream;
+    FBodyRead: Boolean;
     function GetMethod: string;
     function GetPath: string;
     function GetQueryString: string;
@@ -394,6 +395,7 @@ begin
   FRequest := ARequest;
   FBodyStream := nil;
   FEngine := nil;
+  FBodyRead := False;
 end;
 
 destructor TDextHttpSysRequest.Destroy;
@@ -407,6 +409,7 @@ procedure TDextHttpSysRequest.Init(AEngine: TDextHttpSysEngine; ARequest: PHTTP_
 begin
   FEngine := AEngine;
   FRequest := ARequest;
+  FBodyRead := False;
   if Assigned(FBodyStream) then
   begin
     FBodyStream.Size := 0;
@@ -435,8 +438,11 @@ var
   TempBuf: TBytes;
 begin
   if FBodyStream = nil then
-  begin
     FBodyStream := TMemoryStream.Create;
+
+  if not FBodyRead then
+  begin
+    FBodyRead := True;
     
     // 1. Copy pre-allocated body chunks
     if (FRequest.EntityChunkCount > 0) and (FRequest.pEntityChunks <> nil) then
@@ -1485,7 +1491,7 @@ begin
     Ret := HttpReceiveHttpRequest(
       FReqQueue,
       RequestId,
-      0,
+      HTTP_RECEIVE_REQUEST_FLAG_COPY_BODY,
       Request,
       Length(ReqBuffer),
       BytesReturned,
@@ -1632,14 +1638,35 @@ begin
   if FRunning then Exit;
 
   // Register prefix
-  if (FAddress = '0.0.0.0') or (FAddress = '') then
+  if (FAddress = '0.0.0.0') or (FAddress = '+') or (FAddress = '') then
     UrlPrefix := Format('http://+:%d/', [FListeningPort])
   else
     UrlPrefix := Format('http://%s:%d/', [FAddress, FListeningPort]);
     
   Ret := HttpAddUrlToUrlGroup(FUrlGroupId, PWideChar(WideString(UrlPrefix)), 0, 0);
   if Ret <> ERROR_SUCCESS then
-    raise EOSError.Create('HttpAddUrlToUrlGroup failed to register ' + UrlPrefix + ' with error code: ' + IntToStr(Ret));
+  begin
+    if Ret = 5 then // Access Denied
+    begin
+      var Err := EOSError.Create(
+        'HttpAddUrlToUrlGroup failed to register ' + UrlPrefix + ' (Access Denied).' + #13#10 +
+        'This error occurs because registering URL prefixes on all interfaces (+ or 0.0.0.0) requires administrative privileges.' + #13#10 +
+        'To resolve this:' + #13#10 +
+        '1. Run your application as Administrator.' + #13#10 +
+        '2. Or register this URL prefix using netsh in an elevated prompt:' + #13#10 +
+        '   netsh http add urlacl url=' + UrlPrefix + ' user=Todos' + #13#10 +
+        '3. Or configure the server BindAddress to "localhost" or "127.0.0.1" in TServerEngineOptions to run without elevation.'
+      );
+      Err.ErrorCode := Ret;
+      raise Err;
+    end
+    else
+    begin
+      var Err := EOSError.Create('HttpAddUrlToUrlGroup failed to register ' + UrlPrefix + ' with error code: ' + IntToStr(Ret));
+      Err.ErrorCode := Ret;
+      raise Err;
+    end;
+  end;
 
   FRunning := True;
 
