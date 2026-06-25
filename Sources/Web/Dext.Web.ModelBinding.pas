@@ -328,13 +328,25 @@ begin
             NodeVal := JsonObj.GetNode(AParam.Name);
             if NodeVal <> nil then
             begin
-              case NodeVal.GetNodeType of
-                jntString: Result := TReflection.CastFromString(NodeVal.AsString, AParam.ParamType.Handle);
-                jntNumber: Result := TReflection.CastFromString(NodeVal.AsString, AParam.ParamType.Handle);
-                jntBoolean: Result := TValue.From<Boolean>(NodeVal.AsBoolean);
-                jntNull: Result := TReflection.GetDefaultValue(AParam, AParam.ParamType.Handle);
+              if AParam.ParamType.Handle.Kind = tkDynArray then
+              begin
+                if NodeVal.GetNodeType = jntNull then
+                  Result := TReflection.GetDefaultValue(AParam, AParam.ParamType.Handle)
+                else
+                begin
+                  Result := TDextJson.Deserialize(AParam.ParamType.Handle, NodeVal.ToJson());
+                end;
+              end
               else
-                Result := TReflection.CastFromString(NodeVal.AsString, AParam.ParamType.Handle);
+              begin
+                case NodeVal.GetNodeType of
+                  jntString: Result := TReflection.CastFromString(NodeVal.AsString, AParam.ParamType.Handle);
+                  jntNumber: Result := TReflection.CastFromString(NodeVal.AsString, AParam.ParamType.Handle);
+                  jntBoolean: Result := TValue.From<Boolean>(NodeVal.AsBoolean);
+                  jntNull: Result := TReflection.GetDefaultValue(AParam, AParam.ParamType.Handle);
+                else
+                  Result := TReflection.CastFromString(NodeVal.AsString, AParam.ParamType.Handle);
+                end;
               end;
             end
             else
@@ -351,7 +363,9 @@ begin
           jntBoolean: Result := TValue.From<Boolean>(JsonNode.AsBoolean);
           jntNull: Result := TReflection.GetDefaultValue(nil, AParam.ParamType.Handle);
         else
-          if (Length(BodyJsonStr) >= 2) and (BodyJsonStr[1] = '"') and (BodyJsonStr[Length(BodyJsonStr)] = '"') then
+          if AParam.ParamType.Handle.Kind = tkDynArray then
+            Result := TDextJson.Deserialize(AParam.ParamType.Handle, BodyJsonStr)
+          else if (Length(BodyJsonStr) >= 2) and (BodyJsonStr[1] = '"') and (BodyJsonStr[Length(BodyJsonStr)] = '"') then
             Result := TReflection.CastFromString(Copy(BodyJsonStr, 2, Length(BodyJsonStr) - 2), AParam.ParamType.Handle)
           else
             Result := TReflection.CastFromString(BodyJsonStr, AParam.ParamType.Handle);
@@ -360,10 +374,15 @@ begin
       else
         Result := TReflection.GetDefaultValue(nil, AParam.ParamType.Handle);
     except
-      if (Length(BodyJsonStr) >= 2) and (BodyJsonStr[1] = '"') and (BodyJsonStr[Length(BodyJsonStr)] = '"') then
-        Result := TReflection.CastFromString(Copy(BodyJsonStr, 2, Length(BodyJsonStr) - 2), AParam.ParamType.Handle)
-      else
-        Result := TReflection.CastFromString(BodyJsonStr, AParam.ParamType.Handle);
+      on E: Exception do
+      begin
+        if AParam.ParamType.Handle.Kind = tkDynArray then
+          Result := TReflection.GetDefaultValue(nil, AParam.ParamType.Handle)
+        else if (Length(BodyJsonStr) >= 2) and (BodyJsonStr[1] = '"') and (BodyJsonStr[Length(BodyJsonStr)] = '"') then
+          Result := TReflection.CastFromString(Copy(BodyJsonStr, 2, Length(BodyJsonStr) - 2), AParam.ParamType.Handle)
+        else
+          Result := TReflection.CastFromString(BodyJsonStr, AParam.ParamType.Handle);
+      end;
     end;
   end
   else

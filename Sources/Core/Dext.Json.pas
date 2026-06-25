@@ -569,7 +569,7 @@ begin
         Result := TValue.FromOrdinal(AType, Deserialize<Integer>(AJson));
     tkRecord:
       Result := DeserializeRecord(AType, AJson);
-    tkClass:
+    tkClass, tkDynArray:
       Result := Deserialize(AType, AJson, GetDefaultSettings);
     else
       raise EDextJsonException.CreateFmt('Unsupported type for deserialization: %s', [AType.NameFld.ToString]);
@@ -584,7 +584,6 @@ begin
   Serializer := TDextSerializer.Create(ASettings);
   try
     JsonNode := TDextJson.Provider.Parse(AJson);
-
     if JsonNode.GetNodeType = jntObject then
     begin
       if AType.Kind = tkRecord then
@@ -1940,14 +1939,15 @@ begin
       if not ElementValue.IsEmpty then
       begin
         P := PByte(DynArray) + (I * ElSize);
-        System.CopyArray(P, ElementValue.GetReferenceToRawData, ElementType, 1);
+        if TRttiContext.Create.GetType(ElementType).IsManaged then
+          System.CopyArray(P, ElementValue.GetReferenceToRawData, ElementType, 1)
+        else
+          System.Move(ElementValue.GetReferenceToRawData^, P^, ElSize);
       end;
     end;
 
     TValue.Make(@DynArray, AType, Result);
-    // The local DynArray pointer holds a reference. TValue.Make creates another (increments refcount).
-    // We must clear the local reference so that only the TValue holds usage.
-    DynArrayClear(DynArray, AType);
+    DynArray := nil;
   except
     if DynArray <> nil then
       DynArrayClear(DynArray, AType);
