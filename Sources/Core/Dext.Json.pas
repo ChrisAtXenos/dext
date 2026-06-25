@@ -874,7 +874,7 @@ begin
       Cache.Add(AType, Holder)
     else
     begin
-      // Another thread built it first — use theirs
+      // Another thread built it first - use theirs
       Holder.Free;
       Cache.TryGetValue(AType, Holder);
     end;
@@ -1129,7 +1129,7 @@ begin
                 if ExistingObj <> nil then
                 begin
                   // Populate the existing instance in-place using its actual runtime type.
-                  // Leave Val = Empty so Handler.SetValue is skipped — the reference is already correct.
+                  // Leave Val = Empty so Handler.SetValue is skipped - the reference is already correct.
                   DeserializeObject(Node as IDextJsonObject,
                     TReflection.Context.GetType(ExistingObj.ClassType).Handle, ExistingObj);
                 end

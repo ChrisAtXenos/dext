@@ -326,16 +326,11 @@ begin
           if JsonObj.Contains(AParam.Name) then
           begin
             NodeVal := JsonObj.GetNode(AParam.Name);
-            if NodeVal <> nil then
+            if (NodeVal <> nil) and not NodeVal.IsNull then
             begin
               if AParam.ParamType.Handle.Kind = tkDynArray then
               begin
-                if NodeVal.GetNodeType = jntNull then
-                  Result := TReflection.GetDefaultValue(AParam, AParam.ParamType.Handle)
-                else
-                begin
-                  Result := TDextJson.Deserialize(AParam.ParamType.Handle, NodeVal.ToJson());
-                end;
+                Result := TDextJson.Deserialize(AParam.ParamType.Handle, NodeVal.ToJson());
               end
               else
               begin

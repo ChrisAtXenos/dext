@@ -323,7 +323,6 @@ var
   Ctx: TRttiContext;
   Meth: TRttiMethod;
   Param: TRttiParameter;
-  Attr: TCustomAttribute;
 begin
   Context := CreateMockContextWithBody('{"codice":"acme","denominazione":"ACME"}'); // piano is omitted
   Meth := Ctx.GetType(TDummyController).GetMethod('MultiBodyAction');
