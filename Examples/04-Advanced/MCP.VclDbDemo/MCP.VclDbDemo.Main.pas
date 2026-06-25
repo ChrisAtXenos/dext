@@ -49,6 +49,21 @@ type
   end;
 
   // RTTI tool provider class
+  // ===========================================================================
+  // AVISO DE ARQUITETURA & ESCALABILIDADE:
+  //
+  // Este provedor de MCP (TDatabaseMCPProvider) está fortemente acoplado à classe
+  // TFormMain e compartilha diretamente suas conexões e estado de tela.
+  // Esta decisão de design foi tomada CONSCIENTEMENTE apenas por simplicidade
+  // de demonstração, visando exemplificar como injetar lógica de IA em projetos
+  // legados VCL existentes.
+  //
+  // Em uma aplicação real/produção baseada no Dext Framework, você deve:
+  //   1. Criar classes de Provedor MCP e Serviços isoladas do código de UI.
+  //   2. Utilizar Injeção de Dependência (DI) nativa do Dext para prover conexões.
+  //   3. Criar conexões de banco por escopo (scoped/transient) nas threads secundárias
+  //      das requisições MCP, evitando colidir/concorrer com a conexão da tela principal.
+  // ===========================================================================
   TDatabaseMCPProvider = class(TMCPToolProvider)
   private
     FForm: TFormMain;
