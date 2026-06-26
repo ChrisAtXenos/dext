@@ -126,6 +126,7 @@ type
     FStatusCode: Integer;
     FReason: string;
     FHeaders: TDictionary<string, string>;
+    FResponseBuffer: TBytes;
   public
     /// <summary>Initializes a new epoll response wrapper.</summary>
     /// <param name="ASocket">The raw socket descriptor.</param>
@@ -161,13 +162,21 @@ type
   private
     FEngine: TDextEpollEngine;
     FEpollFd: Integer;
+    FListenSocket: Integer;
+    FPipeFds: array[0..1] of Integer;
+    FReadBuffer: TBytes;
+    procedure CreateLocalReactor;
+    procedure CloseLocalReactor;
   protected
     procedure Execute; override;
   public
     /// <summary>Initializes the epoll worker thread.</summary>
     /// <param name="AEngine">The epoll engine instance.</param>
-    /// <param name="AEpollFd">The epoll file descriptor.</param>
-    constructor Create(AEngine: TDextEpollEngine; AEpollFd: Integer);
+    constructor Create(AEngine: TDextEpollEngine);
+    /// <summary>Cleans up resources.</summary>
+    destructor Destroy; override;
+    /// <summary>Sinaliza encerramento imediato.</summary>
+    procedure TerminateWorker;
   end;
 
   /// <summary>
@@ -176,9 +185,6 @@ type
   TDextEpollEngine = class(TInterfacedObject, IDextServerEngine)
   private
     FOptions: TServerEngineOptions;
-    FListenSocket: Integer;
-    FEpollFd: Integer;
-    FPipeFds: array[0..1] of Integer;
     FRunning: Boolean;
     FListeningPort: Word;
     FAddress: string;
@@ -463,13 +469,18 @@ end;
 
 procedure TDextEpollResponse.Close;
 begin
+  if not FHeadersSent then
+    SendHeaders;
   Flush;
 end;
 
 procedure TDextEpollResponse.Flush;
 begin
-  if not FHeadersSent then
-    SendHeaders;
+  if Length(FResponseBuffer) > 0 then
+  begin
+    send(FSocket, FResponseBuffer[0], Length(FResponseBuffer), 0);
+    SetLength(FResponseBuffer, 0);
+  end;
 end;
 
 procedure TDextEpollResponse.SendHeaders;
@@ -491,7 +502,7 @@ begin
   HeaderStr := HeaderStr + #13#10;
   HeaderBytes := TEncoding.UTF8.GetBytes(HeaderStr);
 
-  send(FSocket, HeaderBytes[0], Length(HeaderBytes), 0);
+  FResponseBuffer := HeaderBytes;
   FHeadersSent := True;
 end;
 
@@ -525,160 +536,42 @@ end;
 
 { TDextEpollWorker }
 
-constructor TDextEpollWorker.Create(AEngine: TDextEpollEngine; AEpollFd: Integer);
+constructor TDextEpollWorker.Create(AEngine: TDextEpollEngine);
 begin
   inherited Create(True);
   FEngine := AEngine;
-  FEpollFd := AEpollFd;
-  FreeOnTerminate := False;
-end;
-
-procedure TDextEpollWorker.Execute;
-var
-  EventCount: Integer;
-  I: Integer;
-  Events: array[0..63] of epoll_event;
-  Event: epoll_event;
-  Fd: Integer;
-  ClientFd: Integer;
-  Addr: sockaddr_in;
-  AddrLen: socklen_t;
-  Buffer: TBytes;
-  RecvRet: Integer;
-  Method, Path, Query, Version: string;
-  Headers: TDictionary<string, string>;
-  BodyOffset: Integer;
-  ContentLength: Int64;
-  Connection: IDextServerConnection;
-  RawRequest: IDextRawRequest;
-  RawResponse: IDextRawResponse;
-begin
-  while not Terminated and FEngine.FRunning do
-  begin
-    EventCount := epoll_wait(FEpollFd, @Events[0], Length(Events), 1000);
-    if EventCount < 0 then
-    begin
-      if errno = EINTR then Continue;
-      Break;
-    end;
-
-    for I := 0 to EventCount - 1 do
-    begin
-      Event := Events[I];
-      Fd := Event.data.fd;
-
-      if Fd = FEngine.FListenSocket then
-      begin
-        // Accept loop
-        while True do
-        begin
-          AddrLen := SizeOf(Addr);
-          ClientFd := accept(FEngine.FListenSocket, Psockaddr(@Addr)^, AddrLen);
-          if ClientFd < 0 then
-          begin
-            if (errno = EAGAIN) or (errno = EWOULDBLOCK) then
-              Break;
-            Break;
-          end;
-
-          // Non-blocking
-          fcntl(ClientFd, F_SETFL, O_NONBLOCK);
-
-          // Edge Triggered + One Shot
-          Event.events := EPOLLIN or EPOLLET or EPOLLONESHOT;
-          Event.data.fd := ClientFd;
-          epoll_ctl(FEpollFd, EPOLL_CTL_ADD, ClientFd, @Event);
-
-          TInterlocked.Increment(FEngine.FActiveConnections);
-        end;
-      end
-      else if Fd = FEngine.FPipeFds[0] then
-      begin
-        // Exit signal
-        Exit;
-      end
-      else
-      begin
-        // Process client socket read event
-        SetLength(Buffer, 8192);
-        RecvRet := recv(Fd, Buffer[0], Length(Buffer), 0);
-        if RecvRet > 0 then
-        begin
-          if TDextIocpHttpParser.TryParseRequest(
-            Buffer,
-            RecvRet,
-            Method,
-            Path,
-            Query,
-            Version,
-            Headers,
-            BodyOffset,
-            ContentLength
-          ) then
-          begin
-            TInterlocked.Increment(FEngine.FTotalRequests);
-
-            Connection := TDextEpollConnection.Create(Fd);
-            RawRequest := TDextEpollRequest.Create(Method, Path, Query, Headers, Buffer, BodyOffset, RecvRet - BodyOffset, ContentLength);
-            RawResponse := TDextEpollResponse.Create(Fd);
-
-            try
-              if Assigned(FEngine.FOnRequest) then
-                FEngine.FOnRequest(Connection, RawRequest, RawResponse);
-            finally
-              RawResponse.Close;
-              RawResponse := nil;
-              RawRequest := nil;
-              Connection := nil;
-            end;
-          end;
-        end;
-
-        __close(Fd);
-        TInterlocked.Decrement(FEngine.FActiveConnections);
-      end;
-    end;
-  end;
-end;
-
-{ TDextEpollEngine }
-
-constructor TDextEpollEngine.Create(const AOptions: TServerEngineOptions);
-begin
-  inherited Create;
-  FOptions := AOptions;
-  FListenSocket := -1;
   FEpollFd := -1;
+  FListenSocket := -1;
   FPipeFds[0] := -1;
   FPipeFds[1] := -1;
-  FRunning := False;
-  FWorkers := TList.Create;
+  FreeOnTerminate := False;
+  SetLength(FReadBuffer, 8192);
 end;
 
-destructor TDextEpollEngine.Destroy;
+destructor TDextEpollWorker.Destroy;
 begin
-  Stop;
-  FWorkers.Free;
+  CloseLocalReactor;
   inherited;
 end;
 
-procedure TDextEpollEngine.Bind(const AAddress: string; APort: Word);
+procedure TDextEpollWorker.TerminateWorker;
+var
+  B: Byte;
 begin
-  FAddress := AAddress;
-  FListeningPort := APort;
+  Terminate;
+  if FPipeFds[1] >= 0 then
+  begin
+    B := 1;
+    __write(FPipeFds[1], @B, 1);
+  end;
 end;
 
-procedure TDextEpollEngine.Start;
+procedure TDextEpollWorker.CreateLocalReactor;
 var
   Addr: sockaddr_in;
-  I: Integer;
-  ThreadCount: Integer;
-  Worker: TDextEpollWorker;
   Event: epoll_event;
   OptVal: Integer;
 begin
-  if FRunning then Exit;
-
   FEpollFd := epoll_create1(0);
   if FEpollFd < 0 then
     raise EOSError.Create('epoll_create1 failed');
@@ -696,15 +589,19 @@ begin
   OptVal := 1;
   setsockopt(FListenSocket, SOL_SOCKET, SO_REUSEADDR, OptVal, SizeOf(OptVal));
 
+  // Enable SO_REUSEPORT (value 15 on Linux)
+  OptVal := 1;
+  setsockopt(FListenSocket, SOL_SOCKET, 15, OptVal, SizeOf(OptVal));
+
   fcntl(FListenSocket, F_SETFL, O_NONBLOCK);
 
   FillChar(Addr, SizeOf(Addr), 0);
   Addr.sin_family := AF_INET;
-  Addr.sin_port := htons(FListeningPort);
-  if (FAddress = '') or (FAddress = '0.0.0.0') then
+  Addr.sin_port := htons(FEngine.FListeningPort);
+  if (FEngine.FAddress = '') or (FEngine.FAddress = '0.0.0.0') then
     Addr.sin_addr.s_addr := INADDR_ANY
   else
-    Addr.sin_addr.s_addr := inet_addr(PAnsiChar(AnsiString(FAddress)));
+    Addr.sin_addr.s_addr := inet_addr(PAnsiChar(AnsiString(FEngine.FAddress)));
 
   if Posix.SysSocket.bind(FListenSocket, Psockaddr(@Addr)^, SizeOf(Addr)) < 0 then
     raise EOSError.Create('bind failed');
@@ -721,51 +618,10 @@ begin
   Event.events := EPOLLIN;
   Event.data.fd := FPipeFds[0];
   epoll_ctl(FEpollFd, EPOLL_CTL_ADD, FPipeFds[0], @Event);
-
-  FRunning := True;
-
-  ThreadCount := FOptions.IoThreadCount;
-  if ThreadCount <= 0 then
-    ThreadCount := CPUCount;
-
-  for I := 1 to ThreadCount do
-  begin
-    Worker := TDextEpollWorker.Create(Self, FEpollFd);
-    FWorkers.Add(Worker);
-    Worker.Start;
-  end;
 end;
 
-procedure TDextEpollEngine.Stop(AGracefulTimeoutMs: Integer);
-var
-  I: Integer;
-  Worker: TDextEpollWorker;
-  B: Byte;
+procedure TDextEpollWorker.CloseLocalReactor;
 begin
-  if not FRunning then Exit;
-
-  FRunning := False;
-
-  if FPipeFds[1] >= 0 then
-  begin
-    B := 1;
-    __write(FPipeFds[1], @B, 1);
-  end;
-
-  for I := 0 to FWorkers.Count - 1 do
-  begin
-    Worker := TDextEpollWorker(FWorkers[I]);
-    Worker.Terminate;
-  end;
-
-  for I := 0 to FWorkers.Count - 1 do
-  begin
-    Worker := TDextEpollWorker(FWorkers[I]);
-    Worker.WaitFor;
-    Worker.Free;
-  end;
-  FWorkers.Clear;
-
   if FListenSocket >= 0 then
   begin
     __close(FListenSocket);
@@ -789,6 +645,192 @@ begin
     __close(FEpollFd);
     FEpollFd := -1;
   end;
+end;
+
+procedure TDextEpollWorker.Execute;
+var
+  EventCount: Integer;
+  I: Integer;
+  Events: array[0..63] of epoll_event;
+  Event: epoll_event;
+  Fd: Integer;
+  ClientFd: Integer;
+  Addr: sockaddr_in;
+  AddrLen: socklen_t;
+  RecvRet: Integer;
+  Method, Path, Query, Version: string;
+  Headers: TDictionary<string, string>;
+  BodyOffset: Integer;
+  ContentLength: Int64;
+  Connection: IDextServerConnection;
+  RawRequest: IDextRawRequest;
+  RawResponse: IDextRawResponse;
+begin
+  try
+    CreateLocalReactor;
+  except
+    Exit;
+  end;
+
+  try
+    while not Terminated and FEngine.FRunning do
+    begin
+      EventCount := epoll_wait(FEpollFd, @Events[0], Length(Events), 1000);
+      if EventCount < 0 then
+      begin
+        if errno = EINTR then Continue;
+        Break;
+      end;
+
+      for I := 0 to EventCount - 1 do
+      begin
+        Event := Events[I];
+        Fd := Event.data.fd;
+
+        if Fd = FListenSocket then
+        begin
+          // Accept loop
+          while True do
+          begin
+            AddrLen := SizeOf(Addr);
+            ClientFd := accept(FListenSocket, Psockaddr(@Addr)^, AddrLen);
+            if ClientFd < 0 then
+            begin
+              if (errno = EAGAIN) or (errno = EWOULDBLOCK) then
+                Break;
+              Break;
+            end;
+
+            // Non-blocking
+            fcntl(ClientFd, F_SETFL, O_NONBLOCK);
+
+            // Edge Triggered + One Shot
+            Event.events := EPOLLIN or EPOLLET or EPOLLONESHOT;
+            Event.data.fd := ClientFd;
+            epoll_ctl(FEpollFd, EPOLL_CTL_ADD, ClientFd, @Event);
+
+            TInterlocked.Increment(FEngine.FActiveConnections);
+          end;
+        end
+        else if Fd = FPipeFds[0] then
+        begin
+          // Exit signal
+          Exit;
+        end
+        else
+        begin
+          // Process client socket read event
+          RecvRet := recv(Fd, FReadBuffer[0], Length(FReadBuffer), 0);
+          if RecvRet > 0 then
+          begin
+            if TDextIocpHttpParser.TryParseRequest(
+              FReadBuffer,
+              RecvRet,
+              Method,
+              Path,
+              Query,
+              Version,
+              Headers,
+              BodyOffset,
+              ContentLength
+            ) then
+            begin
+              TInterlocked.Increment(FEngine.FTotalRequests);
+
+              Connection := TDextEpollConnection.Create(Fd);
+              RawRequest := TDextEpollRequest.Create(Method, Path, Query, Headers, FReadBuffer, BodyOffset, RecvRet - BodyOffset, ContentLength);
+              RawResponse := TDextEpollResponse.Create(Fd);
+
+              try
+                if Assigned(FEngine.FOnRequest) then
+                  FEngine.FOnRequest(Connection, RawRequest, RawResponse);
+              finally
+                RawResponse.Close;
+                RawResponse := nil;
+                RawRequest := nil;
+                Connection := nil;
+              end;
+            end;
+          end;
+
+          __close(Fd);
+          TInterlocked.Decrement(FEngine.FActiveConnections);
+        end;
+      end;
+    end;
+  finally
+    CloseLocalReactor;
+  end;
+end;
+
+
+{ TDextEpollEngine }
+
+constructor TDextEpollEngine.Create(const AOptions: TServerEngineOptions);
+begin
+  inherited Create;
+  FOptions := AOptions;
+  FRunning := False;
+  FWorkers := TList.Create;
+end;
+
+destructor TDextEpollEngine.Destroy;
+begin
+  Stop;
+  FWorkers.Free;
+  inherited;
+end;
+
+procedure TDextEpollEngine.Bind(const AAddress: string; APort: Word);
+begin
+  FAddress := AAddress;
+  FListeningPort := APort;
+end;
+
+procedure TDextEpollEngine.Start;
+var
+  I: Integer;
+  ThreadCount: Integer;
+  Worker: TDextEpollWorker;
+begin
+  if FRunning then Exit;
+
+  FRunning := True;
+
+  ThreadCount := FOptions.IoThreadCount;
+  if ThreadCount <= 0 then
+    ThreadCount := CPUCount;
+
+  for I := 1 to ThreadCount do
+  begin
+    Worker := TDextEpollWorker.Create(Self);
+    FWorkers.Add(Worker);
+    Worker.Start;
+  end;
+end;
+
+procedure TDextEpollEngine.Stop(AGracefulTimeoutMs: Integer);
+var
+  I: Integer;
+  Worker: TDextEpollWorker;
+begin
+  if not FRunning then Exit;
+
+  FRunning := False;
+
+  for I := 0 to FWorkers.Count - 1 do
+  begin
+    Worker := TDextEpollWorker(FWorkers[I]);
+    Worker.TerminateWorker;
+  end;
+
+  for I := 0 to FWorkers.Count - 1 do
+  begin
+    Worker := TDextEpollWorker(FWorkers[I]);
+    Worker.WaitFor;
+    Worker.Free;
+  end;
+  FWorkers.Clear;
 end;
 
 function TDextEpollEngine.GetActiveConnections: Integer;
