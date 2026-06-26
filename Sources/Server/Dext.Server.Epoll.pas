@@ -117,7 +117,11 @@ type
     /// <summary>Upgrades the active connection to WebSockets.</summary>
     function UpgradeToWebSocket: IDextWebSocketConnection;
   end;
- 
+  TDextReadOnlyBytesStream = class(TCustomMemoryStream)
+  public
+    constructor Create(const ABytes: TBytes; AOffset, ALen: Integer);
+  end;
+
   /// <summary>
   ///   Raw request implementation wrapper for epoll socket connection.
   /// </summary>
@@ -126,7 +130,7 @@ type
     FMethod: string;
     FPath: string;
     FQuery: string;
-    FBodyStream: TMemoryStream;
+    FBodyStream: TCustomMemoryStream;
     FContentLength: Int64;
     FBuffer: TBytes;
     FHeaderSegments: THeaderSegments;
@@ -617,6 +621,17 @@ begin
   Result := nil;
 end;
 
+{ TDextReadOnlyBytesStream }
+
+constructor TDextReadOnlyBytesStream.Create(const ABytes: TBytes; AOffset, ALen: Integer);
+begin
+  inherited Create;
+  if ALen > 0 then
+    SetPointer(@ABytes[AOffset], ALen)
+  else
+    SetPointer(nil, 0);
+end;
+
 { TDextEpollRequest }
 
 constructor TDextEpollRequest.Create(
@@ -634,15 +649,13 @@ begin
   FHeaderSegments := AHeaderSegments;
   FContentLength := AContentLength;
 
-  // Efetuamos cópia local do buffer do request para thread-safety no reactor desacoplado
-  FBuffer := Copy(ABody, 0, Length(ABody));
+  // Cópia restrita aos bytes úteis do request para thread-safety no reactor desacoplado
+  FBuffer := Copy(ABody, 0, ABodyOffset + ABodyLen);
 
   FResolvedHeaders := TDictionary<string, string>.Create;
 
-  FBodyStream := TMemoryStream.Create;
-  if ABodyLen > 0 then
-    FBodyStream.WriteBuffer(FBuffer[ABodyOffset], ABodyLen);
-  FBodyStream.Position := 0;
+  // Stream que lê diretamente do buffer sem cópia adicional
+  FBodyStream := TDextReadOnlyBytesStream.Create(FBuffer, ABodyOffset, ABodyLen);
 end;
 
 destructor TDextEpollRequest.Destroy;

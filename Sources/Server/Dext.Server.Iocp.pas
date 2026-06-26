@@ -87,6 +87,11 @@ type
     function UpgradeToWebSocket: IDextWebSocketConnection;
   end;
 
+  TDextReadOnlyBytesStream = class(TCustomMemoryStream)
+  public
+    constructor Create(const ABytes: TBytes; AOffset, ALen: Integer);
+  end;
+
   /// <summary>
   ///   Raw request implementation wrapper for IOCP socket connection.
   /// </summary>
@@ -98,7 +103,7 @@ type
     FBuffer: TBytes;
     FHeaderSegments: THeaderSegments;
     FResolvedHeaders: TDictionary<string, string>;
-    FBodyStream: TMemoryStream;
+    FBodyStream: TCustomMemoryStream;
     FContentLength: Int64;
     function GetMethod: string;
     function GetPath: string;
@@ -340,6 +345,17 @@ begin
   Result := nil; // WebSocket upgrade handled in S40
 end;
 
+{ TDextReadOnlyBytesStream }
+
+constructor TDextReadOnlyBytesStream.Create(const ABytes: TBytes; AOffset, ALen: Integer);
+begin
+  inherited Create;
+  if ALen > 0 then
+    SetPointer(@ABytes[AOffset], ALen)
+  else
+    SetPointer(nil, 0);
+end;
+
 { TDextIocpRequest }
 
 constructor TDextIocpRequest.Create(
@@ -357,15 +373,13 @@ begin
   FHeaderSegments := AHeaderSegments;
   FContentLength := AContentLength;
 
-  // Cópia local do buffer do request para thread-safety
-  FBuffer := Copy(ABody, 0, Length(ABody));
+  // Cópia restrita aos bytes úteis do request para thread-safety
+  FBuffer := Copy(ABody, 0, ABodyOffset + ABodyLen);
 
   FResolvedHeaders := TDictionary<string, string>.Create;
 
-  FBodyStream := TMemoryStream.Create;
-  if ABodyLen > 0 then
-    FBodyStream.WriteBuffer(FBuffer[ABodyOffset], ABodyLen);
-  FBodyStream.Position := 0;
+  // Stream que lê diretamente do buffer sem cópia adicional
+  FBodyStream := TDextReadOnlyBytesStream.Create(FBuffer, ABodyOffset, ABodyLen);
 end;
 
 destructor TDextIocpRequest.Destroy;
