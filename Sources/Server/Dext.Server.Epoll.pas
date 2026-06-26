@@ -252,6 +252,7 @@ type
     /// <summary>Initializes a new epoll server engine.</summary>
     /// <param name="AOptions">The engine configuration options.</param>
     constructor Create(const AOptions: TServerEngineOptions);
+    procedure DecActiveConnections;
     /// <summary>Destroys the engine and releases resources.</summary>
     destructor Destroy; override;
 
@@ -291,6 +292,7 @@ type
   public
     /// <summary>Stub constructor.</summary>
     constructor Create(const AOptions: TServerEngineOptions);
+    procedure DecActiveConnections;
     /// <summary>Stub Bind implementation.</summary>
     procedure Bind(const AAddress: string; APort: Word);
     /// <summary>Stub Start implementation.</summary>
@@ -684,7 +686,7 @@ begin
   // Cópia restrita aos bytes úteis do request para thread-safety no reactor desacoplado
   FBuffer := Copy(ABody, 0, ABodyOffset + ABodyLen);
 
-  FResolvedHeaders := TDictionary<string, string>.Create(TIStringComparer.OrdinalI);
+  FResolvedHeaders := TDictionary<string, string>.Create(True, False, 0);
 
   // Stream que lê diretamente do buffer sem cópia adicional
   FBodyStream := TDextReadOnlyBytesStream.Create(FBuffer, ABodyOffset, ABodyLen);
@@ -1037,7 +1039,10 @@ procedure TDextEpollWorker.ProcessRequestAsync(
   const ARequest: IDextRawRequest;
   const AResponse: IDextRawResponse
 );
+var
+  LLocalEpollFd: Integer;
 begin
+  LLocalEpollFd := FEpollFd;
   TTask.Run(
     procedure
     var
@@ -1047,6 +1052,7 @@ begin
       LContext: TDextEpollContext;
       LFd: Integer;
       HasPendingWrite: Boolean;
+      LLocalEvent: epoll_event;
     begin
       LConnection := AConnection;
       LRequest := ARequest;
@@ -1070,10 +1076,14 @@ begin
 
         if not HasPendingWrite then
         begin
-          __close(LFd);
+          shutdown(LFd, 1);
           if LContext <> nil then
-            LContext.Free;
-          TInterlocked.Decrement(FEngine.FActiveConnections);
+          begin
+            FillChar(LLocalEvent, SizeOf(LLocalEvent), 0);
+            LLocalEvent.events := EPOLLIN or EPOLLET or EPOLLONESHOT;
+            LLocalEvent.data.ptr := LContext;
+            epoll_ctl(LLocalEpollFd, EPOLL_CTL_MOD, LFd, @LLocalEvent);
+          end;
         end;
         LResponse := nil;
         LRequest := nil;
@@ -1289,6 +1299,11 @@ end;
 
 { TDextEpollEngine }
 
+procedure TDextEpollEngine.DecActiveConnections;
+begin
+  TInterlocked.Decrement(FActiveConnections);
+end;
+
 constructor TDextEpollEngine.Create(const AOptions: TServerEngineOptions);
 begin
   inherited Create;
@@ -1394,6 +1409,10 @@ end;
 {$ELSE}
 
 { TDextEpollEngine - Stub }
+
+procedure TDextEpollEngine.DecActiveConnections;
+begin
+end;
 
 constructor TDextEpollEngine.Create(const AOptions: TServerEngineOptions);
 begin

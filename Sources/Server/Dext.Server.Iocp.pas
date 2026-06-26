@@ -377,7 +377,7 @@ begin
   // Cópia restrita aos bytes úteis do request para thread-safety
   FBuffer := Copy(ABody, 0, ABodyOffset + ABodyLen);
 
-  FResolvedHeaders := TDictionary<string, string>.Create(TIStringComparer.OrdinalI);
+  FResolvedHeaders := TDictionary<string, string>.Create(True, False, 0);
 
   // Stream que lê diretamente do buffer sem cópia adicional
   FBodyStream := TDextReadOnlyBytesStream.Create(FBuffer, ABodyOffset, ABodyLen);
