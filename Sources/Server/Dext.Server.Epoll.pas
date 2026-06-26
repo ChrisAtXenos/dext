@@ -543,6 +543,15 @@ var
   ClientFd: Integer;
   Addr: sockaddr_in;
   AddrLen: socklen_t;
+  Buffer: TBytes;
+  RecvRet: Integer;
+  Method, Path, Query, Version: string;
+  Headers: TDictionary<string, string>;
+  BodyOffset: Integer;
+  ContentLength: Int64;
+  Connection: IDextServerConnection;
+  RawRequest: IDextRawRequest;
+  RawResponse: IDextRawResponse;
 begin
   while not Terminated and FEngine.FRunning do
   begin
@@ -587,6 +596,46 @@ begin
       begin
         // Exit signal
         Exit;
+      end
+      else
+      begin
+        // Process client socket read event
+        SetLength(Buffer, 8192);
+        RecvRet := recv(Fd, Buffer[0], Length(Buffer), 0);
+        if RecvRet > 0 then
+        begin
+          if TDextIocpHttpParser.TryParseRequest(
+            Buffer,
+            RecvRet,
+            Method,
+            Path,
+            Query,
+            Version,
+            Headers,
+            BodyOffset,
+            ContentLength
+          ) then
+          begin
+            TInterlocked.Increment(FEngine.FTotalRequests);
+
+            Connection := TDextEpollConnection.Create(Fd);
+            RawRequest := TDextEpollRequest.Create(Method, Path, Query, Headers, Buffer, BodyOffset, RecvRet - BodyOffset, ContentLength);
+            RawResponse := TDextEpollResponse.Create(Fd);
+
+            try
+              if Assigned(FEngine.FOnRequest) then
+                FEngine.FOnRequest(Connection, RawRequest, RawResponse);
+            finally
+              RawResponse.Close;
+              RawResponse := nil;
+              RawRequest := nil;
+              Connection := nil;
+            end;
+          end;
+        end;
+
+        __close(Fd);
+        TInterlocked.Decrement(FEngine.FActiveConnections);
       end;
     end;
   end;
