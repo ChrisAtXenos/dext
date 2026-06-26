@@ -38,9 +38,3 @@ history.json
 *.o
 *.dcp
 *.hpp
-
-# Local Benchmark Automation Scripts
-/Benchmarks/run_linux_benchmark.sh
-/Benchmarks/run_docker_benchmark.ps1
-/Benchmarks/Dockerfile
-/Benchmarks/EpollConsole
