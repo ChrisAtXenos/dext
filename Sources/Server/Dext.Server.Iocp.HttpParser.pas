@@ -45,6 +45,8 @@ type
     ValueLen: Integer;
   end;
 
+  THeaderSegments = TArray<THeaderSegment>;
+
   /// <summary>
   ///   Zero-allocation (on structural parsing) incremental HTTP/1.1 parser.
   /// </summary>
@@ -52,6 +54,7 @@ type
   private
     class function FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer; static; inline;
     class function FindCRLF(const ABuffer: TBytes; AStart, AEnd: Integer): Integer; static; inline;
+    class function CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean; static; inline;
   public
     /// <summary>
     ///   Attempts to parse HTTP/1.1 request headers from a byte buffer.
@@ -65,7 +68,7 @@ type
       out APath: string;
       out AQuery: string;
       out AVersion: string;
-      out AHeaders: TDictionary<string, string>;
+      out AHeaderSegments: THeaderSegments;
       out ABodyOffset: Integer;
       out AContentLength: Int64
     ): Boolean; static;
@@ -95,6 +98,23 @@ begin
   Result := -1;
 end;
 
+class function TDextIocpHttpParser.CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean;
+var
+  I: Integer;
+  B1, B2: Byte;
+begin
+  if ALen <> Length(AStr) then Exit(False);
+  for I := 0 to ALen - 1 do
+  begin
+    B1 := ABuffer[AStart + I];
+    B2 := Ord(AStr[I + 1]);
+    if (B1 >= 65) and (B1 <= 90) then B1 := B1 + 32;
+    if (B2 >= 65) and (B2 <= 90) then B2 := B2 + 32;
+    if B1 <> B2 then Exit(False);
+  end;
+  Result := True;
+end;
+
 class function TDextIocpHttpParser.TryParseRequest(
   const ABuffer: TBytes; 
   ALength: Integer;
@@ -102,7 +122,7 @@ class function TDextIocpHttpParser.TryParseRequest(
   out APath: string;
   out AQuery: string;
   out AVersion: string;
-  out AHeaders: TDictionary<string, string>;
+  out AHeaderSegments: THeaderSegments;
   out ABodyOffset: Integer;
   out AContentLength: Int64
 ): Boolean;
@@ -116,7 +136,8 @@ var
   UrlEnd: Integer;
   QueryStart: Integer;
   Colon: Integer;
-  Key, Value: string;
+  Seg: THeaderSegment;
+  SegCount: Integer;
 begin
   AMethod := '';
   APath := '';
@@ -124,7 +145,7 @@ begin
   AVersion := '';
   ABodyOffset := -1;
   AContentLength := 0;
-  AHeaders := nil;
+  SetLength(AHeaderSegments, 0);
 
   // 1. Locate the end of the headers (\r\n\r\n)
   HeaderEnd := -1;
@@ -140,8 +161,6 @@ begin
   if HeaderEnd = -1 then
     Exit(False); // Headers are incomplete
 
-  AHeaders := TDictionary<string, string>.Create;
-
   // 2. Parse request line (first line)
   LineEnd := FindCRLF(ABuffer, 0, HeaderEnd);
   if LineEnd = -1 then Exit(False);
@@ -153,24 +172,27 @@ begin
   if Space2 = -1 then Exit(False);
 
   // Method
-  AMethod := string(AnsiString(PAnsiChar(@ABuffer[0]))).Substring(0, Space1);
+  AMethod := TEncoding.UTF8.GetString(ABuffer, 0, Space1);
 
   // URL / Path & Query
   UrlEnd := Space2;
   QueryStart := FindByte(ABuffer, Space1 + 1, Space2, 63); // '?' character
   if QueryStart <> -1 then
   begin
-    APath := string(AnsiString(PAnsiChar(@ABuffer[Space1 + 1]))).Substring(0, QueryStart - (Space1 + 1));
-    AQuery := string(AnsiString(PAnsiChar(@ABuffer[QueryStart]))).Substring(0, Space2 - QueryStart);
+    APath := TEncoding.UTF8.GetString(ABuffer, Space1 + 1, QueryStart - (Space1 + 1));
+    AQuery := TEncoding.UTF8.GetString(ABuffer, QueryStart, Space2 - QueryStart);
   end
   else
   begin
-    APath := string(AnsiString(PAnsiChar(@ABuffer[Space1 + 1]))).Substring(0, Space2 - (Space1 + 1));
+    APath := TEncoding.UTF8.GetString(ABuffer, Space1 + 1, Space2 - (Space1 + 1));
     AQuery := '';
   end;
 
   // Version
-  AVersion := string(AnsiString(PAnsiChar(@ABuffer[Space2 + 1]))).Substring(0, LineEnd - (Space2 + 1));
+  AVersion := TEncoding.UTF8.GetString(ABuffer, Space2 + 1, LineEnd - (Space2 + 1));
+
+  SegCount := 0;
+  SetLength(AHeaderSegments, 16);
 
   // 3. Parse headers line by line
   LineStart := LineEnd + 2;
@@ -184,18 +206,40 @@ begin
       Colon := FindByte(ABuffer, LineStart, LineEnd, 58); // ':' character
       if Colon <> -1 then
       begin
-        Key := string(AnsiString(PAnsiChar(@ABuffer[LineStart]))).Substring(0, Colon - LineStart).Trim;
-        Value := string(AnsiString(PAnsiChar(@ABuffer[Colon + 1]))).Substring(0, LineEnd - (Colon + 1)).Trim;
-        AHeaders.AddOrSetValue(Key, Value);
+        Seg.KeyStart := LineStart;
+        Seg.KeyLen := Colon - LineStart;
+        Seg.ValueStart := Colon + 1;
+        Seg.ValueLen := LineEnd - (Colon + 1);
 
-        if SameText(Key, 'Content-Length') then
-          AContentLength := StrToInt64Def(Value, 0);
+        // Skip leading space of value
+        while (Seg.ValueLen > 0) and (ABuffer[Seg.ValueStart] = 32) do
+        begin
+          Inc(Seg.ValueStart);
+          Dec(Seg.ValueLen);
+        end;
+
+        if SegCount >= Length(AHeaderSegments) then
+          SetLength(AHeaderSegments, SegCount + 8);
+
+        AHeaderSegments[SegCount] := Seg;
+        Inc(SegCount);
+
+        if CompareBytesCI(ABuffer, Seg.KeyStart, Seg.KeyLen, 'content-length') then
+        begin
+          AContentLength := 0;
+          for I := 0 to Seg.ValueLen - 1 do
+          begin
+            if (ABuffer[Seg.ValueStart + I] >= 48) and (ABuffer[Seg.ValueStart + I] <= 57) then
+              AContentLength := AContentLength * 10 + (ABuffer[Seg.ValueStart + I] - 48);
+          end;
+        end;
       end;
     end;
 
     LineStart := LineEnd + 2;
   end;
 
+  SetLength(AHeaderSegments, SegCount);
   ABodyOffset := HeaderEnd + 4;
   Result := True;
 end;

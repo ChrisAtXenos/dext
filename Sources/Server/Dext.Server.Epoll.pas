@@ -70,6 +70,21 @@ type
     ): Boolean; static;
   end;
 
+  TDextEpollContext = class
+  public
+    FFd: Integer;
+    FEpollFd: Integer;
+    FReadBuffer: TBytes;
+    FReadLen: Integer;
+    
+    // Escrita pendente
+    FWriteBuffer: TBytes;
+    FWriteOffset: Integer;
+    FWriteLen: Integer;
+    
+    constructor Create(AFd: Integer; AEpollFd: Integer);
+  end;
+
   /// <summary>
   ///   Raw connection implementation wrapper for epoll sockets.
   /// </summary>
@@ -96,15 +111,13 @@ type
     function IsSecure: Boolean;
     /// <summary>Closes the connection.</summary>
     procedure Close;
-
+ 
     /// <summary>Checks if connection upgrade is supported.</summary>
     function SupportsUpgrade: Boolean;
     /// <summary>Upgrades the active connection to WebSockets.</summary>
     function UpgradeToWebSocket: IDextWebSocketConnection;
   end;
-
-  /// <summary>
-  ///   Raw request implementation wrapper for epoll socket connection.
+ 
   /// <summary>
   ///   Raw request implementation wrapper for epoll socket connection.
   /// </summary>
@@ -138,13 +151,14 @@ type
     /// <summary>Cleans up the request resources.</summary>
     destructor Destroy; override;
   end;
-
+ 
   /// <summary>
   ///   Raw response implementation wrapper for epoll socket connection.
   /// </summary>
   TDextEpollResponse = class(TInterfacedObject, IDextRawResponse)
   private
     FSocket: Integer;
+    FContext: TDextEpollContext;
     FHeadersSent: Boolean;
     FStatusCode: Integer;
     FReason: string;
@@ -154,11 +168,11 @@ type
     FBodyLen: Integer;
   public
     /// <summary>Initializes a new epoll response wrapper.</summary>
-    /// <param name="ASocket">The raw socket descriptor.</param>
-    constructor Create(ASocket: Integer);
+    /// <param name="AContext">The connection context.</param>
+    constructor Create(AContext: TDextEpollContext);
     /// <summary>Cleans up the response resources.</summary>
     destructor Destroy; override;
-
+ 
     /// <summary>Sets the HTTP status code and optional reason phrase.</summary>
     /// <param name="ACode">The HTTP status code (e.g., 200, 404).</param>
     /// <param name="AReason">Optional HTTP reason phrase.</param>
@@ -179,7 +193,7 @@ type
     /// <summary>Closes the response stream and connection.</summary>
     procedure Close;
   end;
-
+ 
   /// <summary>
   ///   Worker thread running epoll_wait event loop.
   /// </summary>
@@ -193,7 +207,7 @@ type
     procedure CreateLocalReactor;
     procedure CloseLocalReactor;
     procedure ProcessRequestAsync(
-      AFd: Integer;
+      AContext: TDextEpollContext;
       const AConnection: IDextServerConnection;
       const ARequest: IDextRawRequest;
       const AResponse: IDextRawResponse
@@ -349,6 +363,19 @@ function epoll_ctl(epfd: Integer; op: Integer; fd: Integer; event: pepoll_event)
 function epoll_wait(epfd: Integer; events: pepoll_event; maxevents: Integer; timeout: Integer): Integer; cdecl; external libc name 'epoll_wait';
 function writev(fd: Integer; iov: piovec; iovcnt: Integer): Integer; cdecl; external libc name 'writev';
 
+{ TDextEpollContext }
+ 
+constructor TDextEpollContext.Create(AFd: Integer; AEpollFd: Integer);
+begin
+  inherited Create;
+  FFd := AFd;
+  FEpollFd := AEpollFd;
+  FReadLen := 0;
+  SetLength(FReadBuffer, 4096);
+  FWriteOffset := 0;
+  FWriteLen := 0;
+end;
+ 
 { TDextEpollHttpParser }
 
 class function TDextEpollHttpParser.FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer;
@@ -684,10 +711,11 @@ function TDextEpollRequest.GetQueryString: string; begin Result := FQuery; end;
 
 { TDextEpollResponse }
 
-constructor TDextEpollResponse.Create(ASocket: Integer);
+constructor TDextEpollResponse.Create(AContext: TDextEpollContext);
 begin
   inherited Create;
-  FSocket := ASocket;
+  FContext := AContext;
+  FSocket := AContext.FFd;
   FHeadersSent := False;
   FStatusCode := 200;
   FReason := 'OK';
@@ -710,15 +738,24 @@ var
   Iov: array[0..1] of iovec;
   IovCnt: Integer;
   Res: Integer;
+  TotalBytes: Integer;
+  RemainderLen: Integer;
+  DestPos: Integer;
+  HeaderRem: Integer;
+  BodySent: Integer;
+  BodyRem: Integer;
+  Event: epoll_event;
 begin
   if not FHeadersSent then
     SendHeaders;
 
   IovCnt := 0;
+  TotalBytes := 0;
   if Length(FResponseBuffer) > 0 then
   begin
     Iov[IovCnt].iov_base := @FResponseBuffer[0];
     Iov[IovCnt].iov_len := Length(FResponseBuffer);
+    TotalBytes := TotalBytes + Length(FResponseBuffer);
     Inc(IovCnt);
   end;
 
@@ -726,6 +763,7 @@ begin
   begin
     Iov[IovCnt].iov_base := @FBodyBuffer[0];
     Iov[IovCnt].iov_len := FBodyLen;
+    TotalBytes := TotalBytes + FBodyLen;
     Inc(IovCnt);
   end;
 
@@ -734,8 +772,43 @@ begin
     Res := writev(FSocket, @Iov[0], IovCnt);
     if Res < 0 then
     begin
-      // Erros silenciosos ou de rede em fechamento de socket
+      if (errno = EAGAIN) or (errno = EWOULDBLOCK) then
+        Res := 0
+      else
+        Res := -1;
     end;
+
+    if (Res >= 0) and (Res < TotalBytes) then
+    begin
+      RemainderLen := TotalBytes - Res;
+      SetLength(FContext.FWriteBuffer, RemainderLen);
+      DestPos := 0;
+
+      if Res < Length(FResponseBuffer) then
+      begin
+        HeaderRem := Length(FResponseBuffer) - Res;
+        Move(FResponseBuffer[Res], FContext.FWriteBuffer[DestPos], HeaderRem);
+        Inc(DestPos, HeaderRem);
+        if FBodyLen > 0 then
+          Move(FBodyBuffer[0], FContext.FWriteBuffer[DestPos], FBodyLen);
+      end
+      else
+      begin
+        BodySent := Res - Length(FResponseBuffer);
+        BodyRem := FBodyLen - BodySent;
+        if BodyRem > 0 then
+          Move(FBodyBuffer[BodySent], FContext.FWriteBuffer[DestPos], BodyRem);
+      end;
+
+      FContext.FWriteOffset := 0;
+      FContext.FWriteLen := RemainderLen;
+
+      FillChar(Event, SizeOf(Event), 0);
+      Event.events := EPOLLOUT or EPOLLET or EPOLLONESHOT;
+      Event.data.ptr := FContext;
+      epoll_ctl(FContext.FEpollFd, EPOLL_CTL_MOD, FSocket, @Event);
+    end;
+
     SetLength(FResponseBuffer, 0);
     FBodyLen := 0;
     SetLength(FBodyBuffer, 0);
@@ -908,7 +981,7 @@ begin
 end;
 
 procedure TDextEpollWorker.ProcessRequestAsync(
-  AFd: Integer;
+  AContext: TDextEpollContext;
   const AConnection: IDextServerConnection;
   const ARequest: IDextRawRequest;
   const AResponse: IDextRawResponse
@@ -920,12 +993,15 @@ begin
       LConnection: IDextServerConnection;
       LRequest: IDextRawRequest;
       LResponse: IDextRawResponse;
+      LContext: TDextEpollContext;
       LFd: Integer;
+      HasPendingWrite: Boolean;
     begin
       LConnection := AConnection;
       LRequest := ARequest;
       LResponse := AResponse;
-      LFd := AFd;
+      LContext := AContext;
+      LFd := LContext.FFd;
       try
         try
           if Assigned(FEngine.FOnRequest) then
@@ -934,11 +1010,23 @@ begin
           LResponse.Close;
         end;
       finally
+        HasPendingWrite := False;
+        if LContext <> nil then
+        begin
+          if LContext.FWriteLen > 0 then
+            HasPendingWrite := True;
+        end;
+
+        if not HasPendingWrite then
+        begin
+          __close(LFd);
+          if LContext <> nil then
+            LContext.Free;
+          TInterlocked.Decrement(FEngine.FActiveConnections);
+        end;
         LResponse := nil;
         LRequest := nil;
         LConnection := nil;
-        __close(LFd);
-        TInterlocked.Decrement(FEngine.FActiveConnections);
       end;
     end
   );
@@ -962,6 +1050,9 @@ var
   Connection: IDextServerConnection;
   RawRequest: IDextRawRequest;
   RawResponse: IDextRawResponse;
+  Context: TDextEpollContext;
+  ReadFailedOrClosed: Boolean;
+  SentBytes: Integer;
 begin
   try
     CreateLocalReactor;
@@ -1001,9 +1092,12 @@ begin
             // Non-blocking
             fcntl(ClientFd, F_SETFL, O_NONBLOCK);
 
+            // Cria o contexto da conexão
+            Context := TDextEpollContext.Create(ClientFd, FEpollFd);
+
             // Edge Triggered + One Shot
             Event.events := EPOLLIN or EPOLLET or EPOLLONESHOT;
-            Event.data.fd := ClientFd;
+            Event.data.ptr := Context;
             epoll_ctl(FEpollFd, EPOLL_CTL_ADD, ClientFd, @Event);
 
             TInterlocked.Increment(FEngine.FActiveConnections);
@@ -1016,13 +1110,86 @@ begin
         end
         else
         begin
-          // Process client socket read event
-          RecvRet := recv(Fd, FReadBuffer[0], Length(FReadBuffer), 0);
-          if RecvRet > 0 then
+          Context := TDextEpollContext(Event.data.ptr);
+
+          if (Event.events and EPOLLOUT) <> 0 then
+          begin
+            // Pronto para escrita! Terminar de enviar dados parciais.
+            SentBytes := send(Context.FFd, Context.FWriteBuffer[Context.FWriteOffset], Context.FWriteLen, 0);
+            if SentBytes > 0 then
+            begin
+              Context.FWriteOffset := Context.FWriteOffset + SentBytes;
+              Context.FWriteLen := Context.FWriteLen - SentBytes;
+
+              if Context.FWriteLen = 0 then
+              begin
+                // Escrita concluída com sucesso! Agora podemos fechar.
+                __close(Context.FFd);
+                Context.Free;
+                TInterlocked.Decrement(FEngine.FActiveConnections);
+                Continue;
+              end;
+            end
+            else if (SentBytes < 0) and ((errno = EAGAIN) or (errno = EWOULDBLOCK)) then
+            begin
+              // Bloqueado novamente.
+            end
+            else
+            begin
+              // Erro ou desconexão.
+              __close(Context.FFd);
+              Context.Free;
+              TInterlocked.Decrement(FEngine.FActiveConnections);
+              Continue;
+            end;
+
+            // Se ainda tem dados a enviar, rearmamos em modo EPOLLOUT
+            FillChar(Event, SizeOf(Event), 0);
+            Event.events := EPOLLOUT or EPOLLET or EPOLLONESHOT;
+            Event.data.ptr := Context;
+            epoll_ctl(FEpollFd, EPOLL_CTL_MOD, Context.FFd, @Event);
+            Continue;
+          end;
+
+          // Evento de Leitura (EPOLLIN)
+          ReadFailedOrClosed := False;
+          while True do
+          begin
+            if Context.FReadLen + 4096 > Length(Context.FReadBuffer) then
+              SetLength(Context.FReadBuffer, Length(Context.FReadBuffer) + 4096);
+
+            RecvRet := recv(Context.FFd, Context.FReadBuffer[Context.FReadLen], 4096, 0);
+            if RecvRet > 0 then
+            begin
+              Context.FReadLen := Context.FReadLen + RecvRet;
+            end
+            else if RecvRet = 0 then
+            begin
+              ReadFailedOrClosed := True;
+              Break;
+            end
+            else
+            begin
+              if (errno = EAGAIN) or (errno = EWOULDBLOCK) then
+                Break;
+              ReadFailedOrClosed := True;
+              Break;
+            end;
+          end;
+
+          if ReadFailedOrClosed then
+          begin
+            __close(Context.FFd);
+            Context.Free;
+            TInterlocked.Decrement(FEngine.FActiveConnections);
+            Continue;
+          end;
+
+          if Context.FReadLen > 0 then
           begin
             if TDextEpollHttpParser.TryParseRequest(
-              FReadBuffer,
-              RecvRet,
+              Context.FReadBuffer,
+              Context.FReadLen,
               Method,
               Path,
               Query,
@@ -1034,21 +1201,33 @@ begin
             begin
               TInterlocked.Increment(FEngine.FTotalRequests);
 
-              Connection := TDextEpollConnection.Create(Fd);
-              RawRequest := TDextEpollRequest.Create(Method, Path, Query, HeaderSegments, FReadBuffer, BodyOffset, RecvRet - BodyOffset, ContentLength);
-              RawResponse := TDextEpollResponse.Create(Fd);
+              Connection := TDextEpollConnection.Create(Context.FFd);
+              RawRequest := TDextEpollRequest.Create(Method, Path, Query, HeaderSegments, Context.FReadBuffer, BodyOffset, Context.FReadLen - BodyOffset, ContentLength);
+              RawResponse := TDextEpollResponse.Create(Context);
 
-              ProcessRequestAsync(Fd, Connection, RawRequest, RawResponse);
+              ProcessRequestAsync(Context, Connection, RawRequest, RawResponse);
 
               Connection := nil;
               RawRequest := nil;
               RawResponse := nil;
               Continue;
             end;
+
+            // Proteção contra tamanho excessivo de cabeçalho
+            if Context.FReadLen >= 8192 then
+            begin
+              __close(Context.FFd);
+              Context.Free;
+              TInterlocked.Decrement(FEngine.FActiveConnections);
+              Continue;
+            end;
           end;
 
-          __close(Fd);
-          TInterlocked.Decrement(FEngine.FActiveConnections);
+          // Se incompleto, rearma no Epoll para leitura
+          FillChar(Event, SizeOf(Event), 0);
+          Event.events := EPOLLIN or EPOLLET or EPOLLONESHOT;
+          Event.data.ptr := Context;
+          epoll_ctl(FEpollFd, EPOLL_CTL_MOD, Context.FFd, @Event);
         end;
       end;
     end;
