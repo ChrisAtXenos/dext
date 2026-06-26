@@ -49,6 +49,8 @@ type
     ValueLen: Integer;
   end;
 
+  THeaderSegments = TArray<THeaderSegment>;
+
   TDextEpollHttpParser = record
   private
     class function FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer; static; inline;
@@ -62,7 +64,7 @@ type
       out APath: string;
       out AQuery: string;
       out AVersion: string;
-      out AHeaderSegments: TDictionary<string, THeaderSegment>;
+      out AHeaderSegments: THeaderSegments;
       out ABodyOffset: Integer;
       out AContentLength: Int64
     ): Boolean; static;
@@ -114,7 +116,7 @@ type
     FBodyStream: TMemoryStream;
     FContentLength: Int64;
     FBuffer: TBytes;
-    FHeaderSegments: TDictionary<string, THeaderSegment>;
+    FHeaderSegments: THeaderSegments;
     FResolvedHeaders: TDictionary<string, string>;
     function GetMethod: string;
     function GetPath: string;
@@ -128,7 +130,7 @@ type
     /// <summary>Initializes the raw epoll request wrapper.</summary>
     constructor Create(
       const AMethod, APath, AQuery: string;
-      AHeaderSegments: TDictionary<string, THeaderSegment>;
+      const AHeaderSegments: THeaderSegments;
       ABody: TBytes;
       ABodyOffset, ABodyLen: Integer;
       AContentLength: Int64
@@ -393,7 +395,7 @@ class function TDextEpollHttpParser.TryParseRequest(
   out APath: string;
   out AQuery: string;
   out AVersion: string;
-  out AHeaderSegments: TDictionary<string, THeaderSegment>;
+  out AHeaderSegments: THeaderSegments;
   out ABodyOffset: Integer;
   out AContentLength: Int64
 ): Boolean;
@@ -407,8 +409,8 @@ var
   UrlEnd: Integer;
   QueryStart: Integer;
   Colon: Integer;
-  Key: string;
   Seg: THeaderSegment;
+  SegCount: Integer;
 begin
   AMethod := '';
   APath := '';
@@ -416,7 +418,7 @@ begin
   AVersion := '';
   ABodyOffset := -1;
   AContentLength := 0;
-  AHeaderSegments := nil;
+  SetLength(AHeaderSegments, 0);
 
   HeaderEnd := -1;
   for I := 0 to ALength - 4 do
@@ -456,7 +458,8 @@ begin
 
   AVersion := TEncoding.UTF8.GetString(ABuffer, Space2 + 1, LineEnd - (Space2 + 1));
 
-  AHeaderSegments := TDictionary<string, THeaderSegment>.Create;
+  SegCount := 0;
+  SetLength(AHeaderSegments, 16);
 
   LineStart := LineEnd + 2;
   while LineStart < HeaderEnd do
@@ -480,15 +483,20 @@ begin
           Dec(Seg.ValueLen);
         end;
 
-        Key := TEncoding.UTF8.GetString(ABuffer, Seg.KeyStart, Seg.KeyLen).Trim.ToLower;
-        AHeaderSegments.AddOrSetValue(Key, Seg);
+        if SegCount >= Length(AHeaderSegments) then
+          SetLength(AHeaderSegments, SegCount + 8);
 
-        if Key = 'content-length' then
+        AHeaderSegments[SegCount] := Seg;
+        Inc(SegCount);
+
+        if CompareBytesCI(ABuffer, Seg.KeyStart, Seg.KeyLen, 'content-length') then
         begin
-          AContentLength := StrToInt64Def(
-            TEncoding.UTF8.GetString(ABuffer, Seg.ValueStart, Seg.ValueLen).Trim,
-            0
-          );
+          AContentLength := 0;
+          for I := 0 to Seg.ValueLen - 1 do
+          begin
+            if (ABuffer[Seg.ValueStart + I] >= 48) and (ABuffer[Seg.ValueStart + I] <= 57) then
+              AContentLength := AContentLength * 10 + (ABuffer[Seg.ValueStart + I] - 48);
+          end;
         end;
       end;
     end;
@@ -496,6 +504,7 @@ begin
     LineStart := LineEnd + 2;
   end;
 
+  SetLength(AHeaderSegments, SegCount);
   ABodyOffset := HeaderEnd + 4;
   Result := True;
 end;
@@ -585,7 +594,7 @@ end;
 
 constructor TDextEpollRequest.Create(
   const AMethod, APath, AQuery: string;
-  AHeaderSegments: TDictionary<string, THeaderSegment>;
+  const AHeaderSegments: THeaderSegments;
   ABody: TBytes;
   ABodyOffset, ABodyLen: Integer;
   AContentLength: Int64
@@ -611,7 +620,6 @@ end;
 
 destructor TDextEpollRequest.Destroy;
 begin
-  FHeaderSegments.Free;
   FResolvedHeaders.Free;
   FBodyStream.Free;
   inherited;
@@ -630,18 +638,23 @@ end;
 function TDextEpollRequest.ResolveHeader(const AName: string): string;
 var
   Key: string;
+  I: Integer;
   Seg: THeaderSegment;
 begin
   Key := AName.ToLower;
   if FResolvedHeaders.TryGetValue(Key, Result) then Exit;
 
-  if FHeaderSegments.TryGetValue(Key, Seg) then
+  for I := 0 to Length(FHeaderSegments) - 1 do
   begin
-    Result := TEncoding.UTF8.GetString(FBuffer, Seg.ValueStart, Seg.ValueLen).Trim;
-    FResolvedHeaders.Add(Key, Result);
-  end
-  else
-    Result := '';
+    Seg := FHeaderSegments[I];
+    if TDextEpollHttpParser.CompareBytesCI(FBuffer, Seg.KeyStart, Seg.KeyLen, Key) then
+    begin
+      Result := TEncoding.UTF8.GetString(FBuffer, Seg.ValueStart, Seg.ValueLen).Trim;
+      FResolvedHeaders.Add(Key, Result);
+      Exit;
+    end;
+  end;
+  Result := '';
 end;
 
 function TDextEpollRequest.GetHeader(const AName: string): string;
@@ -651,10 +664,17 @@ end;
 
 procedure TDextEpollRequest.PopulateHeaders(ADict: TDictionary<string, string>);
 var
-  Pair: TPair<string, THeaderSegment>;
+  I: Integer;
+  Seg: THeaderSegment;
+  Key, Value: string;
 begin
-  for Pair in FHeaderSegments do
-    ADict.AddOrSetValue(Pair.Key, ResolveHeader(Pair.Key));
+  for I := 0 to Length(FHeaderSegments) - 1 do
+  begin
+    Seg := FHeaderSegments[I];
+    Key := TEncoding.UTF8.GetString(FBuffer, Seg.KeyStart, Seg.KeyLen).Trim.ToLower;
+    Value := ResolveHeader(Key);
+    ADict.AddOrSetValue(Key, Value);
+  end;
 end;
 
 // Interface redirects
@@ -936,7 +956,7 @@ var
   AddrLen: socklen_t;
   RecvRet: Integer;
   Method, Path, Query, Version: string;
-  HeaderSegments: TDictionary<string, THeaderSegment>;
+  HeaderSegments: THeaderSegments;
   BodyOffset: Integer;
   ContentLength: Int64;
   Connection: IDextServerConnection;
