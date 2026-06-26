@@ -42,6 +42,32 @@ type
   {$IFDEF LINUX}
   TDextEpollEngine = class;
 
+  THeaderSegment = record
+    KeyStart: Integer;
+    KeyLen: Integer;
+    ValueStart: Integer;
+    ValueLen: Integer;
+  end;
+
+  TDextEpollHttpParser = record
+  private
+    class function FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer; static; inline;
+    class function FindCRLF(const ABuffer: TBytes; AStart, AEnd: Integer): Integer; static; inline;
+    class function CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean; static; inline;
+  public
+    class function TryParseRequest(
+      const ABuffer: TBytes; 
+      ALength: Integer;
+      out AMethod: string;
+      out APath: string;
+      out AQuery: string;
+      out AVersion: string;
+      out AHeaderSegments: TDictionary<string, THeaderSegment>;
+      out ABodyOffset: Integer;
+      out AContentLength: Int64
+    ): Boolean; static;
+  end;
+
   /// <summary>
   ///   Raw connection implementation wrapper for epoll sockets.
   /// </summary>
@@ -85,9 +111,11 @@ type
     FMethod: string;
     FPath: string;
     FQuery: string;
-    FHeaders: TDictionary<string, string>;
     FBodyStream: TMemoryStream;
     FContentLength: Int64;
+    FBuffer: TBytes;
+    FHeaderSegments: TDictionary<string, THeaderSegment>;
+    FResolvedHeaders: TDictionary<string, string>;
     function GetMethod: string;
     function GetPath: string;
     function GetQueryString: string;
@@ -95,19 +123,12 @@ type
     procedure PopulateHeaders(ADict: TDictionary<string, string>);
     function GetContentLength: Int64;
     function GetBodyStream: TStream;
+    function ResolveHeader(const AName: string): string;
   public
     /// <summary>Initializes the raw epoll request wrapper.</summary>
-    /// <param name="AMethod">The HTTP method.</param>
-    /// <param name="APath">The request path.</param>
-    /// <param name="AQuery">The raw query string.</param>
-    /// <param name="AHeaders">The headers dictionary.</param>
-    /// <param name="ABody">The raw body buffer.</param>
-    /// <param name="ABodyOffset">Offset in the buffer where the body starts.</param>
-    /// <param name="ABodyLen">Length of the body data in the buffer.</param>
-    /// <param name="AContentLength">The content length header value.</param>
     constructor Create(
       const AMethod, APath, AQuery: string;
-      AHeaders: TDictionary<string, string>;
+      AHeaderSegments: TDictionary<string, THeaderSegment>;
       ABody: TBytes;
       ABodyOffset, ABodyLen: Integer;
       AContentLength: Int64
@@ -127,6 +148,8 @@ type
     FReason: string;
     FHeaders: TDictionary<string, string>;
     FResponseBuffer: TBytes;
+    FBodyBuffer: TBytes;
+    FBodyLen: Integer;
   public
     /// <summary>Initializes a new epoll response wrapper.</summary>
     /// <param name="ASocket">The raw socket descriptor.</param>
@@ -167,6 +190,12 @@ type
     FReadBuffer: TBytes;
     procedure CreateLocalReactor;
     procedure CloseLocalReactor;
+    procedure ProcessRequestAsync(
+      AFd: Integer;
+      const AConnection: IDextServerConnection;
+      const ARequest: IDextRawRequest;
+      const AResponse: IDextRawResponse
+    );
   protected
     procedure Execute; override;
   public
@@ -268,6 +297,7 @@ implementation
 
 {$IFDEF LINUX}
 uses
+  System.Threading,
   Posix.Base,
   Posix.SysTypes,
   Posix.SysSocket,
@@ -305,10 +335,170 @@ type
   end;
   pepoll_event = ^epoll_event;
 
+  iovec = record
+    iov_base: Pointer;
+    iov_len: NativeUInt;
+  end;
+  piovec = ^iovec;
+
 function epoll_create(size: Integer): Integer; cdecl; external libc name 'epoll_create';
 function epoll_create1(flags: Integer): Integer; cdecl; external libc name 'epoll_create1';
 function epoll_ctl(epfd: Integer; op: Integer; fd: Integer; event: pepoll_event): Integer; cdecl; external libc name 'epoll_ctl';
 function epoll_wait(epfd: Integer; events: pepoll_event; maxevents: Integer; timeout: Integer): Integer; cdecl; external libc name 'epoll_wait';
+function writev(fd: Integer; iov: piovec; iovcnt: Integer): Integer; cdecl; external libc name 'writev';
+
+{ TDextEpollHttpParser }
+
+class function TDextEpollHttpParser.FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer;
+var
+  I: Integer;
+begin
+  for I := AStart to AEnd - 1 do
+    if ABuffer[I] = AByte then
+      Exit(I);
+  Result := -1;
+end;
+
+class function TDextEpollHttpParser.FindCRLF(const ABuffer: TBytes; AStart, AEnd: Integer): Integer;
+var
+  I: Integer;
+begin
+  for I := AStart to AEnd - 2 do
+    if (ABuffer[I] = 13) and (ABuffer[I+1] = 10) then
+      Exit(I);
+  Result := -1;
+end;
+
+class function TDextEpollHttpParser.CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean;
+var
+  I: Integer;
+  B1, B2: Byte;
+begin
+  if ALen <> Length(AStr) then Exit(False);
+  for I := 0 to ALen - 1 do
+  begin
+    B1 := ABuffer[AStart + I];
+    B2 := Ord(AStr[I + 1]);
+    if (B1 >= 65) and (B1 <= 90) then B1 := B1 + 32;
+    if (B2 >= 65) and (B2 <= 90) then B2 := B2 + 32;
+    if B1 <> B2 then Exit(False);
+  end;
+  Result := True;
+end;
+
+class function TDextEpollHttpParser.TryParseRequest(
+  const ABuffer: TBytes; 
+  ALength: Integer;
+  out AMethod: string;
+  out APath: string;
+  out AQuery: string;
+  out AVersion: string;
+  out AHeaderSegments: TDictionary<string, THeaderSegment>;
+  out ABodyOffset: Integer;
+  out AContentLength: Int64
+): Boolean;
+var
+  HeaderEnd: Integer;
+  I: Integer;
+  LineStart: Integer;
+  LineEnd: Integer;
+  Space1: Integer;
+  Space2: Integer;
+  UrlEnd: Integer;
+  QueryStart: Integer;
+  Colon: Integer;
+  Key: string;
+  Seg: THeaderSegment;
+begin
+  AMethod := '';
+  APath := '';
+  AQuery := '';
+  AVersion := '';
+  ABodyOffset := -1;
+  AContentLength := 0;
+  AHeaderSegments := nil;
+
+  HeaderEnd := -1;
+  for I := 0 to ALength - 4 do
+  begin
+    if (ABuffer[I] = 13) and (ABuffer[I+1] = 10) and (ABuffer[I+2] = 13) and (ABuffer[I+3] = 10) then
+    begin
+      HeaderEnd := I;
+      Break;
+    end;
+  end;
+
+  if HeaderEnd = -1 then Exit(False);
+
+  LineEnd := FindCRLF(ABuffer, 0, HeaderEnd);
+  if LineEnd = -1 then Exit(False);
+
+  Space1 := FindByte(ABuffer, 0, LineEnd, 32);
+  if Space1 = -1 then Exit(False);
+
+  Space2 := FindByte(ABuffer, Space1 + 1, LineEnd, 32);
+  if Space2 = -1 then Exit(False);
+
+  AMethod := TEncoding.UTF8.GetString(ABuffer, 0, Space1);
+
+  UrlEnd := Space2;
+  QueryStart := FindByte(ABuffer, Space1 + 1, Space2, 63);
+  if QueryStart <> -1 then
+  begin
+    APath := TEncoding.UTF8.GetString(ABuffer, Space1 + 1, QueryStart - (Space1 + 1));
+    AQuery := TEncoding.UTF8.GetString(ABuffer, QueryStart, Space2 - QueryStart);
+  end
+  else
+  begin
+    APath := TEncoding.UTF8.GetString(ABuffer, Space1 + 1, Space2 - (Space1 + 1));
+    AQuery := '';
+  end;
+
+  AVersion := TEncoding.UTF8.GetString(ABuffer, Space2 + 1, LineEnd - (Space2 + 1));
+
+  AHeaderSegments := TDictionary<string, THeaderSegment>.Create;
+
+  LineStart := LineEnd + 2;
+  while LineStart < HeaderEnd do
+  begin
+    LineEnd := FindCRLF(ABuffer, LineStart, HeaderEnd);
+    if LineEnd = -1 then LineEnd := HeaderEnd;
+
+    if LineEnd > LineStart then
+    begin
+      Colon := FindByte(ABuffer, LineStart, LineEnd, 58);
+      if Colon <> -1 then
+      begin
+        Seg.KeyStart := LineStart;
+        Seg.KeyLen := Colon - LineStart;
+        Seg.ValueStart := Colon + 1;
+        Seg.ValueLen := LineEnd - (Colon + 1);
+
+        while (Seg.ValueLen > 0) and (ABuffer[Seg.ValueStart] = 32) do
+        begin
+          Inc(Seg.ValueStart);
+          Dec(Seg.ValueLen);
+        end;
+
+        Key := TEncoding.UTF8.GetString(ABuffer, Seg.KeyStart, Seg.KeyLen).Trim.ToLower;
+        AHeaderSegments.AddOrSetValue(Key, Seg);
+
+        if Key = 'content-length' then
+        begin
+          AContentLength := StrToInt64Def(
+            TEncoding.UTF8.GetString(ABuffer, Seg.ValueStart, Seg.ValueLen).Trim,
+            0
+          );
+        end;
+      end;
+    end;
+
+    LineStart := LineEnd + 2;
+  end;
+
+  ABodyOffset := HeaderEnd + 4;
+  Result := True;
+end;
 
 
 { TDextEpollConnection }
@@ -395,7 +585,7 @@ end;
 
 constructor TDextEpollRequest.Create(
   const AMethod, APath, AQuery: string;
-  AHeaders: TDictionary<string, string>;
+  AHeaderSegments: TDictionary<string, THeaderSegment>;
   ABody: TBytes;
   ABodyOffset, ABodyLen: Integer;
   AContentLength: Int64
@@ -405,17 +595,24 @@ begin
   FMethod := AMethod;
   FPath := APath;
   FQuery := AQuery;
-  FHeaders := AHeaders;
+  FHeaderSegments := AHeaderSegments;
   FContentLength := AContentLength;
+
+  // Efetuamos cópia local do buffer do request para thread-safety no reactor desacoplado
+  FBuffer := Copy(ABody, 0, Length(ABody));
+
+  FResolvedHeaders := TDictionary<string, string>.Create;
+
   FBodyStream := TMemoryStream.Create;
   if ABodyLen > 0 then
-    FBodyStream.WriteBuffer(ABody[ABodyOffset], ABodyLen);
+    FBodyStream.WriteBuffer(FBuffer[ABodyOffset], ABodyLen);
   FBodyStream.Position := 0;
 end;
 
 destructor TDextEpollRequest.Destroy;
 begin
-  FHeaders.Free;
+  FHeaderSegments.Free;
+  FResolvedHeaders.Free;
   FBodyStream.Free;
   inherited;
 end;
@@ -430,18 +627,34 @@ begin
   Result := FContentLength;
 end;
 
+function TDextEpollRequest.ResolveHeader(const AName: string): string;
+var
+  Key: string;
+  Seg: THeaderSegment;
+begin
+  Key := AName.ToLower;
+  if FResolvedHeaders.TryGetValue(Key, Result) then Exit;
+
+  if FHeaderSegments.TryGetValue(Key, Seg) then
+  begin
+    Result := TEncoding.UTF8.GetString(FBuffer, Seg.ValueStart, Seg.ValueLen).Trim;
+    FResolvedHeaders.Add(Key, Result);
+  end
+  else
+    Result := '';
+end;
+
 function TDextEpollRequest.GetHeader(const AName: string): string;
 begin
-  if not FHeaders.TryGetValue(AName, Result) then
-    Result := '';
+  Result := ResolveHeader(AName);
 end;
 
 procedure TDextEpollRequest.PopulateHeaders(ADict: TDictionary<string, string>);
 var
-  Pair: TPair<string, string>;
+  Pair: TPair<string, THeaderSegment>;
 begin
-  for Pair in FHeaders do
-    ADict.AddOrSetValue(Pair.Key, Pair.Value);
+  for Pair in FHeaderSegments do
+    ADict.AddOrSetValue(Pair.Key, ResolveHeader(Pair.Key));
 end;
 
 // Interface redirects
@@ -469,24 +682,49 @@ end;
 
 procedure TDextEpollResponse.Close;
 begin
-  if not FHeadersSent then
-    SendHeaders;
   Flush;
 end;
 
 procedure TDextEpollResponse.Flush;
+var
+  Iov: array[0..1] of iovec;
+  IovCnt: Integer;
+  Res: Integer;
 begin
+  if not FHeadersSent then
+    SendHeaders;
+
+  IovCnt := 0;
   if Length(FResponseBuffer) > 0 then
   begin
-    send(FSocket, FResponseBuffer[0], Length(FResponseBuffer), 0);
+    Iov[IovCnt].iov_base := @FResponseBuffer[0];
+    Iov[IovCnt].iov_len := Length(FResponseBuffer);
+    Inc(IovCnt);
+  end;
+
+  if FBodyLen > 0 then
+  begin
+    Iov[IovCnt].iov_base := @FBodyBuffer[0];
+    Iov[IovCnt].iov_len := FBodyLen;
+    Inc(IovCnt);
+  end;
+
+  if IovCnt > 0 then
+  begin
+    Res := writev(FSocket, @Iov[0], IovCnt);
+    if Res < 0 then
+    begin
+      // Erros silenciosos ou de rede em fechamento de socket
+    end;
     SetLength(FResponseBuffer, 0);
+    FBodyLen := 0;
+    SetLength(FBodyBuffer, 0);
   end;
 end;
 
 procedure TDextEpollResponse.SendHeaders;
 var
   HeaderStr: string;
-  HeaderBytes: TBytes;
   Pair: TPair<string, string>;
 begin
   if FHeadersSent then Exit;
@@ -500,9 +738,7 @@ begin
     HeaderStr := HeaderStr + Format('%s: %s'#13#10, [Pair.Key, Pair.Value]);
 
   HeaderStr := HeaderStr + #13#10;
-  HeaderBytes := TEncoding.UTF8.GetBytes(HeaderStr);
-
-  FResponseBuffer := HeaderBytes;
+  FResponseBuffer := TEncoding.UTF8.GetBytes(HeaderStr);
   FHeadersSent := True;
 end;
 
@@ -525,13 +761,17 @@ begin
 end;
 
 procedure TDextEpollResponse.Write(const ABuffer: TBytes; AOffset, ACount: Integer);
+var
+  NewLen: Integer;
 begin
-  if not FHeadersSent then
-    SendHeaders;
-
   if ACount <= 0 then Exit;
 
-  send(FSocket, ABuffer[AOffset], ACount, 0);
+  NewLen := FBodyLen + ACount;
+  if Length(FBodyBuffer) < NewLen then
+    SetLength(FBodyBuffer, NewLen);
+
+  Move(ABuffer[AOffset], FBodyBuffer[FBodyLen], ACount);
+  FBodyLen := NewLen;
 end;
 
 { TDextEpollWorker }
@@ -647,6 +887,43 @@ begin
   end;
 end;
 
+procedure TDextEpollWorker.ProcessRequestAsync(
+  AFd: Integer;
+  const AConnection: IDextServerConnection;
+  const ARequest: IDextRawRequest;
+  const AResponse: IDextRawResponse
+);
+begin
+  TTask.Run(
+    procedure
+    var
+      LConnection: IDextServerConnection;
+      LRequest: IDextRawRequest;
+      LResponse: IDextRawResponse;
+      LFd: Integer;
+    begin
+      LConnection := AConnection;
+      LRequest := ARequest;
+      LResponse := AResponse;
+      LFd := AFd;
+      try
+        try
+          if Assigned(FEngine.FOnRequest) then
+            FEngine.FOnRequest(LConnection, LRequest, LResponse);
+        finally
+          LResponse.Close;
+        end;
+      finally
+        LResponse := nil;
+        LRequest := nil;
+        LConnection := nil;
+        __close(LFd);
+        TInterlocked.Decrement(FEngine.FActiveConnections);
+      end;
+    end
+  );
+end;
+
 procedure TDextEpollWorker.Execute;
 var
   EventCount: Integer;
@@ -659,7 +936,7 @@ var
   AddrLen: socklen_t;
   RecvRet: Integer;
   Method, Path, Query, Version: string;
-  Headers: TDictionary<string, string>;
+  HeaderSegments: TDictionary<string, THeaderSegment>;
   BodyOffset: Integer;
   ContentLength: Int64;
   Connection: IDextServerConnection;
@@ -723,14 +1000,14 @@ begin
           RecvRet := recv(Fd, FReadBuffer[0], Length(FReadBuffer), 0);
           if RecvRet > 0 then
           begin
-            if TDextIocpHttpParser.TryParseRequest(
+            if TDextEpollHttpParser.TryParseRequest(
               FReadBuffer,
               RecvRet,
               Method,
               Path,
               Query,
               Version,
-              Headers,
+              HeaderSegments,
               BodyOffset,
               ContentLength
             ) then
@@ -738,18 +1015,15 @@ begin
               TInterlocked.Increment(FEngine.FTotalRequests);
 
               Connection := TDextEpollConnection.Create(Fd);
-              RawRequest := TDextEpollRequest.Create(Method, Path, Query, Headers, FReadBuffer, BodyOffset, RecvRet - BodyOffset, ContentLength);
+              RawRequest := TDextEpollRequest.Create(Method, Path, Query, HeaderSegments, FReadBuffer, BodyOffset, RecvRet - BodyOffset, ContentLength);
               RawResponse := TDextEpollResponse.Create(Fd);
 
-              try
-                if Assigned(FEngine.FOnRequest) then
-                  FEngine.FOnRequest(Connection, RawRequest, RawResponse);
-              finally
-                RawResponse.Close;
-                RawResponse := nil;
-                RawRequest := nil;
-                Connection := nil;
-              end;
+              ProcessRequestAsync(Fd, Connection, RawRequest, RawResponse);
+
+              Connection := nil;
+              RawRequest := nil;
+              RawResponse := nil;
+              Continue;
             end;
           end;
 
