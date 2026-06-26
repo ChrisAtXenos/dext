@@ -34,6 +34,7 @@ uses
   System.Classes,
   System.SysUtils,
   System.SyncObjs,
+  System.Generics.Defaults,
   Winapi.Windows,
   Winapi.WinSock2,
   Dext.Server.Engine.Types,
@@ -376,7 +377,7 @@ begin
   // Cópia restrita aos bytes úteis do request para thread-safety
   FBuffer := Copy(ABody, 0, ABodyOffset + ABodyLen);
 
-  FResolvedHeaders := TDictionary<string, string>.Create;
+  FResolvedHeaders := TDictionary<string, string>.Create(TIStringComparer.OrdinalI);
 
   // Stream que lê diretamente do buffer sem cópia adicional
   FBodyStream := TDextReadOnlyBytesStream.Create(FBuffer, ABodyOffset, ABodyLen);
@@ -401,24 +402,25 @@ end;
 
 function TDextIocpRequest.ResolveHeader(const AName: string): string;
 var
-  Key: string;
   I: Integer;
   Seg: THeaderSegment;
 begin
-  Key := AName.ToLower;
-  if FResolvedHeaders.TryGetValue(Key, Result) then Exit;
+  if FResolvedHeaders.TryGetValue(AName, Result) then Exit;
 
   for I := 0 to Length(FHeaderSegments) - 1 do
   begin
     Seg := FHeaderSegments[I];
-    if TDextIocpHttpParser.CompareBytesCI(FBuffer, Seg.KeyStart, Seg.KeyLen, Key) then
+    if TDextIocpHttpParser.CompareBytesCI(FBuffer, Seg.KeyStart, Seg.KeyLen, AName) then
     begin
       Result := TEncoding.UTF8.GetString(FBuffer, Seg.ValueStart, Seg.ValueLen).Trim;
-      FResolvedHeaders.Add(Key, Result);
+      FResolvedHeaders.Add(AName, Result);
       Exit;
     end;
   end;
+
+  // Cacheia cabeçalhos não encontrados
   Result := '';
+  FResolvedHeaders.Add(AName, '');
 end;
 
 function TDextIocpRequest.GetHeader(const AName: string): string;
