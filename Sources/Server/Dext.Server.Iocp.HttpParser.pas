@@ -55,6 +55,7 @@ type
     class function FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer; static; inline;
     class function FindCRLF(const ABuffer: TBytes; AStart, AEnd: Integer): Integer; static; inline;
     class function CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean; static; inline;
+    class function GetMethodString(const ABuffer: TBytes; AStart, ALen: Integer): string; static; inline;
   public
     /// <summary>
     ///   Attempts to parse HTTP/1.1 request headers from a byte buffer.
@@ -67,7 +68,6 @@ type
       out AMethod: string;
       out APath: string;
       out AQuery: string;
-      out AVersion: string;
       out AHeaderSegments: THeaderSegments;
       out ABodyOffset: Integer;
       out AContentLength: Int64
@@ -115,13 +115,38 @@ begin
   Result := True;
 end;
 
+class function TDextIocpHttpParser.GetMethodString(const ABuffer: TBytes; AStart, ALen: Integer): string;
+begin
+  case ALen of
+    3:
+      if (ABuffer[AStart] = 71) and (ABuffer[AStart+1] = 69) and (ABuffer[AStart+2] = 84) then
+        Exit('GET')
+      else if (ABuffer[AStart] = 80) and (ABuffer[AStart+1] = 85) and (ABuffer[AStart+2] = 84) then
+        Exit('PUT');
+    4:
+      if (ABuffer[AStart] = 80) and (ABuffer[AStart+1] = 79) and (ABuffer[AStart+2] = 83) and (ABuffer[AStart+3] = 84) then
+        Exit('POST')
+      else if (ABuffer[AStart] = 72) and (ABuffer[AStart+1] = 69) and (ABuffer[AStart+2] = 65) and (ABuffer[AStart+3] = 68) then
+        Exit('HEAD');
+    5:
+      if (ABuffer[AStart] = 80) and (ABuffer[AStart+1] = 65) and (ABuffer[AStart+2] = 84) and (ABuffer[AStart+3] = 67) and (ABuffer[AStart+4] = 72) then
+        Exit('PATCH');
+    6:
+      if (ABuffer[AStart] = 68) and (ABuffer[AStart+1] = 69) and (ABuffer[AStart+2] = 76) and (ABuffer[AStart+3] = 69) and (ABuffer[AStart+4] = 84) and (ABuffer[AStart+5] = 69) then
+        Exit('DELETE');
+    7:
+      if (ABuffer[AStart] = 79) and (ABuffer[AStart+1] = 80) and (ABuffer[AStart+2] = 84) and (ABuffer[AStart+3] = 73) and (ABuffer[AStart+4] = 79) and (ABuffer[AStart+5] = 78) and (ABuffer[AStart+6] = 83) then
+        Exit('OPTIONS');
+  end;
+  Result := TEncoding.UTF8.GetString(ABuffer, AStart, ALen);
+end;
+
 class function TDextIocpHttpParser.TryParseRequest(
   const ABuffer: TBytes; 
   ALength: Integer;
   out AMethod: string;
   out APath: string;
   out AQuery: string;
-  out AVersion: string;
   out AHeaderSegments: THeaderSegments;
   out ABodyOffset: Integer;
   out AContentLength: Int64
@@ -138,11 +163,11 @@ var
   Colon: Integer;
   Seg: THeaderSegment;
   SegCount: Integer;
+  PathStart, PathLen: Integer;
 begin
   AMethod := '';
   APath := '';
   AQuery := '';
-  AVersion := '';
   ABodyOffset := -1;
   AContentLength := 0;
   SetLength(AHeaderSegments, 0);
@@ -171,25 +196,29 @@ begin
   Space2 := FindByte(ABuffer, Space1 + 1, LineEnd, 32);
   if Space2 = -1 then Exit(False);
 
-  // Method
-  AMethod := TEncoding.UTF8.GetString(ABuffer, 0, Space1);
+  // Method (cached)
+  AMethod := GetMethodString(ABuffer, 0, Space1);
 
   // URL / Path & Query
   UrlEnd := Space2;
   QueryStart := FindByte(ABuffer, Space1 + 1, Space2, 63); // '?' character
+  
+  PathStart := Space1 + 1;
   if QueryStart <> -1 then
-  begin
-    APath := TEncoding.UTF8.GetString(ABuffer, Space1 + 1, QueryStart - (Space1 + 1));
-    AQuery := TEncoding.UTF8.GetString(ABuffer, QueryStart, Space2 - QueryStart);
-  end
+    PathLen := QueryStart - PathStart
   else
-  begin
-    APath := TEncoding.UTF8.GetString(ABuffer, Space1 + 1, Space2 - (Space1 + 1));
-    AQuery := '';
-  end;
+    PathLen := Space2 - PathStart;
 
-  // Version
-  AVersion := TEncoding.UTF8.GetString(ABuffer, Space2 + 1, LineEnd - (Space2 + 1));
+  // Path raiz otimizado
+  if (PathLen = 1) and (ABuffer[PathStart] = 47) then
+    APath := '/'
+  else
+    APath := TEncoding.UTF8.GetString(ABuffer, PathStart, PathLen);
+
+  if QueryStart <> -1 then
+    AQuery := TEncoding.UTF8.GetString(ABuffer, QueryStart, Space2 - QueryStart)
+  else
+    AQuery := '';
 
   SegCount := 0;
   SetLength(AHeaderSegments, 16);

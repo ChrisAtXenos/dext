@@ -489,24 +489,29 @@ end;
 
 procedure TDextIocpResponse.SendHeaders;
 var
-  HeaderStr: string;
-  HeaderBytes: TBytes;
+  SB: TStringBuilder;
   Pair: TPair<string, string>;
   WsaBuf: TWsaBuf;
   BytesSent: DWORD;
+  HeaderBytes: TBytes;
 begin
   if FHeadersSent then Exit;
 
-  HeaderStr := Format('HTTP/1.1 %d %s'#13#10, [FStatusCode, FReason]);
-  
-  if not FHeaders.ContainsKey('Content-Type') then
-    FHeaders.Add('Content-Type', 'text/plain');
+  SB := TStringBuilder.Create;
+  try
+    SB.Append('HTTP/1.1 ').Append(FStatusCode).Append(' ').Append(FReason).Append(#13#10);
+    
+    if not FHeaders.ContainsKey('Content-Type') then
+      FHeaders.Add('Content-Type', 'text/plain');
 
-  for Pair in FHeaders do
-    HeaderStr := HeaderStr + Format('%s: %s'#13#10, [Pair.Key, Pair.Value]);
+    for Pair in FHeaders do
+      SB.Append(Pair.Key).Append(': ').Append(Pair.Value).Append(#13#10);
 
-  HeaderStr := HeaderStr + #13#10;
-  HeaderBytes := TEncoding.UTF8.GetBytes(HeaderStr);
+    SB.Append(#13#10);
+    HeaderBytes := TEncoding.UTF8.GetBytes(SB.ToString);
+  finally
+    SB.Free;
+  end;
 
   WsaBuf.len := Length(HeaderBytes);
   WsaBuf.buf := @HeaderBytes[0];
@@ -572,7 +577,7 @@ var
   RemoteAddress: string;
   LocalPort, RemotePort: Word;
   Buffer: TBytes;
-  Method, Path, Query, Version: string;
+  Method, Path, Query: string;
   HeaderSegments: THeaderSegments;
   BodyOffset: Integer;
   ContentLength: Int64;
@@ -650,7 +655,6 @@ begin
             Method,
             Path,
             Query,
-            Version,
             HeaderSegments,
             BodyOffset,
             ContentLength
