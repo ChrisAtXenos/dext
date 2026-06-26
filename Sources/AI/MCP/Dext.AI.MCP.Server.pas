@@ -380,17 +380,20 @@ begin
   ServerInfo.AddPair('version', FVersion);
 
   // Negotiate protocol version dynamically
-  AgreedProtoVer := MCP_PROTOCOL_VERSION; // Default to '2025-03-26'
+  AgreedProtoVer := '2025-11-25'; // Default to latest stable
   if Params <> nil then
   begin
     ClientProtoVer := Params.GetValue<string>('protocolVersion', '');
     if ClientProtoVer <> '' then
     begin
-      // If the client requests '2024-11-05', we negotiate to that version.
-      // If it requests '2025-03-26', we use that.
-      // Otherwise we fallback to our preferred latest supported version.
-      if (ClientProtoVer = '2024-11-05') or (ClientProtoVer = '2025-03-26') then
+      // Support all official stable versions: 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05
+      if (ClientProtoVer = '2025-11-25') or 
+         (ClientProtoVer = '2025-06-18') or 
+         (ClientProtoVer = '2025-03-26') or 
+         (ClientProtoVer = '2024-11-05') then
+      begin
         AgreedProtoVer := ClientProtoVer;
+      end;
     end;
   end;
 
