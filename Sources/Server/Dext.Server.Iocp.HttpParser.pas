@@ -54,7 +54,6 @@ type
   private
     class function FindByte(const ABuffer: TBytes; AStart, AEnd: Integer; AByte: Byte): Integer; static; inline;
     class function FindCRLF(const ABuffer: TBytes; AStart, AEnd: Integer): Integer; static; inline;
-    class function CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean; static; inline;
     class function GetMethodString(const ABuffer: TBytes; AStart, ALen: Integer): string; static; inline;
   public
     /// <summary>
@@ -72,6 +71,8 @@ type
       out ABodyOffset: Integer;
       out AContentLength: Int64
     ): Boolean; static;
+
+    class function CompareBytesCI(const ABuffer: TBytes; AStart, ALen: Integer; const AStr: string): Boolean; static; inline;
   end;
 
 implementation
