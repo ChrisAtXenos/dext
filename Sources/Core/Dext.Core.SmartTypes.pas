@@ -105,6 +105,29 @@ type
   end;
 
   /// <summary>
+  ///   Internal, non-generic factory/evaluator backing the Prop&lt;T&gt;
+  ///   arithmetic and unary operators (Add/Subtract/Multiply/Divide/Negative).
+  ///   It is declared here, in the interface, because a method of a generic type
+  ///   cannot reference an implementation-local symbol (Delphi E2506).
+  ///
+  ///   Centralizing the expression-tree construction and the Variant evaluation
+  ///   in a type that does NOT depend on T means the compiler materializes them
+  ///   once, keeping each generic Prop&lt;T&gt; operator body minimal. Together
+  ///   with assigning the query-mode Result fields directly (instead of calling
+  ///   the generic Prop&lt;T&gt;.FromExpression), this avoids the dccaarm64
+  ///   (Android/ARM64, Delphi 13) code-generation hang. Not intended for direct
+  ///   use by application code.
+  /// </summary>
+  TArithmeticExpressionHelper = record
+    /// <summary>Builds the expression node "ALeft &lt;op&gt; ARight".</summary>
+    class function Expr(const ALeft, ARight: IExpression; AOp: TArithmeticOperator): IExpression; static;
+    /// <summary>Wraps a literal value as a literal expression node.</summary>
+    class function Lit(const AValue: TValue): IExpression; static;
+    /// <summary>Evaluates "A &lt;op&gt; B" via Variant arithmetic (runtime mode).</summary>
+    class function Compute(const A, B: Variant; AOp: TArithmeticOperator): Variant; static;
+  end;
+
+  /// <summary>
   ///   Generic property wrapper that enables operator overloading for queries.
   ///   In "Query Mode", it generates expression trees (AST). In "Runtime Mode", it performs normal comparisons.
   /// </summary>
@@ -838,17 +861,70 @@ begin
   end;
 end;
 
+// ===========================================================================
+//  Prop<T> arithmetic / unary operators
+//  ---------------------------------------------------------------------------
+//  Each operator keeps two behaviours: in "query mode" it builds an
+//  expression-tree node (TArithmeticExpression); in "runtime mode" it evaluates
+//  the operation through Variant arithmetic.
+//
+//  Both the expression-tree construction and the Variant evaluation are
+//  delegated to the NON-generic helper TArithmeticExpressionHelper below, and the query-mode
+//  result is produced by assigning Result's fields directly (instead of calling
+//  the generic Prop<T>.FromExpression). This keeps every generic operator body
+//  minimal -- just GetExpression / TValue.From<T> / a field assignment -- i.e.
+//  a strict subset of the comparison operators, which compile everywhere.
+//
+//  Why it matters: the previous shape built the object graph inline AND
+//  re-constructed the enclosing Prop<T> via Prop<T>.FromExpression. That
+//  self-referential generic construction made the Android/ARM64 backend
+//  (dccaarm64, Delphi 13 / 37.0) loop forever while materializing the operator
+//  bodies across the 9 closed aliases (StringType..TimeType) -- a hang that did
+//  NOT occur on Android 32-bit, Win32 or Win64. Routing through a non-generic
+//  helper removes that recursion, so the behaviour is identical on EVERY
+//  platform (Win32/Win64/Linux and Android 32/64-bit) with a single code path.
+//  Diagnosis / repro harness: diag-android64\.
+//  (TArithmeticExpressionHelper is declared in the interface section: methods of a generic type
+//  cannot reference implementation-local symbols -- Delphi E2506.)
+// ===========================================================================
+class function TArithmeticExpressionHelper.Expr(const ALeft, ARight: IExpression; AOp: TArithmeticOperator): IExpression;
+begin
+  Result := TArithmeticExpression.Create(ALeft, ARight, AOp);
+end;
+
+class function TArithmeticExpressionHelper.Lit(const AValue: TValue): IExpression;
+begin
+  Result := TLiteralExpression.Create(AValue);
+end;
+
+class function TArithmeticExpressionHelper.Compute(const A, B: Variant; AOp: TArithmeticOperator): Variant;
+begin
+  case AOp of
+    aoSubtract: Result := A - B;
+    aoMultiply: Result := A * B;
+    aoDivide:   Result := A / B;
+  else
+    Result := A + B; // aoAdd
+  end;
+end;
+
 class operator Prop<T>.Negative(const Value: Prop<T>): Prop<T>;
 var
   V: Variant;
 begin
   if Value.IsQueryMode then
-    // Unary minus would need TUnaryExpression to support aoNegative? 
-    // For now, multiply by -1
-    Result := Value * TValue.From<Integer>(-1).AsType<T>
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    // Equivalent to the previous "Value * (-1)", built directly to avoid
+    // recursing through the Multiply operator.
+    Result.FExpression := TArithmeticExpressionHelper.Expr(
+      Value.GetExpression,
+      TArithmeticExpressionHelper.Lit(TValue.From<T>(TValue.From<Integer>(-1).AsType<T>)),
+      aoMultiply);
+  end
   else
   begin
-    // Runtime math using variants
     Result := Default(Prop<T>);
     V := TValue.From<T>(Value.FValue).AsVariant;
     Result.FValue := TValue.FromVariant(-V).AsType<T>;
@@ -857,7 +933,6 @@ end;
 
 class operator Prop<T>.Positive(const Value: Prop<T>): Prop<T>;
 begin
-  Result := Default(Prop<T>);
   Result := Value;
 end;
 
@@ -866,13 +941,17 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoAdd))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, TArithmeticExpressionHelper.Lit(TValue.From<T>(RHS)), aoAdd);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 + V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoAdd)).AsType<T>;
   end;
 end;
 
@@ -881,19 +960,38 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode or RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoAdd))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, RHS.GetExpression, aoAdd);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 + V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoAdd)).AsType<T>;
   end;
 end;
 
 class operator Prop<T>.Add(const LHS: T; const RHS: Prop<T>): Prop<T>;
+var
+  V1, V2: Variant;
 begin
-  Result := RHS + LHS;
+  // Commutative: equivalent to RHS + LHS, built directly (no operator recursion).
+  if RHS.IsQueryMode then
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(RHS.GetExpression, TArithmeticExpressionHelper.Lit(TValue.From<T>(LHS)), aoAdd);
+  end
+  else
+  begin
+    Result := Default(Prop<T>);
+    V1 := TValue.From<T>(RHS.FValue).AsVariant;
+    V2 := TValue.From<T>(LHS).AsVariant;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoAdd)).AsType<T>;
+  end;
 end;
 
 class operator Prop<T>.Subtract(const LHS: Prop<T>; const RHS: T): Prop<T>;
@@ -901,13 +999,17 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoSubtract))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, TArithmeticExpressionHelper.Lit(TValue.From<T>(RHS)), aoSubtract);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoSubtract)).AsType<T>;
   end;
 end;
 
@@ -916,13 +1018,17 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode or RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoSubtract))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, RHS.GetExpression, aoSubtract);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoSubtract)).AsType<T>;
   end;
 end;
 
@@ -930,14 +1036,19 @@ class operator Prop<T>.Subtract(const LHS: T; const RHS: Prop<T>): Prop<T>;
 var
   V1, V2: Variant;
 begin
+  // Non-commutative: literal goes on the left of the expression.
   if RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(TLiteralExpression.Create(TValue.From<T>(LHS)), RHS.GetExpression, aoSubtract))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(TArithmeticExpressionHelper.Lit(TValue.From<T>(LHS)), RHS.GetExpression, aoSubtract);
+  end
   else
   begin
+    Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS).AsVariant;
     V2 := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 - V2).AsType<T>;
-    Result.FInfo := nil;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoSubtract)).AsType<T>;
   end;
 end;
 
@@ -946,13 +1057,17 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoMultiply))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, TArithmeticExpressionHelper.Lit(TValue.From<T>(RHS)), aoMultiply);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 * V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoMultiply)).AsType<T>;
   end;
 end;
 
@@ -961,19 +1076,38 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode or RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoMultiply))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, RHS.GetExpression, aoMultiply);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 * V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoMultiply)).AsType<T>;
   end;
 end;
 
 class operator Prop<T>.Multiply(const LHS: T; const RHS: Prop<T>): Prop<T>;
+var
+  V1, V2: Variant;
 begin
-  Result := RHS * LHS;
+  // Commutative: equivalent to RHS * LHS, built directly (no operator recursion).
+  if RHS.IsQueryMode then
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(RHS.GetExpression, TArithmeticExpressionHelper.Lit(TValue.From<T>(LHS)), aoMultiply);
+  end
+  else
+  begin
+    Result := Default(Prop<T>);
+    V1 := TValue.From<T>(RHS.FValue).AsVariant;
+    V2 := TValue.From<T>(LHS).AsVariant;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoMultiply)).AsType<T>;
+  end;
 end;
 
 class operator Prop<T>.Divide(const LHS: Prop<T>; const RHS: T): Prop<T>;
@@ -981,13 +1115,17 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, TLiteralExpression.Create(TValue.From<T>(RHS)), aoDivide))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, TArithmeticExpressionHelper.Lit(TValue.From<T>(RHS)), aoDivide);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoDivide)).AsType<T>;
   end;
 end;
 
@@ -996,13 +1134,17 @@ var
   V1, V2: Variant;
 begin
   if LHS.IsQueryMode or RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(LHS.GetExpression, RHS.GetExpression, aoDivide))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(LHS.GetExpression, RHS.GetExpression, aoDivide);
+  end
   else
   begin
     Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS.FValue).AsVariant;
     V2 := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoDivide)).AsType<T>;
   end;
 end;
 
@@ -1010,14 +1152,19 @@ class operator Prop<T>.Divide(const LHS: T; const RHS: Prop<T>): Prop<T>;
 var
   V1, V2: Variant;
 begin
+  // Non-commutative: literal goes on the left of the expression.
   if RHS.IsQueryMode then
-    Result := Prop<T>.FromExpression(TArithmeticExpression.Create(TLiteralExpression.Create(TValue.From<T>(LHS)), RHS.GetExpression, aoDivide))
+  begin
+    Result.FInfo := nil;
+    Result.FValue := Default(T);
+    Result.FExpression := TArithmeticExpressionHelper.Expr(TArithmeticExpressionHelper.Lit(TValue.From<T>(LHS)), RHS.GetExpression, aoDivide);
+  end
   else
   begin
+    Result := Default(Prop<T>);
     V1 := TValue.From<T>(LHS).AsVariant;
     V2 := TValue.From<T>(RHS.FValue).AsVariant;
-    Result.FValue := TValue.FromVariant(V1 / V2).AsType<T>;
-    Result.FInfo := nil;
+    Result.FValue := TValue.FromVariant(TArithmeticExpressionHelper.Compute(V1, V2, aoDivide)).AsType<T>;
   end;
 end;
 
