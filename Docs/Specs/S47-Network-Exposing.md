@@ -1,9 +1,9 @@
 # Spec S47: Expose TCP/UDP & MQTT Server/Client
 
-**Status: 📝 Draft**
-**Owner:** Cesar Romero & Engineering Team
-**Created:** 2026-06-28
-**Dependencies:** S39 (Native Server Engine)
+**Status: 📝 Draft**  
+**Owner:** Cesar Romero & Engineering Team  
+**Created:** 2026-06-28  
+**Dependencies:** S39 (Native Server Engine)  
 **Enables:** High-performance IoT gateways, raw TCP/UDP messaging, native MQTT client/server without third-party dependencies (CrossSocket, Indy, etc.).
 
 ---
@@ -233,7 +233,7 @@ type
 
 ### Impact:
 - Opens up Dext for IoT gateways, edge routers, SCADA systems, and embedded long-lived TCP connection services.
-- Replaces complex third-party stacks like CrossSocket or Indy, allowing 100% native Pascal compile-once deploy-anywhere setups on Linux/Windows.
+- Replaces complex third-party stacks, allowing 100% native Pascal compile-once deploy-anywhere setups on Linux/Windows.
 
 ---
 
