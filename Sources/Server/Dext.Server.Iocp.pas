@@ -37,6 +37,7 @@ uses
   System.Generics.Defaults,
   Winapi.Windows,
   Winapi.WinSock2,
+  Dext.Threading.ProcessorGroups,
   Dext.Server.Engine.Types,
   Dext.Server.Engine.Interfaces,
   Dext.Server.Iocp.HttpParser,
@@ -206,13 +207,14 @@ type
   private
     FEngine: TDextIocpEngine;
     FIocp: THandle;
+    FAffinity: TDextProcessorGroupAffinity;
   protected
     procedure Execute; override;
   public
     /// <summary>Initializes a new IOCP worker thread.</summary>
     /// <param name="AEngine">The IOCP engine instance.</param>
     /// <param name="AIocp">The IOCP port handle.</param>
-    constructor Create(AEngine: TDextIocpEngine; AIocp: THandle);
+    constructor Create(AEngine: TDextIocpEngine; AIocp: THandle; const AAffinity: TDextProcessorGroupAffinity);
   end;
 
   /// <summary>
@@ -565,11 +567,12 @@ end;
 
 { TDextIocpWorker }
 
-constructor TDextIocpWorker.Create(AEngine: TDextIocpEngine; AIocp: THandle);
+constructor TDextIocpWorker.Create(AEngine: TDextIocpEngine; AIocp: THandle; const AAffinity: TDextProcessorGroupAffinity);
 begin
   inherited Create(True);
   FEngine := AEngine;
   FIocp := AIocp;
+  FAffinity := AAffinity;
   FreeOnTerminate := False;
 end;
 
@@ -593,6 +596,8 @@ var
   RawRequest: IDextRawRequest;
   RawResponse: IDextRawResponse;
 begin
+  ApplyGroupAffinityToThread(GetCurrentThread, FAffinity);
+
   IocpOverlapped := nil;
 
   while not Terminated and FEngine.FRunning do
@@ -779,9 +784,10 @@ end;
 procedure TDextIocpEngine.Start;
 var
   Addr: TSockAddrIn;
-  I: Integer;
+  i: Integer;
   ThreadCount: Integer;
   Worker: TDextIocpWorker;
+  Affinity: TDextProcessorGroupAffinity;
 begin
   if FRunning then Exit;
 
@@ -815,17 +821,18 @@ begin
   FRunning := True;
 
   // Queue initial accept operations
-  for I := 1 to 10 do
+  for i := 1 to 10 do
     QueueAccept;
 
   // Start Worker Threads
   ThreadCount := FOptions.IoThreadCount;
   if ThreadCount <= 0 then
-    ThreadCount := CPUCount;
+    ThreadCount := GetSystemLogicalProcessorCount;
 
-  for I := 1 to ThreadCount do
+  for i := 0 to ThreadCount - 1 do
   begin
-    Worker := TDextIocpWorker.Create(Self, FIocp);
+    GetProcessorGroupAffinityForWorker(i, Affinity);
+    Worker := TDextIocpWorker.Create(Self, FIocp, Affinity);
     FWorkers.Add(Worker);
     Worker.Start;
   end;

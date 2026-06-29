@@ -276,6 +276,7 @@
 <a href="Dext.Text.Escaping.html" class="nav-item">Dext.Text.Escaping</a>
 <a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
 <a href="Dext.Threading.CancellationToken.html" class="nav-item">Dext.Threading.CancellationToken</a>
+<a href="Dext.Threading.ProcessorGroups.html" class="nav-item">Dext.Threading.ProcessorGroups</a>
 <a href="Dext.Threading.Sync.html" class="nav-item">Dext.Threading.Sync</a>
 <a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
 <a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
@@ -607,7 +608,7 @@ IDextServerEngine <|.. TDextHttpSysEngine
 <div class="class-header">
 <h3>class TDextHttpSysWorker</h3><a name="TDextHttpSysWorker"></a><div class="ancestor">Inherits from: TThread</div><div class="description">Worker thread for processing request queue events.</div></div>
 <div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
-<div class="api-signature">constructor Create(AEngine: TDextHttpSysEngine; AReqQueue: THandle)</div><div class="description">Initializes the http.sys worker thread.</div></div>
+<div class="api-signature">constructor Create(AEngine: TDextHttpSysEngine; AReqQueue: THandle; const const: TDextProcessorGroupAffinity)</div><div class="description">Initializes the http.sys worker thread.</div></div>
 </div>
 <div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
 <div class="api-signature">procedure Execute</div></div>

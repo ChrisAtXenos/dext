@@ -276,6 +276,7 @@
 <a href="Dext.Text.Escaping.html" class="nav-item">Dext.Text.Escaping</a>
 <a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
 <a href="Dext.Threading.CancellationToken.html" class="nav-item">Dext.Threading.CancellationToken</a>
+<a href="Dext.Threading.ProcessorGroups.html" class="nav-item">Dext.Threading.ProcessorGroups</a>
 <a href="Dext.Threading.Sync.html" class="nav-item">Dext.Threading.Sync</a>
 <a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
 <a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
@@ -374,6 +375,7 @@
 <div class="mermaid">
 classDiagram
 class TDextEpollEngine {    +Create()
+    +DecActiveConnections()
     +Bind()
     +Start()
     +Stop()
@@ -395,6 +397,8 @@ IDextServerEngine <|.. TDextEpollEngine
 <h3>class TDextEpollEngine</h3><a name="TDextEpollEngine"></a><div class="ancestor">Inherits from: TInterfacedObject</div><div class="description">Compilation stub of TDextEpollEngine for non-Linux platforms.</div></div>
 <div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
 <div class="api-signature">constructor Create(const const: TServerEngineOptions)</div><div class="description">Stub constructor.</div></div>
+<div class="api-item">
+<div class="api-signature">procedure DecActiveConnections</div></div>
 <div class="api-item">
 <div class="api-signature">procedure Bind(const const: string; APort: Word)</div><div class="description">Stub Bind implementation.</div></div>
 <div class="api-item">

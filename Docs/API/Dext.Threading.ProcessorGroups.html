@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dext.OpenAPI.Extensions - Dext Framework 1.0</title>
+    <title>Dext.Threading.ProcessorGroups - Dext Framework 1.0</title>
     
     <!-- Blocking script to avoid theme flicker --> 
     <script>
@@ -368,54 +368,44 @@
         
         <div id="contentArea">
             <!-- Main Documentation Content Injected Here -->
-            <h1>Unit Dext.OpenAPI.Extensions</h1><h2>Classes</h2>
+            <h1>Unit Dext.Threading.ProcessorGroups</h1><h2>Classes</h2>
 <details class="mermaid-details" open>
 <summary>Class Diagram <span class="collapse-text">(Click to collapse)</span><span class="expand-text">(Click to expand)</span></summary>
 <div class="mermaid-container">
 <div class="mermaid">
 classDiagram
-class TEndpointMetadataExtensions {    +WithSummary()
-    +WithDescription()
-    +WithTag()
-    +WithTags()
-    +WithMetadata()
-    +RequireAuthorization()
-    +AllowAnonymous()
-    +WithResponse()
-    +WithRequestType()
-    +UpdateRouteMetadata()
-}
-TObject <|-- TEndpointMetadataExtensions
+class TDextProcessorGroupAffinity {}
+class TGroupAffinity {}
 </div>
 </div>
 </details>
 <h2>API Details</h2>
 <div class="class-header">
-<h3>class TEndpointMetadataExtensions</h3><a name="TEndpointMetadataExtensions"></a><div class="ancestor">Inherits from: TObject</div><div class="description">Fluent extensions for adding OpenAPI metadata to endpoints.</div></div>
-<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
-<div class="api-signature">function WithSummary(App: IApplicationBuilder; const const: string): IApplicationBuilder</div><div class="description">Adds a summary to the endpoint.</div></div>
-<div class="api-item">
-<div class="api-signature">function WithDescription(App: IApplicationBuilder; const const: string): IApplicationBuilder</div><div class="description">Adds a description to the endpoint.</div></div>
-<div class="api-item">
-<div class="api-signature">function WithTag(App: IApplicationBuilder; const const: string): IApplicationBuilder</div><div class="description">Adds a tag to the endpoint.</div></div>
-<div class="api-item">
-<div class="api-signature">function WithTags(App: IApplicationBuilder; const const: array): IApplicationBuilder</div><div class="description">Adds multiple tags to the endpoint.</div></div>
-<div class="api-item">
-<div class="api-signature">function WithMetadata(App: IApplicationBuilder; const const: string; const const: string; const const: array): IApplicationBuilder</div><div class="description">Adds metadata to the endpoint (summary, description, and tags).</div></div>
-<div class="api-item">
-<div class="api-signature">function RequireAuthorization(App: IApplicationBuilder; const const: array): IApplicationBuilder</div><div class="description">Adds security requirements to the endpoint.</div></div>
-<div class="api-item">
-<div class="api-signature">function RequireAuthorization(App: IApplicationBuilder; const const: string): IApplicationBuilder</div></div>
-<div class="api-item">
-<div class="api-signature">function AllowAnonymous(App: IApplicationBuilder): IApplicationBuilder</div><div class="description">Marks the endpoint as allowing anonymous access (skips authorization).</div></div>
-<div class="api-item">
-<div class="api-signature">function WithResponse(App: IApplicationBuilder; Code: Integer; const const: string; ASchemaType: PTypeInfo; const const: string): IApplicationBuilder</div><div class="description">Adds a documented response to the endpoint.</div></div>
-<div class="api-item">
-<div class="api-signature">function WithRequestType(App: IApplicationBuilder; ATypeInfo: PTypeInfo): IApplicationBuilder</div><div class="description">explicitly sets the request type for OpenAPI documentation.</div></div>
-<div class="api-item">
-<div class="api-signature">procedure UpdateRouteMetadata(App: IApplicationBuilder; RequestType: PTypeInfo; ResponseType: PTypeInfo)</div><div class="description">Update the last registered route's metadata. Internal/Helper use.</div></div>
-</div>
+<h3>record TDextProcessorGroupAffinity</h3><a name="TDextProcessorGroupAffinity"></a><div class="description">Represents a Windows processor group index and its logical processor affinity mask.</div></div>
 <hr>
+<div class="class-header">
+<h3>record TGroupAffinity</h3><a name="TGroupAffinity"></a><div class="description">WinAPI GROUP_AFFINITY structure representation.</div></div>
+<hr>
+<h2>Global Routines</h2>
+<div class="visibility-group"><h5>Routines</h5><div class="api-item">
+<div class="api-signature">function GetSystemLogicalProcessorCount: Integer</div><div class="description">Retrieves the total number of logical processors across all active processor groups.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetSystemActiveProcessorGroupCount: Word</div><div class="description">Retrieves the number of active processor groups on the system.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetSystemActiveProcessorCountForGroup(AGroup: Word): Integer</div><div class="description">Retrieves the number of active logical processors in a specific processor group.</div></div>
+<div class="api-item">
+<div class="api-signature">function GetProcessorGroupAffinityForWorker(AWorkerIndex: Integer; out out: TDextProcessorGroupAffinity): Boolean</div><div class="description">Calculates and retrieves the processor group affinity configuration for a given worker index.</div></div>
+<div class="api-item">
+<div class="api-signature">function SetThreadGroupAffinity(hThread: THandle; const const: TGroupAffinity; PreviousGroupAffinity: PGroupAffinity): BOOL</div><div class="description">Sets the processor group affinity for the specified thread using the Windows API.</div></div>
+<div class="api-item">
+<div class="api-signature">function ApplyGroupAffinityToThread(AThreadHandle: THandle; const const: TDextProcessorGroupAffinity): Boolean</div><div class="description">Applies the specified group affinity to a thread handle.</div></div>
+<div class="api-item">
+<div class="api-signature">function ApplyGroupAffinityToThread(AThreadHandle: THandle; AGroupIndex: Word; AMask: NativeUInt): Boolean</div><div class="description">Applies group affinity to a thread handle using group index and processor mask.</div></div>
+</div>
+<h2>Types</h2>
+<div class="visibility-group"><div class="api-item">
+<div class="api-signature">type PGroupAffinity = pointer</div><div class="description">Pointer to TGroupAffinity structure.</div></div>
+</div>
 
         </div>
     </div>

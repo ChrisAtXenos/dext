@@ -102,6 +102,11 @@ Dext was designed to leverage modern Object Pascal features while maintaining a 
 - **Nullable\<T\> Interop** — Implicit bidirectional conversion between `Prop<T>` and `Nullable<T>`.
 - **Variant Interop** — Implicit bidirectional conversion between `Prop<T>` and `Variant`.
 
+### 1.6c Windows Processor Groups & CPU Topology (`Dext.Threading.ProcessorGroups`)
+- **Windows Processor Groups** — Native support for Windows machines with >64 logical cores. Automatically detects multiple processor groups and binds worker threads using `SetThreadGroupAffinity` to scale and balance workloads.
+- **GetSystemLogicalProcessorCount** — Helper that queries system-wide processor topology across all groups on Windows (falling back to standard `CPUCount` on other platforms) to prevent under-provisioning of server IO workers.
+- **Round-Robin Group Affinity** — Auto-allocator that distributes worker threads evenly across available NUMA nodes and processor groups.
+
 ### 1.7 Value Converter Engine (`Dext.Core.ValueConverters`)
 - **TValueConverterRegistry** — Global converter registry with 3-level lookup: (1) Exact Match by `PTypeInfo` pair, (2) Kind Match by `TTypeKind` pair, (3) Fallback for `tkVariant` source.
 - **TValueConverter** — Execution engine orchestrating conversions, with automatic handling of Smart Types (`Prop<T>`) and `Nullable<T>` (detected via `TReflection.GetMetadata`).

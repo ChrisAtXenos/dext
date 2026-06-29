@@ -276,6 +276,7 @@
 <a href="Dext.Text.Escaping.html" class="nav-item">Dext.Text.Escaping</a>
 <a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
 <a href="Dext.Threading.CancellationToken.html" class="nav-item">Dext.Threading.CancellationToken</a>
+<a href="Dext.Threading.ProcessorGroups.html" class="nav-item">Dext.Threading.ProcessorGroups</a>
 <a href="Dext.Threading.Sync.html" class="nav-item">Dext.Threading.Sync</a>
 <a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
 <a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
@@ -412,11 +413,15 @@ class TDextJson {    +GetProvider()
 }
 TObject <|-- TDextJson
 class TSerializationPlanItem {}
+class TRecordPlanItem {}
+class TRecordPlan {}
 class TSerializationPlan {}
 class TDextSerializer {    +Create()
     +Destroy()
     +CreateInstanceForDeserialization()
     +GetOrBuildPlan()
+    +GetOrBuildRecordPlan()
+    +ResolveFieldName()
     +SerializeObjectWithPlan()
     +GetFieldName()
     +GetRecordName()
@@ -550,6 +555,12 @@ TObject <|-- TJsonBuilder
 <h3>record TSerializationPlanItem</h3><a name="TSerializationPlanItem"></a><div class="description">Pre-computed serialization metadata for a single property. Built once per type, reused across all instances.</div></div>
 <hr>
 <div class="class-header">
+<h3>record TRecordPlanItem</h3><a name="TRecordPlanItem"></a></div>
+<hr>
+<div class="class-header">
+<h3>record TRecordPlan</h3><a name="TRecordPlan"></a></div>
+<hr>
+<div class="class-header">
 <h3>record TSerializationPlan</h3><a name="TSerializationPlan"></a><div class="description">Complete serialization plan for a class type. Built once per PTypeInfo, cached globally for reuse.</div></div>
 <hr>
 <div class="class-header">
@@ -619,6 +630,10 @@ TObject <|-- TJsonBuilder
 <div class="api-item">
 <div class="api-signature">function GetOrBuildPlan(AType: PTypeInfo): PSerializationPlan</div></div>
 <div class="api-item">
+<div class="api-signature">function GetOrBuildRecordPlan(AType: PTypeInfo): PRecordPlan</div></div>
+<div class="api-item">
+<div class="api-signature">function ResolveFieldName(Item: PRecordPlanItem): string</div></div>
+<div class="api-item">
 <div class="api-signature">function SerializeObjectWithPlan(Obj: TObject; const const: TSerializationPlan): IDextJsonObject</div></div>
 </div>
 <hr>
@@ -686,6 +701,12 @@ TObject <|-- TJsonBuilder
 <div class="api-signature">type TDextSettings = Type</div><div class="description">Deprecated alias for TJsonSettings.</div></div>
 <div class="api-item">
 <div class="api-signature">type TSerializeKind = enumeration</div><div class="enum-values">Values: skInteger, skFloat, skDateTime, skString, skBoolean, skEnumAsString, skEnumAsNumber, skRecord, skRecordGUID, skRecordUUID, skClass, skList, skDynArray, skInterface, skUnknown</div><div class="description">Classification of how a property should be serialized. Pre-computed once per type to avoid repeated RTTI dispatch.</div></div>
+<div class="api-item">
+<div class="api-signature">type PSerializationPlanItem = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type PRecordPlanItem = pointer</div></div>
+<div class="api-item">
+<div class="api-signature">type PRecordPlan = pointer</div></div>
 <div class="api-item">
 <div class="api-signature">type PSerializationPlan = pointer</div></div>
 </div>

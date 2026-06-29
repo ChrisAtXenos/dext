@@ -276,6 +276,7 @@
 <a href="Dext.Text.Escaping.html" class="nav-item">Dext.Text.Escaping</a>
 <a href="Dext.Threading.Async.html" class="nav-item">Dext.Threading.Async</a>
 <a href="Dext.Threading.CancellationToken.html" class="nav-item">Dext.Threading.CancellationToken</a>
+<a href="Dext.Threading.ProcessorGroups.html" class="nav-item">Dext.Threading.ProcessorGroups</a>
 <a href="Dext.Threading.Sync.html" class="nav-item">Dext.Threading.Sync</a>
 <a href="Dext.Types.Lazy.html" class="nav-item">Dext.Types.Lazy</a>
 <a href="Dext.Types.Nullable.html" class="nav-item">Dext.Types.Nullable</a>
@@ -386,6 +387,9 @@ class TDextIocpConnection {    +Create()
 }
 TInterfacedObject <|-- TDextIocpConnection
 IDextServerConnection <|.. TDextIocpConnection
+class TDextReadOnlyBytesStream {    +Create()
+}
+TCustomMemoryStream <|-- TDextReadOnlyBytesStream
 class TDextIocpRequest {    +GetMethod()
     +GetPath()
     +GetQueryString()
@@ -393,6 +397,7 @@ class TDextIocpRequest {    +GetMethod()
     +PopulateHeaders()
     +GetContentLength()
     +GetBodyStream()
+    +ResolveHeader()
     +Create()
     +Destroy()
 }
@@ -460,9 +465,15 @@ IDextServerEngine <|.. TDextIocpEngine
 </div>
 <hr>
 <div class="class-header">
+<h3>class TDextReadOnlyBytesStream</h3><a name="TDextReadOnlyBytesStream"></a><div class="ancestor">Inherits from: TCustomMemoryStream</div></div>
+<div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
+<div class="api-signature">constructor Create(const const: TBytes; AOffset: Integer; ALen: Integer)</div></div>
+</div>
+<hr>
+<div class="class-header">
 <h3>class TDextIocpRequest</h3><a name="TDextIocpRequest"></a><div class="ancestor">Inherits from: TInterfacedObject</div><div class="description">Raw request implementation wrapper for IOCP socket connection.</div></div>
 <div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
-<div class="api-signature">constructor Create(const const: string; const const: string; const const: string; AHeaders: TDictionary; ABody: TBytes; ABodyOffset: Integer; ABodyLen: Integer; AContentLength: Int64)</div><div class="description">Initializes the raw IOCP request wrapper.</div></div>
+<div class="api-signature">constructor Create(const const: string; const const: string; const const: string; const const: THeaderSegments; ABody: TBytes; ABodyOffset: Integer; ABodyLen: Integer; AContentLength: Int64)</div><div class="description">Initializes the raw IOCP request wrapper.</div></div>
 <div class="api-item">
 <div class="api-signature">destructor Destroy</div><div class="description">Cleans up request resources.</div></div>
 </div>
@@ -480,6 +491,8 @@ IDextServerEngine <|.. TDextIocpEngine
 <div class="api-signature">function GetContentLength: Int64</div></div>
 <div class="api-item">
 <div class="api-signature">function GetBodyStream: TStream</div></div>
+<div class="api-item">
+<div class="api-signature">function ResolveHeader(const const: string): string</div></div>
 </div>
 <hr>
 <div class="class-header">
@@ -508,7 +521,7 @@ IDextServerEngine <|.. TDextIocpEngine
 <div class="class-header">
 <h3>class TDextIocpWorker</h3><a name="TDextIocpWorker"></a><div class="ancestor">Inherits from: TThread</div><div class="description">Worker thread running GetQueuedCompletionStatus event loop.</div></div>
 <div class="visibility-group"><h5>PUBLIC</h5><div class="api-item">
-<div class="api-signature">constructor Create(AEngine: TDextIocpEngine; AIocp: THandle)</div><div class="description">Initializes a new IOCP worker thread.</div></div>
+<div class="api-signature">constructor Create(AEngine: TDextIocpEngine; AIocp: THandle; const const: TDextProcessorGroupAffinity)</div><div class="description">Initializes a new IOCP worker thread.</div></div>
 </div>
 <div class="visibility-group"><h5>PROTECTED</h5><div class="api-item">
 <div class="api-signature">procedure Execute</div></div>

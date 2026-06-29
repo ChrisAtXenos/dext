@@ -1,6 +1,6 @@
 # 📑 S48: Windows Processor Groups Optimization (NUMA-Aware Scaling)
 
-**Status:** 📝 Draft
+**Status:** ✅ Implemented
 **Owner:** Cesar Romero & Engineering Team
 **Created:** 2026-06-29
 **Dependencies:** S39 (Native Server Engine)
@@ -75,6 +75,32 @@ When Dext initializes its server worker threads (e.g., in `TDextHttpSysEngine.St
 1. Determine the target processor group for each worker thread using a round-robin distribution strategy.
 2. Initialize a `TGroupAffinity` record with the group index and mask.
 3. Call `SetThreadGroupAffinity` using the native thread handle before starting the thread's execution loop.
+
+### 3.3 Target Files & Classes to Modify
+
+To implement the Windows processor group affinity and discovery logic, the following units and classes should be created or updated:
+
+#### [NEW] [Dext.Threading.ProcessorGroups.pas](file:///c:/dev/Dext/DextRepository/Sources/Core/Dext.Threading.ProcessorGroups.pas)
+- **Purpose**: A new dedicated unit for Windows Processor Groups topology discovery and affinity binding wrappers.
+- **Key API Exports**:
+  - `GetSystemLogicalProcessorCount`: Helper function that returns the total system-wide core count on Windows (across all processor groups), falling back to Delphi's standard `CPUCount` on non-Windows platforms.
+  - `SetThreadGroupAffinity`: WinAPI binding import.
+  - `ApplyGroupAffinityToThread(ThreadHandle, GroupIndex, Mask)`: Helper function to apply CPU affinity to a given thread handle.
+- *Alternative*: If a new unit is not desired, these functions can be added to [Dext.Utils.pas](file:///c:/dev/Dext/DextRepository/Sources/Core/Base/Dext.Utils.pas) within a Windows-specific conditional compile block.
+
+#### [MODIFY] [Dext.Server.HttpSys.pas](file:///c:/dev/Dext/DextRepository/Sources/Server/Dext.Server.HttpSys.pas)
+- **`TDextHttpSysEngine`**:
+  - Update `Start` method: Query the new topology helper (`GetSystemLogicalProcessorCount`) when `FOptions.IoThreadCount <= 0` to accurately spawn workers for all logical cores across all processor groups.
+- **`TDextHttpSysWorker`**:
+  - Assign a target processor group index to each worker thread instance (e.g., during construction via round-robin distribution `I mod GroupCount`).
+  - Update `Execute`: Call the affinity helper function with the worker's native `Handle` right before entering the execution loop.
+
+#### [MODIFY] [Dext.Server.Iocp.pas](file:///c:/dev/Dext/DextRepository/Sources/Server/Dext.Server.Iocp.pas)
+- **`TDextIocpEngine`**:
+  - Update `Start` method: Replace standard `CPUCount` with the system-wide processor topology helper when auto-detecting worker count.
+- **`TDextIocpWorker`**:
+  - Assign a target processor group index to each worker thread instance.
+  - Update `Execute`: Bind the IOCP worker thread to its designated processor group and CPU mask prior to processing IO port completion packets.
 
 ---
 
