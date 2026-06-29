@@ -6,6 +6,7 @@
 
 ## Links Rápidos
 
+- [Por Onde Começar?](01-primeiros-passos/por-onde-comecar.md) - Escolhendo seu caminho de aprendizado
 - [Primeiros Passos](01-primeiros-passos/README.md) - Instalação & Hello World
 - [Framework Web](02-framework-web/README.md) - Minimal APIs & Controllers
 - [ORM](05-orm/README.md) - Acesso a banco de dados
@@ -18,6 +19,7 @@
 
 #### [1. Primeiros Passos](01-primeiros-passos/README.md)
 
+- [Por Onde Começar?](01-primeiros-passos/por-onde-comecar.md)
 - [Instalação](01-primeiros-passos/instalacao.md)
 - [Hello World](01-primeiros-passos/hello-world.md)
 - [Estrutura do Projeto](01-primeiros-passos/estrutura-projeto.md)
