@@ -741,4 +741,24 @@ O framework inclui suporte nativo à especificação **HTTP/2 (RFC 9113)** e ao 
 - **Suporte gRPC** — Exemplo prático de transporte gRPC Unary demonstrando o processamento de corpos de mensagem binários no padrão *Length-Prefixed Message* (1 byte de flag de compressão + 4 bytes big-endian de tamanho do corpo + dados protobuf).
 - **Tratamento de Headers e Trailers** — Emissão correta de cabeçalhos de resposta gRPC e envio final de trailers HTTP/2 (`grpc-status`, `grpc-message`) em um frame `HEADERS` com flag `END_STREAM`.
 
-*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: Jun 18, 2026).*
+---
+
+## 📡 21. Exposição de Sockets & Protocolo MQTT Nativo (S47) (`Sources\Net`, `Tests\Net`)
+
+O framework inclui suporte para desacoplamento de transporte no servidor IOCP/Epoll para exposição de sockets TCP/UDP puros e uma implementação nativa do protocolo MQTT v3.1.1 (cliente e broker) para mensageria assíncrona.
+
+### 21.1 Desacoplamento de Transporte (IConnectionHandler)
+- **Desacoplamento de Engine** — Abstração de conexões físicas (`IDextTransportConnection`) e manipulador customizado (`IConnectionHandler`) que permite interceptar conexões puras de rede diretamente na engine IOCP/Epoll sem passar pelo parser de requisições HTTP.
+
+### 21.2 Servidores e Clientes TCP/UDP
+- **TDextTcpServer & TDextTcpClient** — Servidor TCP baseado nas engines assíncronas do Dext e cliente leve com controle de timeouts de leitura e escrita.
+- **TDextUdpServer & TDextUdpClient** — Componentes UDP para transmissão rápida de pacotes, com suporte a spans de bytes e callback assíncrona de recebimento.
+
+### 21.3 Protocolo MQTT v3.1.1 Nativo
+- **Encoder/Decoder Binário** — Parser de alta performance com codificação e decodificação eficiente de inteiros de comprimento variável (Remaining Length) e suporte para todas as mensagens de controle MQTT (CONNECT, CONNACK, PUBLISH, PUBACK, SUBSCRIBE, SUBACK, UNSUBSCRIBE, UNSUBACK, PINGREQ, PINGRESP, DISCONNECT).
+- **Roteador Trie Tree** — Árvore Trie customizada para correspondência eficiente de tópicos com suporte completo aos coringas de nível único (`+`) e múltiplos níveis (`#`).
+- **Broker Server e Client** — Servidor broker concorrente com suporte a sessões limpas e controle de assinaturas, e cliente assíncrono com thread de recebimento dedicada e keep-alive automático via ping/pong.
+
+---
+
+*Dext Framework — Exhaustive Technical Map & Features Index. (Revision: Jun 29, 2026).*

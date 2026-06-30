@@ -1,6 +1,6 @@
 # Spec S47: Expose TCP/UDP & MQTT Server/Client
 
-**Status: 📝 Draft**  
+**Status: ✅ Approved & Implemented**  
 **Owner:** Cesar Romero & Engineering Team  
 **Created:** 2026-06-28  
 **Dependencies:** S39 (Native Server Engine)  
@@ -235,7 +235,26 @@ type
 - Opens up Dext for IoT gateways, edge routers, SCADA systems, and embedded long-lived TCP connection services.
 - Replaces complex third-party stacks, allowing 100% native Pascal compile-once deploy-anywhere setups on Linux/Windows.
 
+### 4.5 Impacted Codebase Files
+
+The implementation of S47 will affect the following existing files and introduce new components:
+
+#### Modified Files (Refactoring Core I/O Engine)
+- [Dext.Server.Engine.Interfaces.pas](file:///c:/dev/Dext/DextRepository/Sources/Server/Dext.Server.Engine.Interfaces.pas) - Modify to introduce generic `IDextTransportConnection` and `IConnectionHandler` interfaces, separating them from the HTTP-specific request handlers.
+- [Dext.Server.Iocp.pas](file:///c:/dev/Dext/DextRepository/Sources/Server/Dext.Server.Iocp.pas) - Decouple the Windows IOCP worker loops from HTTP parsing, forwarding events to the configured `IConnectionHandler`.
+- [Dext.Server.Epoll.pas](file:///c:/dev/Dext/DextRepository/Sources/Server/Dext.Server.Epoll.pas) - Decouple the Linux Epoll worker loops from HTTP parsing, forwarding events to the configured `IConnectionHandler`.
+
+#### New Files (TCP/UDP & MQTT Protocol Layer)
+- `[NEW]` [Dext.Net.Tcp.pas](file:///c:/dev/Dext/DextRepository/Sources/Net/Dext.Net.Tcp.pas) - Implementation of raw TCP server (`TDextTcpServer`), client (`TDextTcpClient`), and connection wraps.
+- `[NEW]` [Dext.Net.Udp.pas](file:///c:/dev/Dext/DextRepository/Sources/Net/Dext.Net.Udp.pas) - Implementation of raw UDP server (`TDextUdpServer`) and client (`TDextUdpClient`).
+- `[NEW]` [Dext.Net.Mqtt.Parser.pas](file:///c:/dev/Dext/DextRepository/Sources/Net/Dext.Net.Mqtt.Parser.pas) - High-performance MQTT control packet binary encoder/decoder.
+- `[NEW]` [Dext.Net.Mqtt.pas](file:///c:/dev/Dext/DextRepository/Sources/Net/Dext.Net.Mqtt.pas) - Implementation of `TDextMqttClient`, `TDextMqttServer` (Broker), and subscription trie pattern.
+
+#### Testing & Verification Files
+- `[NEW]` [Dext.Net.TcpTests.pas](file:///c:/dev/Dext/DextRepository/Tests/Server/Dext.Net.TcpTests.pas) - Unit and integration tests for the new TCP/UDP and MQTT layers.
+
 ---
+
 
 ## 5. Verification Plan
 

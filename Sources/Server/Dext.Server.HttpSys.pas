@@ -303,6 +303,8 @@ type
     procedure SetOnRequest(const AHandler: TRequestEventHandler);
     /// <summary>Sets the socket upgrade event handler.</summary>
     procedure SetOnUpgrade(const AHandler: TUpgradeEventHandler);
+    /// <summary>Sets the custom connection handler (unsupported for HTTP.sys).</summary>
+    procedure SetConnectionHandler(const AHandler: IConnectionHandler);
 
     /// <summary>Static factory method for creating and registering the http.sys web host.</summary>
     class function Factory(Port: Integer; Pipeline: TRequestDelegate; Services: IServiceProvider): IWebHost; static;
@@ -1771,6 +1773,11 @@ end;
 procedure TDextHttpSysEngine.SetOnUpgrade(const AHandler: TUpgradeEventHandler);
 begin
   FOnUpgrade := AHandler;
+end;
+
+procedure TDextHttpSysEngine.SetConnectionHandler(const AHandler: IConnectionHandler);
+begin
+  // HTTP.sys is a kernel-mode HTTP listener and does not support raw connection handlers
 end;
 
 class function TDextHttpSysEngine.Factory(Port: Integer; Pipeline: TRequestDelegate; Services: IServiceProvider): IWebHost;

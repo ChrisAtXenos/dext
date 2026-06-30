@@ -118,6 +118,8 @@
 #### [12. Networking (Dext.Net)](12-networking/rest-client.md) ⭐ NEW
 
 - [REST Client](12-networking/rest-client.md) - Fluent HTTP Client
+- [TCP/UDP Sockets](12-networking/low-level-sockets.md) - Low-level networking and connection handling
+- [MQTT Client & Broker](12-networking/mqtt.md) - Pub/sub message routing and MQTT protocol
 
 #### [13. AI Assistants & MCP](13-ai-assistants/README.md) ⭐ NEW
 

@@ -109,6 +109,8 @@
 #### [12. Networking (Dext.Net)](12-networking/rest-client.md) ⭐ NOVO
 
 - [Cliente REST](12-networking/rest-client.md) - Cliente HTTP Fluente
+- [Servidores TCP/UDP](12-networking/low-level-sockets.md) - Exposição e controle de sockets de baixo nível
+- [Cliente e Broker MQTT](12-networking/mqtt.md) - Roteamento de mensagens e protocolo MQTT v3.1.1
 
 #### [13. Assistentes de IA & MCP](13-ai-assistants/README.md) ⭐ NOVO
 
