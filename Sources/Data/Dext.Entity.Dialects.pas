@@ -111,9 +111,9 @@ type
     ///   Generates the SQL statement to fetch the next value from a database sequence.
     /// </summary>
     /// <param name="ASequenceName">The name of the sequence in the database.</param>
-    function GetSequenceNextValSQL(const ASequenceName: string): string;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string;
     function GetSequenceExistsSQL(const ASequenceName: string): string;
-    function GetCreateSequenceSQL(const ASequenceName: string): string;
+    function GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string;
   end;
   {$M-}
 
@@ -177,9 +177,9 @@ type
 
     function GetDialect: TDatabaseDialect; virtual;
     function GetJsonValueSQL(const AColumn, APath: string): string; virtual;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; virtual;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; virtual;
     function GetSequenceExistsSQL(const ASequenceName: string): string; virtual;
-    function GetCreateSequenceSQL(const ASequenceName: string): string; virtual;
+    function GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; virtual;
   end;
 
   /// <summary>
@@ -198,7 +198,7 @@ type
     function GetCreateTableSQL(const ATableName, ABody: string): string; override;
     function GetDialect: TDatabaseDialect; override;
     function GetJsonValueSQL(const AColumn, APath: string): string; override;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; override;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
   end;
 
   /// <summary>
@@ -225,9 +225,9 @@ type
     function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; override;
     function GetLockingSQL(ALockMode: TLockMode): string; override;
     function UseSchemaPrefix: Boolean; override;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; override;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
     function GetSequenceExistsSQL(const ASequenceName: string): string; override;
-    function GetCreateSequenceSQL(const ASequenceName: string): string; override;
+    function GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
   end;
 
   /// <summary>
@@ -245,9 +245,9 @@ type
     function SupportsInsertReturning: Boolean; override;
     function GetReturningSQL(const AColumnName: string): string; override;
     function GetDialect: TDatabaseDialect; override;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; override;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
     function GetSequenceExistsSQL(const ASequenceName: string): string; override;
-    function GetCreateSequenceSQL(const ASequenceName: string): string; override;
+    function GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
   end;
 
   /// <summary>
@@ -274,9 +274,9 @@ type
     function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; override;
     function GetLockingSQL(ALockMode: TLockMode): string; override;
     function GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean = False): string; override;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; override;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
     function GetSequenceExistsSQL(const ASequenceName: string): string; override;
-    function GetCreateSequenceSQL(const ASequenceName: string): string; override;
+    function GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
   end;
 
   /// <summary>
@@ -297,7 +297,7 @@ type
     function GetDialect: TDatabaseDialect; override;
     function GetJsonValueSQL(const AColumn, APath: string): string; override;
     function GetColumnTypeForField(AFieldType: TFieldType; AIsAutoInc: Boolean = False): string; override;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; override;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
   end;
 
   /// <summary>
@@ -317,9 +317,9 @@ type
     function GetDialect: TDatabaseDialect; override;
     function GenerateProcedureCallSQL(const AProcName: string; const AParamNames: TArray<string>): string; override;
     function GetLockingSQL(ALockMode: TLockMode): string; override;
-    function GetSequenceNextValSQL(const ASequenceName: string): string; override;
+    function GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
     function GetSequenceExistsSQL(const ASequenceName: string): string; override;
-    function GetCreateSequenceSQL(const ASequenceName: string): string; override;
+    function GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer = 1): string; override;
   end;
 
   /// <summary>
@@ -443,7 +443,7 @@ begin
   raise Exception.Create('JSON queries not supported by this dialect');
 end;
 
-function TBaseDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TBaseDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   raise ENotSupportedException.Create('Sequences are not supported by this dialect');
 end;
@@ -453,7 +453,7 @@ begin
   Result := '';
 end;
 
-function TBaseDialect.GetCreateSequenceSQL(const ASequenceName: string): string;
+function TBaseDialect.GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := '';
 end;
@@ -873,7 +873,7 @@ begin
   Result := Format('json_extract(%s, ''$.%s'')', [AColumn, APath]);
 end;
 
-function TSQLiteDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TSQLiteDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := Format('SELECT nextval FROM dext_sequences WHERE name = ''%s''', [ASequenceName]);
 end;
@@ -1024,7 +1024,7 @@ begin
   Result := False;
 end;
 
-function TPostgreSQLDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TPostgreSQLDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := Format('SELECT nextval(''%s'')', [ASequenceName]);
 end;
@@ -1034,9 +1034,12 @@ begin
   Result := Format('SELECT 1 FROM pg_class WHERE relkind = ''S'' AND relname = LOWER(''%s'')', [ASequenceName]);
 end;
 
-function TPostgreSQLDialect.GetCreateSequenceSQL(const ASequenceName: string): string;
+function TPostgreSQLDialect.GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
-  Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
+  if AAllocationSize > 1 then
+    Result := Format('CREATE SEQUENCE %s INCREMENT BY %d START WITH %d', [ASequenceName, AAllocationSize, AAllocationSize])
+  else
+    Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
 end;
 
 { TInterBaseDialect }
@@ -1158,9 +1161,12 @@ begin
   Result := 'RETURNING ' + QuoteIdentifier(AColumnName);
 end;
 
-function TFirebirdDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TFirebirdDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
-  Result := Format('SELECT NEXT VALUE FOR %s FROM rdb$database', [ASequenceName]);
+  if AAllocationSize > 1 then
+    Result := Format('SELECT GEN_ID(%s, %d) FROM rdb$database', [ASequenceName, AAllocationSize])
+  else
+    Result := Format('SELECT NEXT VALUE FOR %s FROM rdb$database', [ASequenceName]);
 end;
 
 function TFirebirdDialect.GetSequenceExistsSQL(const ASequenceName: string): string;
@@ -1168,7 +1174,7 @@ begin
   Result := Format('SELECT 1 FROM rdb$generators WHERE rdb$generator_name = UPPER(''%s'')', [ASequenceName]);
 end;
 
-function TFirebirdDialect.GetCreateSequenceSQL(const ASequenceName: string): string;
+function TFirebirdDialect.GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
 end;
@@ -1369,7 +1375,7 @@ begin
     Result := inherited GetColumnTypeForField(AFieldType, AIsAutoInc);
 end;
 
-function TSQLServerDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TSQLServerDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := Format('SELECT NEXT VALUE FOR %s', [ASequenceName]);
 end;
@@ -1379,9 +1385,12 @@ begin
   Result := Format('SELECT 1 FROM sys.sequences WHERE name = ''%s''', [ASequenceName]);
 end;
 
-function TSQLServerDialect.GetCreateSequenceSQL(const ASequenceName: string): string;
+function TSQLServerDialect.GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
-  Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
+  if AAllocationSize > 1 then
+    Result := Format('CREATE SEQUENCE %s INCREMENT BY %d START WITH %d', [ASequenceName, AAllocationSize, AAllocationSize])
+  else
+    Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
 end;
 
 { TMySQLDialect }
@@ -1499,7 +1508,7 @@ begin
   Result := Format('JSON_UNQUOTE(JSON_EXTRACT(%s, ''$.%s''))', [AColumn, APath]);
 end;
 
-function TMySQLDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TMySQLDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := Format('SELECT NEXTVAL(%s)', [ASequenceName]);
 end;
@@ -1622,7 +1631,7 @@ begin
   end;
 end;
 
-function TOracleDialect.GetSequenceNextValSQL(const ASequenceName: string): string;
+function TOracleDialect.GetSequenceNextValSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
   Result := Format('SELECT %s.NEXTVAL FROM dual', [ASequenceName]);
 end;
@@ -1632,9 +1641,12 @@ begin
   Result := Format('SELECT 1 FROM user_sequences WHERE sequence_name = UPPER(''%s'')', [ASequenceName]);
 end;
 
-function TOracleDialect.GetCreateSequenceSQL(const ASequenceName: string): string;
+function TOracleDialect.GetCreateSequenceSQL(const ASequenceName: string; AAllocationSize: Integer): string;
 begin
-  Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
+  if AAllocationSize > 1 then
+    Result := Format('CREATE SEQUENCE %s INCREMENT BY %d START WITH %d', [ASequenceName, AAllocationSize, AAllocationSize])
+  else
+    Result := Format('CREATE SEQUENCE %s', [ASequenceName]);
 end;
 
 end.
